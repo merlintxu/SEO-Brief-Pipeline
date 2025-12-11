@@ -1,0 +1,17 @@
+[
+  {
+    "client_id": "ADESLAS",
+    "name": "ADESLAS",
+    "semrush_token": null,
+    "serpapi_key": null,
+    "openai_key": null,
+    "piloterr_key": null,
+    "dataforseo_login": null,
+    "dataforseo_password": null,
+    "gsc_sa_path": null,
+    "sheets_sa_path": null,
+    "default_database": "es",
+    "default_gl": "es",
+    "default_hl": "es"
+  }
+]
