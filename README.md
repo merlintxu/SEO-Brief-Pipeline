@@ -67,18 +67,36 @@ pytest
 find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
 ```
 
-3.  **Environment Configuration**:
-    Copy `.env.example` to `.env` and fill in your API keys:
+3.  **Environment Configuration** (⚠️ IMPORTANT for security):
+    
+    a. Copy `.env.example` to `.env`:
     ```bash
     cp .env.example .env
     ```
-    Required keys:
-    - `SEMRUSH_TOKEN`
-    - `SERPAPI_KEY`
-    - `OPENAI_API_KEY`
-    - `DFSP_USERNAME` / `DFSP_PASSWORD` (DataForSEO - Optional)
-
-    *Note: For GSC and Sheets integration, place your Service Account JSON files in `credentials/`.*
+    
+    b. Edit `.env` and fill in your API credentials (**never commit `.env` to Git**):
+    ```env
+    SEMRUSH_TOKEN=your_token_here
+    SERPAPI_KEY=your_key_here
+    OPENAI_API_KEY=sk-proj-your_key_here
+    API_KEY=your_strong_api_key_here  # Must be >= 20 chars
+    DFSP_USERNAME=your_username       # Optional
+    DFSP_PASSWORD=your_password       # Optional
+    ```
+    
+    c. **Security Best Practices**:
+    - ✅ **DO**: Store credentials in `.env` (local, never committed)
+    - ✅ **DO**: Use environment variables in production (Docker, cloud platforms)
+    - ❌ **DON'T**: Hardcode secrets in Python files
+    - ❌ **DON'T**: Commit `.env` to version control (already in `.gitignore`)
+    - ⚠️ **ROTATE keys** if ever exposed publicly
+    
+    d. **Service Accounts** (Google Cloud):
+    For GSC (Google Search Console) and Google Sheets integration, place your Service Account JSON files in:
+    - `credentials/client_secret.json` (OAuth credentials)
+    - `credentials/token_gsc.json` (cached token)
+    
+    See [TUTORIALS.md](TUTORIALS.md) for setup instructions.
 
 ## 💻 Usage
 
