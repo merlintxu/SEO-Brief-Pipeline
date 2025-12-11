@@ -38,6 +38,15 @@ def _fetch_html(url: str, timeout: int = 15) -> str | None:
 
 
 def audit_single_url(url: str) -> AuditEntry:
+    """
+    Audita una única URL extrayendo metadatos, headings y schema.
+
+    Args:
+        url (str): URL a auditar.
+
+    Returns:
+        AuditEntry: Objeto con los datos extraídos.
+    """
     entry = AuditEntry(url=url)
 
     html = _fetch_html(url)
@@ -72,28 +81,38 @@ def audit_single_url(url: str) -> AuditEntry:
 
     # Schema.org básico
     schema_tags = soup.find_all("script", type="application/ld+json")
-    raw_types = []
+    schema_types = []
     for tag in schema_tags:
         try:
             content = tag.string
             if "@type" in content:
-                raw_types.append(content)
+                schema_types.append(content)
                 if "Article" in content:
-                    entry.schema.has_article = True
+                    entry.schema_signals.has_article = True
                 if "Product" in content:
-                    entry.schema.has_product = True
+                    entry.schema_signals.has_product = True
                 if "BreadcrumbList" in content:
-                    entry.schema.has_breadcrumb = True
+                    entry.schema_signals.has_breadcrumb = True
                 if "FAQPage" in content:
-                    entry.schema.has_faq = True
+                    entry.schema_signals.has_faq = True
         except (TypeError, ValueError, AttributeError):
             continue
-    entry.schema.raw_types = raw_types[:5]
+    entry.schema_signals.schema_types = schema_types[:5]
 
     return entry
 
 
 def audit_urls(urls: List[str], max_workers: int = 5) -> AuditReport:
+    """
+    Audita una lista de URLs en paralelo.
+
+    Args:
+        urls (List[str]): Lista de URLs.
+        max_workers (int): Número de hilos simultáneos.
+
+    Returns:
+        AuditReport: Reporte consolidado de todas las URLs.
+    """
     report = AuditReport(label="top10_audit", entries=[], generated_at=Path().stem)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:

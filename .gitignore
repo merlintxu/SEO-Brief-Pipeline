@@ -1,0 +1,81 @@
+# Environment variables - NEVER commit
+.env
+.env.local
+.env.*.local
+.env.production
+
+# API Keys and credentials - NEVER commit
+credentials/*.json
+!credentials/.gitkeep
+*.key
+*.pem
+client_secret.json
+token_*.json
+
+# Cache directories
+data/semrush_cache/
+data/serp_cache/
+data/cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Python
+*.egg-info/
+*.egg
+dist/
+build/
+.Python
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Test/Coverage
+.coverage
+htmlcov/
+.tox/
+*.cover
+.hypothesis/
+
+# Outputs (generated files)
+outputs/
+runs/
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*~
+.~lock.*

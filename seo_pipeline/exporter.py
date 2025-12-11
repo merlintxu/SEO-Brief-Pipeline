@@ -29,6 +29,16 @@ def export_all_formats(
     """
     Exporta todos los artefactos de una ejecución en un directorio dedicado.
     Devuelve mapping {formato → Path}.
+
+    Args:
+        run_id (str): ID de ejecución.
+        keyword (str): Keyword principal.
+        row24 (SheetRow24): Fila de 24 columnas.
+        briefing (SEOBriefing): Briefing generado.
+        output_dir (Path): Directorio de salida.
+
+    Returns:
+        dict[str, Path]: Diccionario de rutas exportadas por formato.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     exports = {}
@@ -57,5 +67,5 @@ def export_all_formats(
     df_csv.to_excel(xlsx_path, index=False, engine="openpyxl")
     exports["xlsx"] = xlsx_path
 
-    logger.info("Exportación completa para %s → %s artefactos", keyword, len(exports))
+    logger.info(f"Exportación completa para {keyword} → {len(exports)} artefactos")
     return exports

@@ -66,28 +66,21 @@ def test_openai_failure_writes_status(tmp_path, monkeypatch):
     monkeypatch.setattr(SemrushClient, 'fetch_related', semrush_ok)
 
     # Minimal SERP
-    monkeypatch.setattr('seo_pipeline.vendors.serp_io.search_raw', lambda *a, **kw: {
-        'organic_results': [], 'search_parameters': {}, 'ai_overview': None, 'people_also_ask': [], 'related_searches': []
-    })
+    monkeypatch.setattr('seo_pipeline.pipeline.search_raw', lambda *a, **k: {'organic_results': [], 'search_parameters': {}})
 
     # Minimal audit report
-    entry = AuditEntry(
-        url='https://a', status_code=200, title='t', h1='h1', meta_desc='d', word_count=100,
-        headings={'H2': []}, schema_signals=SchemaSignals(), is_pdf=False, errors=[]
-    )
-    audit = AuditReport(label='lab', entries=[entry], generated_at='now')
-    monkeypatch.setattr('seo_pipeline.audit.content_audit.audit_urls', lambda urls: audit)
+    monkeypatch.setattr('seo_pipeline.pipeline.audit_urls', lambda urls: type('R', (), {'entries': [], 'model_dump': lambda self=None: {}})())
 
     # anchors
-    monkeypatch.setattr('seo_pipeline.anchors.generate_anchors', lambda **kw: AnchorSet(primary=['a'], secondary=[], internal=[]))
+    monkeypatch.setattr('seo_pipeline.pipeline.generate_anchors', lambda **kw: AnchorSet(primary=['a'], secondary=[], internal=[]))
 
     # Force OpenAI error from generate_briefing
-    from openai.error import OpenAIError
+    from openai import OpenAIError
 
     def raise_openai(*a, **kw):
         raise OpenAIError("openai boom")
 
-    monkeypatch.setattr('seo_pipeline.blueprint.generate_briefing', raise_openai)
+    monkeypatch.setattr('seo_pipeline.pipeline.generate_briefing', raise_openai)
 
     status_path = tmp_path / 'status.json'
     with pytest.raises(OpenAIError):

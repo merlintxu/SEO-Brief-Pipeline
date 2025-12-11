@@ -86,7 +86,7 @@ class PipelineConfig:
             return {c["client_id"]: ClientConfig(**c) for c in raw}
         except (OSError, json.JSONDecodeError) as e:
             from seo_pipeline.utils.logging import logger
-            logger.error("Error cargando clientes: %s", e)
+            logger.error(f"Error cargando clientes: {e}")
             return {}
 
     def _load_projects(self) -> Dict[str, ProjectConfig]:
@@ -97,7 +97,7 @@ class PipelineConfig:
             return {p["project_id"]: ProjectConfig(**p) for p in raw}
         except (OSError, json.JSONDecodeError) as e:
             from seo_pipeline.utils.logging import logger
-            logger.error("Error cargando proyectos: %s", e)
+            logger.error(f"Pipeline fallido para 'projects': {e}", exc_info=True)
             return {}
 
     def save_clients(self):

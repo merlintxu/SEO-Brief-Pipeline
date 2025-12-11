@@ -32,12 +32,20 @@ def _ensure_gspread() -> None:
 
 class SheetHandler:
     def __init__(self, spreadsheet_id: str, sa_json_path: str):
+        """
+        Inicializa el manejador de Google Sheets.
+
+        Args:
+            spreadsheet_id (str): ID de la hoja de cálculo.
+            sa_json_path (str): Ruta a las credenciales JSON.
+        """
         _ensure_gspread()
         self.sa_path = sa_json_path
         self.gc = gspread.service_account(filename=sa_json_path)
         self.sh = self.gc.open_by_key(spreadsheet_id)
 
     def get_or_create_worksheet(self, title: str, rows: int = 1000, cols: int = 30) -> gspread.Worksheet:
+        """Obtiene una pestaña por nombre o la crea si no existe."""
         try:
             ws = self.sh.worksheet(title)
             log.debug("Pestaña existente: %s", title)
@@ -48,6 +56,7 @@ class SheetHandler:
             return ws
 
     def ensure_headers(self, ws: gspread.Worksheet, headers: List[str]) -> None:
+        """Asegura que la primera fila contenga los encabezados exactos."""
         current = ws.row_values(1)
         if current == headers:
             return
@@ -64,10 +73,16 @@ class SheetHandler:
         row_data: List[Any]
     ) -> Dict[str, Any]:
         """
-        Upsert idempotente:
-        - Busca coincidencia exacta en key_columns
-        - Actualiza fila si existe
-        - Appendea si no existe
+        Realiza un upsert (insertar o actualizar) idempotente.
+
+        Args:
+            ws (gspread.Worksheet): Pestaña de trabajo.
+            headers (List[str]): Lista de encabezados.
+            key_columns (List[str]): Columnas clave para identificar unicidad.
+            row_data (List[Any]): Datos de la fila a insertar/actualizar.
+
+        Returns:
+            Dict[str, Any]: Estado de la operación ('updated' o 'inserted') y número de fila.
         """
         col_index = {h: i + 1 for i, h in enumerate(headers)}
         key_values = [row_data[col_index[k] - 1] for k in key_columns]
@@ -108,6 +123,20 @@ def upsert_to_sheet(
     row: List[Any],
     sa_json_path: str
 ) -> Dict[str, Any]:
+    """
+    Función de alto nivel para realizar un upsert en Google Sheets.
+
+    Args:
+        spreadsheet_id (str): ID de la hoja de cálculo.
+        tab_name (str): Nombre de la pestaña.
+        headers (List[str]): Encabezados de columna.
+        key_columns (List[str]): Columnas para identificar filas únicas.
+        row (List[Any]): Datos de la fila.
+        sa_json_path (str): Ruta a credenciales.
+
+    Returns:
+        Dict[str, Any]: Resultado de la operación.
+    """
     handler = SheetHandler(spreadsheet_id, sa_json_path)
     ws = handler.get_or_create_worksheet(tab_name)
     handler.ensure_headers(ws, headers)

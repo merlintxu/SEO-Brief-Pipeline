@@ -1,9 +1,59 @@
-__pycache__
-*.pyc
-.git
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Git
+.git/
 .gitignore
-README.md
+.github/
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Data and outputs (will be mounted as volumes)
+outputs/
+runs/
+data/cache/
+logs/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Other
 *.log
 .DS_Store
-venv/
-env/
+Thumbs.db
+notebooks/
+tests/
+.dockerignore
+Dockerfile*
+docker-compose*.yml

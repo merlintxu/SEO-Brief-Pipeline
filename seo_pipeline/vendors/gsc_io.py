@@ -27,6 +27,16 @@ SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
 
 def build_service(sa_json_path: str, subject: Optional[str] = None):
+    """
+    Construye el servicio de Google Search Console.
+
+    Args:
+        sa_json_path (str): Ruta al archivo JSON de la Service Account.
+        subject (Optional[str]): Email a suplantar (delegación de dominio).
+
+    Returns:
+        Resource: Recurso de la API de GSC.
+    """
     if not GSC_LIBS_OK:
         raise RuntimeError("Faltan librerías google-auth / google-api-client")
     try:
@@ -49,6 +59,17 @@ def fetch_cannibalization(
     """
     Detecta queries con múltiples URLs rankeando (cannibalización).
     Posición = promedio ponderado por impresiones.
+
+    Args:
+        site_url (str): URL del sitio en GSC (ej: "sc-domain:example.com").
+        start_date (str): Fecha inicio (YYYY-MM-DD).
+        end_date (str): Fecha fin (YYYY-MM-DD).
+        sa_json_path (str): Ruta a credenciales.
+        subject (Optional[str]): Usuario delegado.
+        min_impressions (int): Mínimo de impresiones para considerar una URL.
+
+    Returns:
+        GscCannibalization: Reporte de canibalización.
     """
     service = build_service(sa_json_path, subject)
 

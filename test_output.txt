@@ -1,0 +1,321 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.1, pluggy-1.6.0
+rootdir: /Users/marcos/Downloads/SEO-Brief-Pipeline
+plugins: anyio-4.11.0
+collected 3 items
+
+tests/test_api_background.py FFF                                         [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_api_background_success __________________________
+
+tmp_path = PosixPath('/private/var/folders/qq/7ff88bdd619gbckdy60w9mqh0000gq/T/pytest-of-marcos/pytest-4/test_api_background_success0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11a5b5a70>
+
+    def test_api_background_success(tmp_path, monkeypatch):
+        cfg = setup_cfg(tmp_path)
+    
+        # Mock providers to return minimal successful data
+        monkeypatch.setattr('seo_pipeline.vendors.semrush_io.SemrushClient.fetch_related', lambda *a, **k: SemrushResults(keyword_principal=SemrushKeyword(keyword='kw', search_volume=10), keywords_secundarias=[]))
+        monkeypatch.setattr('seo_pipeline.vendors.serp_io.search_raw', lambda *a, **k: {'organic_results': [], 'search_parameters': {}})
+        monkeypatch.setattr('seo_pipeline.audit.content_audit.audit_urls', lambda urls: type('R', (), {'entries': [], 'model_dump': lambda self=None: {}})())
+        monkeypatch.setattr('seo_pipeline.anchors.generate_anchors', lambda **kw: type('A', (), {'model_dump': lambda self=None: {}})())
+        # Briefing minimal
+        def fake_briefing(*a, **kw):
+            return type('B', (), {'model_dump': lambda self=None: {}, 'headings': [] , 'meta_title':'mt','meta_description':'md','h1':'h1','tone_style':'t','unique_angle':'u','longitud_recomendada':'lr','eeat_notas':'','faqs':[],'external_links':[],'multimedia_suggestions':[]})()
+        monkeypatch.setattr('seo_pipeline.blueprint.generate_briefing', fake_briefing)
+        monkeypatch.setattr('seo_pipeline.row24.build_row24', lambda *a, **k: SheetRow24(kw_principal='kw', run_id='r1'))
+        monkeypatch.setattr('seo_pipeline.exporter.export_all_formats', lambda *a, **k: {'json': Path('x.json')})
+        monkeypatch.setattr('seo_pipeline.vendors.sheets_io.upsert_to_sheet', lambda *a, **k: {'status': 'ok'})
+    
+        # Import app here (it uses get_config())
+        from api.main import app
+        client = TestClient(app)
+    
+        resp = client.post('/briefing', json={"keyword": "prueba", "target_url": None, "upload_to_sheets": False, "related_limit": 10, "serp_num": 10}, headers={"X-API-Key": "secret-token-2025"})
+        assert resp.status_code == 200
+        body = resp.json()
+        run_id = body['run_id']
+    
+        data = poll_status(client, run_id, timeout=8.0)
+>       assert data is not None and data.get('status') == 'done'
+E       assert ({'message': "name 'get_config' is not defined", 'status': 'failed', 'step': 'error'} is not None and 'failed' == 'done'
+E         
+E         - done
+E         + failed)
+
+tests/test_api_background.py:75: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[11/24/25 19:53:30] DEBUG    2025-11-24 19:53:30.851 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:30.856 | INFO     | pipeline.py:57
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:57 - === INICIO PIPELINE SEO                   
+                             2025 ===                                           
+                    INFO     2025-11-24 19:53:30.858 | INFO     | pipeline.py:58
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:58 - Keyword: %s | Run ID: %s                  
+                    DEBUG    2025-11-24 19:53:30.860 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:30.862 | INFO     | pipeline.py:87
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:87 - 1/8 Obteniendo datos                      
+                             SEMrush...                                         
+                    DEBUG    2025-11-24 19:53:30.864 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:30.865 | INFO      pipeline.py:104
+                             |                                                  
+                             seo_pipeline.pipeline:run_full_pipe                
+                             line:104 - 2/8 Consultando SERP en                 
+                             tiempo real...                                     
+                    DEBUG    2025-11-24 19:53:30.868 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    WARNING  2025-11-24 19:53:30.869 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:32] WARNING  2025-11-24 19:53:32.876 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:34] WARNING  2025-11-24 19:53:34.883 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:36] ERROR    2025-11-24 19:53:36.889 | ERROR     pipeline.py:251
+                             |                                                  
+                             seo_pipeline.pipeline:run_full_pipe                
+                             line:251 - Pipeline fallido para                   
+                             '%s': %s                                           
+                    DEBUG    2025-11-24 19:53:36.892 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    DEBUG    2025-11-24 19:53:36.895 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+----------------------------- Captured stderr call -----------------------------
+[32m2025-11-24 19:53:30[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m=== INICIO PIPELINE SEO 2025 ===[0m
+[32m2025-11-24 19:53:30[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1mKeyword: %s | Run ID: %s[0m
+[32m2025-11-24 19:53:30[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m1/8 Obteniendo datos SEMrush...[0m
+[32m2025-11-24 19:53:30[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m2/8 Consultando SERP en tiempo real...[0m
+[32m2025-11-24 19:53:30[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:32[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:34[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:36[0m | [31m[1mERROR   [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [31m[1mPipeline fallido para '%s': %s[0m
+____________ test_api_background_sheets_failure_logs_but_completes _____________
+
+tmp_path = PosixPath('/private/var/folders/qq/7ff88bdd619gbckdy60w9mqh0000gq/T/pytest-of-marcos/pytest-4/test_api_background_sheets_fai0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11a6fce90>
+
+    def test_api_background_sheets_failure_logs_but_completes(tmp_path, monkeypatch):
+        cfg = setup_cfg(tmp_path)
+    
+        monkeypatch.setattr('seo_pipeline.vendors.semrush_io.SemrushClient.fetch_related', lambda *a, **k: SemrushResults(keyword_principal=SemrushKeyword(keyword='kw', search_volume=10), keywords_secundarias=[]))
+        monkeypatch.setattr('seo_pipeline.vendors.serp_io.search_raw', lambda *a, **k: {'organic_results': [], 'search_parameters': {}})
+        monkeypatch.setattr('seo_pipeline.audit.content_audit.audit_urls', lambda urls: type('R', (), {'entries': [], 'model_dump': lambda self=None: {}})())
+        monkeypatch.setattr('seo_pipeline.anchors.generate_anchors', lambda **kw: type('A', (), {'model_dump': lambda self=None: {}})())
+        monkeypatch.setattr('seo_pipeline.blueprint.generate_briefing', lambda *a, **k: type('B', (), {'model_dump': lambda self=None: {}, 'headings': [] , 'meta_title':'mt','meta_description':'md','h1':'h1','tone_style':'t','unique_angle':'u','longitud_recomendada':'lr','eeat_notas':'','faqs':[],'external_links':[],'multimedia_suggestions':[]})())
+        monkeypatch.setattr('seo_pipeline.row24.build_row24', lambda *a, **k: SheetRow24(kw_principal='kw', run_id='r1'))
+        monkeypatch.setattr('seo_pipeline.exporter.export_all_formats', lambda *a, **k: {'json': Path('x.json')})
+    
+        # Make upsert_to_sheet raise an APIError-like exception
+        class FakeAPIError(Exception):
+            pass
+    
+        def raise_sheets(*a, **k):
+            raise FakeAPIError('sheetsboom')
+    
+        monkeypatch.setattr('seo_pipeline.vendors.sheets_io.upsert_to_sheet', raise_sheets)
+    
+        from api.main import app
+        client = TestClient(app)
+        resp = client.post('/briefing', json={"keyword": "prueba", "target_url": None, "upload_to_sheets": True, "related_limit": 10, "serp_num": 10}, headers={"X-API-Key": "secret-token-2025"})
+        assert resp.status_code == 200
+        run_id = resp.json()['run_id']
+    
+        data = poll_status(client, run_id, timeout=8.0)
+        # despite sheets error, pipeline should complete and status==done (Sheets error is non-fatal in pipeline)
+>       assert data is not None and data.get('status') == 'done'
+E       assert ({'message': "name 'get_config' is not defined", 'status': 'failed', 'step': 'error'} is not None and 'failed' == 'done'
+E         
+E         - done
+E         + failed)
+
+tests/test_api_background.py:106: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[11/24/25 19:53:37] DEBUG    2025-11-24 19:53:37.037 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:37.039 | INFO     | pipeline.py:57
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:57 - === INICIO PIPELINE SEO                   
+                             2025 ===                                           
+                    INFO     2025-11-24 19:53:37.041 | INFO     | pipeline.py:58
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:58 - Keyword: %s | Run ID: %s                  
+                    DEBUG    2025-11-24 19:53:37.043 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:37.044 | INFO     | pipeline.py:87
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:87 - 1/8 Obteniendo datos                      
+                             SEMrush...                                         
+                    DEBUG    2025-11-24 19:53:37.046 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:37.047 | INFO      pipeline.py:104
+                             |                                                  
+                             seo_pipeline.pipeline:run_full_pipe                
+                             line:104 - 2/8 Consultando SERP en                 
+                             tiempo real...                                     
+                    DEBUG    2025-11-24 19:53:37.049 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    WARNING  2025-11-24 19:53:37.050 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:39] WARNING  2025-11-24 19:53:39.053 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:41] WARNING  2025-11-24 19:53:41.078 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:43] ERROR    2025-11-24 19:53:43.086 | ERROR     pipeline.py:251
+                             |                                                  
+                             seo_pipeline.pipeline:run_full_pipe                
+                             line:251 - Pipeline fallido para                   
+                             '%s': %s                                           
+                    DEBUG    2025-11-24 19:53:43.089 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    DEBUG    2025-11-24 19:53:43.091 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+----------------------------- Captured stderr call -----------------------------
+[32m2025-11-24 19:53:37[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m=== INICIO PIPELINE SEO 2025 ===[0m
+[32m2025-11-24 19:53:37[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1mKeyword: %s | Run ID: %s[0m
+[32m2025-11-24 19:53:37[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m1/8 Obteniendo datos SEMrush...[0m
+[32m2025-11-24 19:53:37[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m2/8 Consultando SERP en tiempo real...[0m
+[32m2025-11-24 19:53:37[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:39[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:41[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:43[0m | [31m[1mERROR   [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [31m[1mPipeline fallido para '%s': %s[0m
+___________________ test_api_background_gsc_failure_handled ____________________
+
+tmp_path = PosixPath('/private/var/folders/qq/7ff88bdd619gbckdy60w9mqh0000gq/T/pytest-of-marcos/pytest-4/test_api_background_gsc_failur0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11a6f15b0>
+
+    def test_api_background_gsc_failure_handled(tmp_path, monkeypatch):
+        cfg = setup_cfg(tmp_path)
+        # enable gsc path to trigger GSC block
+        cfg.active_client.gsc_sa_path = 'missing.json'
+    
+        monkeypatch.setattr('seo_pipeline.vendors.semrush_io.SemrushClient.fetch_related', lambda *a, **k: SemrushResults(keyword_principal=SemrushKeyword(keyword='kw', search_volume=10), keywords_secundarias=[]))
+        monkeypatch.setattr('seo_pipeline.vendors.serp_io.search_raw', lambda *a, **k: {'organic_results': [], 'search_parameters': {}})
+        monkeypatch.setattr('seo_pipeline.audit.content_audit.audit_urls', lambda urls: type('R', (), {'entries': [], 'model_dump': lambda self=None: {}})())
+        monkeypatch.setattr('seo_pipeline.anchors.generate_anchors', lambda **kw: type('A', (), {'model_dump': lambda self=None: {}})())
+        monkeypatch.setattr('seo_pipeline.blueprint.generate_briefing', lambda *a, **k: type('B', (), {'model_dump': lambda self=None: {}, 'headings': [] , 'meta_title':'mt','meta_description':'md','h1':'h1','tone_style':'t','unique_angle':'u','longitud_recomendada':'lr','eeat_notas':'','faqs':[],'external_links':[],'multimedia_suggestions':[]})())
+        monkeypatch.setattr('seo_pipeline.row24.build_row24', lambda *a, **k: SheetRow24(kw_principal='kw', run_id='r1'))
+        monkeypatch.setattr('seo_pipeline.exporter.export_all_formats', lambda *a, **k: {'json': Path('x.json')})
+    
+        # fetch_cannibalization raises RuntimeError to simulate GSC problem
+        monkeypatch.setattr('seo_pipeline.vendors.gsc_io.fetch_cannibalization', lambda *a, **k: (_ for _ in ()).throw(RuntimeError('gsc fail')))
+    
+        from api.main import app
+        client = TestClient(app)
+        resp = client.post('/briefing', json={"keyword": "prueba", "target_url": None, "upload_to_sheets": False, "related_limit": 10, "serp_num": 10}, headers={"X-API-Key": "secret-token-2025"})
+        assert resp.status_code == 200
+        run_id = resp.json()['run_id']
+        data = poll_status(client, run_id, timeout=8.0)
+        # GSC failure is handled and pipeline should complete
+>       assert data is not None and data.get('status') == 'done'
+E       assert ({'message': "name 'get_config' is not defined", 'status': 'failed', 'step': 'error'} is not None and 'failed' == 'done'
+E         
+E         - done
+E         + failed)
+
+tests/test_api_background.py:132: AssertionError
+----------------------------- Captured stdout call -----------------------------
+                    DEBUG    2025-11-24 19:53:43.107 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:43.109 | INFO     | pipeline.py:57
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:57 - === INICIO PIPELINE SEO                   
+                             2025 ===                                           
+                    INFO     2025-11-24 19:53:43.110 | INFO     | pipeline.py:58
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:58 - Keyword: %s | Run ID: %s                  
+                    DEBUG    2025-11-24 19:53:43.112 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:43.113 | INFO     | pipeline.py:87
+                             seo_pipeline.pipeline:run_full_pipel               
+                             ine:87 - 1/8 Obteniendo datos                      
+                             SEMrush...                                         
+                    DEBUG    2025-11-24 19:53:43.114 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    INFO     2025-11-24 19:53:43.115 | INFO      pipeline.py:104
+                             |                                                  
+                             seo_pipeline.pipeline:run_full_pipe                
+                             line:104 - 2/8 Consultando SERP en                 
+                             tiempo real...                                     
+                    DEBUG    2025-11-24 19:53:43.117 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    WARNING  2025-11-24 19:53:43.118 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:45] WARNING  2025-11-24 19:53:45.124 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:47] WARNING  2025-11-24 19:53:47.127 | WARNING  | pipeline.py:78
+                             seo_pipeline.pipeline:_retry_call:78               
+                             - Intento %s/%s fallo para %s: %s                  
+[11/24/25 19:53:49] ERROR    2025-11-24 19:53:49.129 | ERROR     pipeline.py:251
+                             |                                                  
+                             seo_pipeline.pipeline:run_full_pipe                
+                             line:251 - Pipeline fallido para                   
+                             '%s': %s                                           
+                    DEBUG    2025-11-24 19:53:49.132 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+                    DEBUG    2025-11-24 19:53:49.134 | DEBUG    |       io.py:28
+                             seo_pipeline.utils.io:save_json:28 - JSON          
+                             guardado: %s                                       
+----------------------------- Captured stderr call -----------------------------
+[32m2025-11-24 19:53:43[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m=== INICIO PIPELINE SEO 2025 ===[0m
+[32m2025-11-24 19:53:43[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1mKeyword: %s | Run ID: %s[0m
+[32m2025-11-24 19:53:43[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m1/8 Obteniendo datos SEMrush...[0m
+[32m2025-11-24 19:53:43[0m | [1mINFO    [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [1m2/8 Consultando SERP en tiempo real...[0m
+[32m2025-11-24 19:53:43[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:45[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:47[0m | [33m[1mWARNING [0m | [36mseo_pipeline.pipeline[0m:[36m_retry_call[0m - [33m[1mIntento %s/%s fallo para %s: %s[0m
+[32m2025-11-24 19:53:49[0m | [31m[1mERROR   [0m | [36mseo_pipeline.pipeline[0m:[36mrun_full_pipeline[0m - [31m[1mPipeline fallido para '%s': %s[0m
+=============================== warnings summary ===============================
+tests/test_api_background.py::test_api_background_success
+  /Users/marcos/Downloads/SEO-Brief-Pipeline/api/main.py:45: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+tests/test_api_background.py::test_api_background_success
+  /Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/fastapi/applications.py:4575: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_api_background.py::test_api_background_success - assert ({'...
+FAILED tests/test_api_background.py::test_api_background_sheets_failure_logs_but_completes
+FAILED tests/test_api_background.py::test_api_background_gsc_failure_handled
+======================== 3 failed, 2 warnings in 20.72s ========================

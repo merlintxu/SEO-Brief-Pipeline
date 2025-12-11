@@ -6,11 +6,11 @@ Produce anchors mucho más efectivos y realistas que la versión heurística ori
 """
 from __future__ import annotations
 
-from typing import List, Dict, Set
-from collections import Counter
+from typing import List
 import re
 
 from .utils.text import normalize_ws, uniq_preserve
+from .models import AnchorSet
 
 
 def _extract_candidate_phrases(
@@ -21,6 +21,14 @@ def _extract_candidate_phrases(
     """
     Extrae frases candidatas (2-6 palabras) de múltiples textos.
     Prioriza combinaciones naturales y evita fragmentos sin sentido.
+
+    Args:
+        texts (List[str]): Textos fuente.
+        min_len (int): Longitud mínima.
+        max_len (int): Longitud máxima.
+
+    Returns:
+        List[str]: Lista de frases candidatas.
     """
     candidates: List[str] = []
     seen: Set[str] = set()
@@ -55,6 +63,16 @@ def _score_phrase(
 ) -> float:
     """
     Sistema de puntuación sofisticado (cuanto mayor, mejor como anchor).
+
+    Args:
+        phrase (str): Frase a evaluar.
+        main_kw (str): Keyword principal.
+        secondary_kws (List[str]): Keywords secundarias.
+        h2s (List[str]): H2s de la competencia.
+        competitor_titles (List[str]): Títulos de la competencia.
+
+    Returns:
+        float: Puntuación calculada.
     """
     norm = normalize_ws(phrase).lower()
     score = 0.0
@@ -109,12 +127,23 @@ def generate_anchors(
     main_keyword: str,
     secondary_keywords: List[str],
     competitor_titles: List[str] | None = None,
-) -> Dict[str, List[str]]:
+) -> "AnchorSet":  # Changed from Dict to AnchorSet
     """
     Genera tres categorías de anchors optimizados:
     - primary: 4–5 anchors de alta conversión y exact match
     - secondary: 6–8 anchors naturales y variados
     - internal: 8–12 anchors long-tail para enlazado interno
+
+    Args:
+        title (str): Meta title propuesto.
+        h1 (str): H1 propuesto.
+        h2_list (List[str]): Lista de H2s propuestos.
+        main_keyword (str): Keyword principal.
+        secondary_keywords (List[str]): Keywords secundarias.
+        competitor_titles (List[str] | None): Títulos de competidores.
+
+    Returns:
+        AnchorSet: Objeto con listas de anchors por categoría.
     """
     competitor_titles = competitor_titles or []
     all_sources = [title, h1] + h2_list + competitor_titles
@@ -161,8 +190,11 @@ def generate_anchors(
             if len(primary) >= 5 and len(secondary) >= 8 and len(internal) >= 12:
                 break
 
-    return {
-        "primary": primary[:5],
-        "secondary": secondary[:8],
-        "internal": internal[:12]
-    }
+    # Import here to avoid circular dependency
+    from seo_pipeline.models import AnchorSet
+    
+    return AnchorSet(
+        primary=primary[:5],
+        secondary=secondary[:8],
+        internal=internal[:12]
+    )

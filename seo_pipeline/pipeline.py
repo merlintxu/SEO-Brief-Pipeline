@@ -55,7 +55,7 @@ def run_full_pipeline(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("=== INICIO PIPELINE SEO 2025 ===")
-    logger.info("Keyword: %s | Run ID: %s", keyword, run_id)
+    logger.info(f"Keyword: {keyword} | Run ID: {run_id}")
 
     results = {"run_id": run_id, "keyword": keyword, "output_dir": str(output_dir)}
 
@@ -66,7 +66,7 @@ def run_full_pipeline(
                 try:
                     save_json(status_path, payload)
                 except (OSError, TypeError, ValueError) as e:
-                    logger.debug("No se pudo escribir status en %s: %s", status_path, e)
+                    logger.debug(f"No se pudo escribir status en {status_path}: {e}")
 
         def _retry_call(fn, *a, retries=3, delay=2, **kw):
             last_exc = None
@@ -75,7 +75,7 @@ def run_full_pipeline(
                     return fn(*a, **kw)
                 except Exception as e:
                     last_exc = e
-                    logger.warning("Intento %s/%s fallo para %s: %s", i + 1, retries, getattr(fn, '__name__', str(fn)), e)
+                    logger.warning(f"Intento {i+1}/{retries} fallo para {getattr(fn, '__name__', str(fn))}: {e}")
                     sleep(delay)
             raise last_exc
 
@@ -126,7 +126,7 @@ def run_full_pipeline(
         # ===================================================================
         # 3. Auditoría de contenido Top-10
         # ===================================================================
-        logger.info("3/8 Auditando contenido de la competencia (%s URLs)...", len(top_urls))
+        logger.info(f"3/8 Auditando contenido de la competencia ({len(top_urls)} URLs)...")
         _write_status(step="audit", message="Auditando contenido competitivo", percent=40)
         audit_report = _retry_call(audit_urls, top_urls)
         audit_path = output_dir / "audit_report.json"
@@ -156,7 +156,7 @@ def run_full_pipeline(
                     ])
                 results["cannibalization"] = cannibal.model_dump()
             except RuntimeError as e:
-                logger.warning("Canibalización no disponible: %s", e)
+                logger.warning(f"Canibalización no disponible: {e}")
         else:
             logger.info("4/8 GSC no configurado → omitiendo canibalización")
 
@@ -239,7 +239,7 @@ def run_full_pipeline(
                 )
                 logger.info("Fila subida correctamente a Sheets")
             except Exception as e:
-                logger.error("Error subiendo a Sheets: %s", e)
+                logger.error(f"Error subiendo a Sheets: {e}")
         else:
             logger.info("8/8 Subida a Sheets desactivada o no configurada")
 
@@ -248,7 +248,7 @@ def run_full_pipeline(
         return results
 
     except Exception as e:
-        logger.error("Pipeline fallido para '%s': %s", keyword, e, exc_info=True)
+        logger.error(f"Pipeline fallido para '{keyword}': {e}", exc_info=True)
         if 'status_path' in locals() and status_path:
             try:
                 save_json(status_path, {"status": "failed", "step": "error", "message": str(e)})

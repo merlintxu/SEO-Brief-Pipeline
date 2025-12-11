@@ -12,6 +12,16 @@ from seo_pipeline.utils.logging import logger
 
 
 def ensure_dir(path: Path) -> Path:
+    """
+    Asegura que el directorio del path exista.
+    Si el path es un archivo, asegura su directorio padre.
+
+    Args:
+        path (Path): Ruta a verificar.
+
+    Returns:
+        Path: La ruta original.
+    """
     p = Path(path)
     if p.is_file():
         p = p.parent
@@ -20,19 +30,39 @@ def ensure_dir(path: Path) -> Path:
 
 
 def save_json(path: Path, data: Any) -> Path:
+    """
+    Guarda datos en formato JSON (UTF-8).
+
+    Args:
+        path (Path): Ruta de destino.
+        data (Any): Datos serializables.
+
+    Returns:
+        Path: Ruta del archivo guardado.
+    """
     path = Path(path)
     ensure_dir(path.parent)
     try:
         with path.open("w", encoding="utf-8") as fh:
             json.dump(data, fh, ensure_ascii=False, indent=2)
-        logger.debug("JSON guardado: %s", path)
+        logger.debug(f"JSON guardado: {path}")
         return path
     except (OSError, TypeError, ValueError) as e:
-        logger.error("Error guardando JSON %s: %s", path, e)
+        logger.error(f"Error guardando JSON {path}: {e}")
+        logger.error(f"OpenAI error generando briefing para {keyword}: {e}")
         raise
 
 
 def load_json(path: Path) -> Any:
+    """
+    Carga datos desde un archivo JSON.
+
+    Args:
+        path (Path): Ruta del archivo.
+
+    Returns:
+        Any: Datos cargados o None si no existe.
+    """
     path = Path(path)
     if not path.exists():
         return None
@@ -41,9 +71,19 @@ def load_json(path: Path) -> Any:
 
 
 def save_text(path: Path, text: str) -> Path:
+    """
+    Guarda texto en un archivo (UTF-8).
+
+    Args:
+        path (Path): Ruta de destino.
+        text (str): Contenido de texto.
+
+    Returns:
+        Path: Ruta del archivo guardado.
+    """
     path = Path(path)
     ensure_dir(path.parent)
     with path.open("w", encoding="utf-8") as fh:
         fh.write(text)
-    logger.debug("Texto guardado: %s", path)
+    logger.debug(f"Texto guardado: {path}")
     return path

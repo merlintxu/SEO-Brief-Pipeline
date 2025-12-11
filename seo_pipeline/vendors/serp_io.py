@@ -16,8 +16,8 @@ import requests
 
 from seo_pipeline.utils.io import save_json, load_json
 from seo_pipeline.utils.text import uniq_preserve
-
-log = logging.getLogger("serp_io")
+from seo_pipeline.config import get_config
+from seo_pipeline.utils.logging import logger
 
 # La librería oficial es 'google-search-results' → expone serpapi
 try:
@@ -26,7 +26,7 @@ try:
 except ImportError as e:
     GoogleSearch = None  # type: ignore
     SERPAPI_AVAILABLE = False
-    log.warning("SerpAPI no disponible (pip install google-search-results): %s", e)
+    logger.warning(f"SerpAPI no disponible (pip install google-search-results): {e}")
 
 
 def _ensure_serpapi() -> None:
@@ -64,21 +64,21 @@ def search_raw(
 
         try:
             search = GoogleSearch(params)
-            result = search.get_dict(timeout=timeout)
+            result = search.get_dict()  # timeout is not a valid parameter
             if "error" not in result:
-                logger.info("SERP obtenida vía SerpAPI para: %s", query)
+                logger.info(f"SERP obtenida vía SerpAPI para: {query}")
                 return result
             else:
-                logger.warning("SerpAPI error: %s → intentando DataForSEO", result["error"])
+                logger.warning(f"SerpAPI error: {result['error']} → intentando DataForSEO")
         except requests.exceptions.RequestException as e:
-            logger.warning("SerpAPI falló por error de red: %s → intentando DataForSEO", e)
+            logger.warning(f"SerpAPI falló por error de red: {e} → intentando DataForSEO")
         except Exception as e:
             # Otros errores (p.ej. fallo interno del cliente serpapi)
-            logger.warning("SerpAPI falló: %s → intentando DataForSEO", e)
+            logger.warning(f"SerpAPI falló: {e} → intentando DataForSEO")
 
     # 2. Fallback a DataForSEO
     if use_dataforseo_fallback and client and hasattr(client, "dataforseo_login"):
-        logger.info("Usando DataForSEO como fallback para: %s", query)
+        logger.info(f"Usando DataForSEO como fallback para: {query}")
         from .dataforseo_serp import fetch_serp_dataforseo
         fallback = fetch_serp_dataforseo(
             keyword=query,
@@ -114,9 +114,9 @@ def search_and_cache(
             raw = search_raw(query, api_key, gl=gl, hl=hl, num=num)
             save_json(filepath, raw)
             results[key] = filepath
-            log.info("SERP guardada: %s → %s", query[:60], filepath.name)
+            logger.info(f"SERP guardada: {query[:60]} → {filepath.name}")
         except (RuntimeError, requests.exceptions.RequestException) as e:
-            log.error("Fallo SERP para '%s': %s", query[:60], e)
+            logger.error(f"Fallo SERP para '{query[:60]}': {e}")
         except Exception:
             # Re-raise errores inesperados para no silenciar fallos graves
             raise
@@ -184,5 +184,5 @@ def load_serp(filepath: Path) -> Dict:
     """Carga segura de un JSON SERP desde disco."""
     data = load_json(filepath, default={})
     if not data:
-        log.warning("SERP JSON vacío o corrupto: %s", filepath)
+        logger.warning(f"SERP JSON vacío o corrupto: {filepath}")
     return data

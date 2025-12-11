@@ -9,57 +9,15 @@ from __future__ import annotations
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import json
-import instructor
-from openai import OpenAI, RateLimitError
-from openai.error import OpenAIError
+from openai import OpenAI, RateLimitError, OpenAIError
 from pydantic import BaseModel, Field
 
-from seo_pipeline.models import AnchorSet
+from seo_pipeline.models import AnchorSet, SEOBriefing
 from seo_pipeline.utils.text import normalize_ws
 from seo_pipeline.constants import BRIEFING_SYSTEM_PROMPT
 from seo_pipeline.utils.logging import logger
 
 
-# =============================================
-# Modelo estructurado del Briefing (output final)
-# =============================================
-class BriefingSection(BaseModel):
-    title: str = Field(..., description="Título de la sección (H2)")
-    content: str = Field(..., description="Contenido completo y accionable de la sección")
-
-
-class FAQItem(BaseModel):
-    question: str
-    answer: str
-
-
-class InternalLink(BaseModel):
-    anchor: str
-    target_url: str
-    reason: str = Field(..., description="Por qué este enlace mejora la arquitectura y el SEO")
-
-
-class ExternalLink(BaseModel):
-    url: str
-    anchor: str
-    authority: str = Field(..., description="DR, DA, tráfico orgánico estimado o motivo de autoridad")
-
-
-class SEOBriefing(BaseModel):
-    meta_title: str = Field(..., max_length=60)
-    meta_description: str = Field(..., max_length=160)
-    h1: str
-    tone_style: str = Field(..., description="Ej: profesional y cercano, conversacional experto, etc.")
-    unique_angle: str = Field(..., description="Diferenciador clave frente a la competencia actual")
-    longitud_recomendada: str = Field(default="2500–3500 palabras")
-    eeat_notas: str = Field(default="", description="Cómo demostrar Expertise, Experience, Authoritativeness y Trustworthiness")
-
-    headings: List[BriefingSection] = Field(..., min_items=8, max_items=20)
-    faqs: List[FAQItem] = Field(default_factory=list, max_items=12)
-    internal_inbound: List[InternalLink] = Field(default_factory=list, description="Enlaces que deberían apuntar a esta URL")
-    internal_outbound: List[InternalLink] = Field(default_factory=list, max_items=15)
-    external_links: List[ExternalLink] = Field(default_factory=list, max_items=10)
-    multimedia_suggestions: List[str] = Field(default_factory=list, description="Ideas concretas de imágenes, tablas, gráficos, vídeos incrustados...")
 
 
 def generate_briefing(
@@ -69,17 +27,16 @@ def generate_briefing(
     serp_raw: Dict,
     audit_report: Dict,
     anchors: AnchorSet,
-    cannibalization_notes: str = "",
     openai_api_key: str,
+    cannibalization_notes: str = "",
     model: str = "gpt-4o-2024-11-20",  # modelo más reciente y barato con structured outputs
     temperature: float = 0.7
 ) -> SEOBriefing:
     """
-    Genera el briefing completo utilizando Instructor + OpenAI structured outputs.
-    Garantiza 100 % parseo correcto del JSON.
+    Genera el briefing completo utilizando OpenAI structured outputs nativos.
+    Garantiza 100 % parseo correcto del JSON sin necesidad de instructor.
     """
     client = OpenAI(api_key=openai_api_key)
-    client = instructor.from_openai(client)
 
     # Construcción del prompt de usuario (contextual y extremadamente rico)
     user_prompt = f"""
@@ -91,7 +48,7 @@ Redacta un briefing SEO completo y ultra-detallado para crear un artículo que p
 ## Datos de mercado (SEMrush)
 - Volumen de búsqueda: {search_volume:,}
 - Keywords secundarias más relevantes (top 15 por volumen):
-{chr(10).join([f"- {k.keyword} ({k.search_volume:,} búsquedas/mes)" for k in semrush_data.keywords_secundarias[:15]])}
+{chr(10).join([f"- {k['keyword']} ({k['search_volume']:,} búsquedas/mes)" for k in semrush_data.get('keywords_secundarias', [])[:15]])}
 
 ## SERP actual (Google {serp_raw.get('search_parameters', {}).get('hl', 'es')} {serp_raw.get('search_parameters', {}).get('gl', 'es')})
 - AI Overview presente: {"Sí" if serp_raw.get("ai_overview") else "No"}
@@ -99,7 +56,7 @@ Redacta un briefing SEO completo y ultra-detallado para crear un artículo que p
 - Related searches: {len(serp_raw.get("related_searches", []))} términos
 
 ## Análisis de la competencia (Top-10 auditado)
-{chr(10).join([f"- {e.url} → {e.word_count} palabras | H1: {e.h1[:80]}..." for e in audit_report.entries[:8]])}
+{chr(10).join([f"- {e['url']} → {e['word_count']} palabras | H1: {e.get('h1', '')[:80]}..." for e in audit_report.get('entries', [])[:8]])}
 
 ## Anchors recomendados (generados automáticamente)
 Primarios: {", ".join(anchors.primary)}
@@ -116,28 +73,31 @@ Instrucciones estrictas:
 """
 
     try:
-        logger.info("Generando briefing con %s para: %s", model, keyword)
-        briefing: SEOBriefing = client.chat.completions.create(
+        logger.info(f"Generando briefing con {model} para: {keyword}")
+        
+        # Usar structured outputs nativo de OpenAI (beta)
+        completion = client.beta.chat.completions.parse(
             model=model,
             temperature=temperature,
-            response_model=SEOBriefing,
-            max_retries=3,
             messages=[
                 {"role": "system", "content": BRIEFING_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt.strip()}
-            ]
+            ],
+            response_format=SEOBriefing
         )
-        logger.info("Briefing generado correctamente para: %s", keyword)
+        
+        briefing = completion.choices[0].message.parsed
+        logger.info(f"Briefing generado correctamente para: {keyword}")
         return briefing
 
     except RateLimitError:
         logger.error("Rate limit alcanzado con OpenAI")
         raise
     except OpenAIError as e:
-        logger.error("OpenAI error generando briefing para %s: %s", keyword, e)
+        logger.error(f"OpenAI error generando briefing para {keyword}: {e}")
         raise
     except Exception as e:
-        logger.error("Error generando briefing para %s: %s", keyword, e)
+        logger.error(f"Error generando briefing para {keyword}: {e}")
         raise
 
 
@@ -172,5 +132,5 @@ def save_briefing_markdown(briefing: SEOBriefing, output_path: Path) -> Path:
 
     text = "\n".join(lines)
     output_path.write_text(text, encoding="utf-8")
-    logger.info("Markdown del briefing guardado en: %s", output_path)
+    logger.info(f"Markdown del briefing guardado en: {output_path}")
     return output_path

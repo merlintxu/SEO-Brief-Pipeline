@@ -2,7 +2,14 @@
 
 An advanced, automated SEO pipeline that generates comprehensive content briefings using **Semrush**, **SerpAPI**, **OpenAI**, and **Google Search Console**.
 
-## 🚀 Features
+## Documentation
+- 📘 **[Architecture Guide](ARCHITECTURE.md)**: Detailed component descriptions, data flow, and performance optimization
+- 🚀 **[Tutorials](TUTORIALS.md)**: Step-by-step guides for common use cases
+- 🔧 **[Troubleshooting](TROUBLESHOOTING.md)**: Common issues and solutions
+- 📡 **[API Reference](#api-usage)**: See below for API endpoints
+- 📁 **[Project Structure](#project-structure)**: File organization
+
+## Features
 
 - **Automated Keyword Research**: Fetches related keywords and search volumes via Semrush.
 - **SERP Analysis**: Analyzes top competitors in real-time using SerpAPI.
@@ -41,6 +48,25 @@ graph TD
     pip install -r requirements.txt
     ```
 
+## ⚡ Quick Commands
+
+```bash
+# Reiniciar pipeline (limpia cache + inicia client manager)
+./restart_pipeline.sh
+
+# Ejecutar client manager directamente
+python client_manager.py
+
+# Ejecutar API server
+uvicorn api.main:app --reload
+
+# Ejecutar tests
+pytest
+
+# Limpiar cache Python manualmente
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+```
+
 3.  **Environment Configuration**:
     Copy `.env.example` to `.env` and fill in your API keys:
     ```bash
@@ -62,14 +88,166 @@ The easiest way to manage clients, projects, and runs.
 python client_manager.py
 ```
 
-### REST API
+### API Usage
+
 Start the API server:
 ```bash
 uvicorn api.main:app --reload
 ```
-- **POST** `/briefing`: Trigger a new briefing run.
-- **GET** `/briefing/{run_id}`: Check status.
-- **GET** `/outputs/{run_id}/...`: Download generated files.
+
+The API is available at `http://localhost:8000`. All endpoints require authentication via API key.
+
+#### Authentication
+Include the API key in the `X-API-Key` header:
+```bash
+export API_KEY="your-secret-key"  # Set in .env or environment
+```
+
+#### Create a Briefing
+
+**Endpoint**: `POST /briefing`
+
+**curl Example**:
+```bash
+curl -X POST "http://localhost:8000/briefing" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: secret-token-2025" \
+  -d '{
+    "keyword": "marketing digital",
+    "target_url": null,
+    "upload_to_sheets": false,
+    "related_limit": 30,
+    "serp_num": 10
+  }'
+```
+
+**Python Example**:
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/briefing",
+    headers={"X-API-Key": "secret-token-2025"},
+    json={
+        "keyword": "marketing digital",
+        "target_url": None,
+        "upload_to_sheets": False,
+        "related_limit": 30,
+        "serp_num": 10
+    }
+)
+
+data = response.json()
+run_id = data["run_id"]
+print(f"Briefing started: {run_id}")
+```
+
+**Response**:
+```json
+{
+  "run_id": "20251124_210530",
+  "keyword": "marketing digital",
+  "output_dir": "outputs/20251124_210530",
+  "files": {
+    "status": "/outputs/20251124_210530/status.json"
+  }
+}
+```
+
+#### Check Status
+
+**Endpoint**: `GET /briefing/{run_id}`
+
+**curl Example**:
+```bash
+curl "http://localhost:8000/briefing/20251124_210530"
+```
+
+**Python Example** (with polling):
+```python
+import time
+
+def wait_for_completion(run_id, timeout=300):
+    start = time.time()
+    while time.time() - start < timeout:
+        resp = requests.get(f"http://localhost:8000/briefing/{run_id}")
+        status = resp.json()
+        
+        if status["status"] == "done":
+            print("✓ Briefing complete!")
+            return status
+        elif status["status"] == "failed":
+            print(f"✗ Failed: {status.get('message')}")
+            return status
+        
+        print(f"⏳ {status.get('step', 'processing')}...")
+        time.sleep(5)
+    
+    raise TimeoutError("Briefing took too long")
+
+result = wait_for_completion(run_id)
+```
+
+**Response** (in progress):
+```json
+{
+  "status": "running",
+  "step": "3/8 Auditando competidores...",
+  "message": "Processing"
+}
+```
+
+**Response** (complete):
+```json
+{
+  "status": "done",
+  "step": "completed",
+  "message": "Pipeline completado",
+  "files": {
+    "json": "/outputs/20251124_210530/briefing.json",
+    "markdown": "/outputs/20251124_210530/briefing.md",
+    "xlsx": "/outputs/20251124_210530/row24.xlsx"
+  }
+}
+```
+
+#### Download Results
+
+**Endpoints**: 
+- `GET /outputs/{run_id}/{filename}`
+
+**curl Example**:
+```bash
+# Download JSON briefing
+curl "http://localhost:8000/outputs/20251124_210530/briefing.json" -o briefing.json
+
+# Download Markdown
+curl "http://localhost:8000/outputs/20251124_210530/briefing.md" -o briefing.md
+```
+
+#### Error Responses
+
+**401 Unauthorized** (missing API key):
+```json
+{
+  "detail": "Could not validate credentials"
+}
+```
+
+**404 Not Found** (invalid run_id):
+```json
+{
+  "detail": "Run_id no encontrado"
+}
+```
+
+**500 Internal Server Error**:
+```json
+{
+  "detail": "SEMrush: solo 50 units (mínimo requerido: 100)"
+}
+```
+
 
 ## 📂 Project Structure
 

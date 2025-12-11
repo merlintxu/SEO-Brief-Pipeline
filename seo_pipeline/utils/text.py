@@ -16,7 +16,15 @@ _TRUNCATE_RE = re.compile(r"\s+")
 
 
 def slugify(text: str | None) -> str:
-    """Convierte texto a slug SEO-friendly (kebab-case)."""
+    """
+    Convierte texto a slug SEO-friendly (kebab-case).
+
+    Args:
+        text (str | None): Texto de entrada.
+
+    Returns:
+        str: Slug normalizado (ej: "hola-mundo").
+    """
     if not text:
         return ""
     # Normalización Unicode + eliminación de acentos
@@ -33,7 +41,15 @@ def to_kebab(text: str | None) -> str:
 
 
 def normalize_ws(text: str | None) -> str:
-    """Normaliza espacios en blanco a un único espacio y recorta."""
+    """
+    Normaliza espacios en blanco a un único espacio y recorta.
+
+    Args:
+        text (str | None): Texto de entrada.
+
+    Returns:
+        str: Texto normalizado.
+    """
     if not text:
         return ""
     return _WS_RE.sub(" ", text.strip())
@@ -43,6 +59,14 @@ def truncate_smart(text: str | None, max_len: int, ellipsis: str = "…") -> str
     """
     Trunca texto de forma inteligente preservando palabras completas.
     Evita cortar a mitad de palabra.
+
+    Args:
+        text (str | None): Texto a truncar.
+        max_len (int): Longitud máxima.
+        ellipsis (str): Sufijo para indicar truncamiento.
+
+    Returns:
+        str: Texto truncado.
     """
     if not text or len(text) <= max_len:
         return text or ""
@@ -55,7 +79,15 @@ def truncate_smart(text: str | None, max_len: int, ellipsis: str = "…") -> str
 
 
 def is_blank(text: str | None) -> bool:
-    """Verifica si el texto está vacío o solo contiene espacios."""
+    """
+    Verifica si el texto está vacío o solo contiene espacios.
+
+    Args:
+        text (str | None): Texto a verificar.
+
+    Returns:
+        bool: True si está vacío o es None.
+    """
     return not normalize_ws(text)
 
 
@@ -63,6 +95,12 @@ def uniq_preserve(seq: Iterable[str]) -> List[str]:
     """
     Elimina duplicados preservando el orden original de aparición.
     Versión optimizada con O(n) y bajo consumo de memoria.
+
+    Args:
+        seq (Iterable[str]): Secuencia de entrada.
+
+    Returns:
+        List[str]: Lista sin duplicados.
     """
     seen: Set[str] = set()
     result: List[str] = []
@@ -77,6 +115,13 @@ def uniq_preserve(seq: Iterable[str]) -> List[str]:
 def extract_ngrams(text: str, n: int = 3) -> List[str]:
     """
     Extrae n-grams de palabras (útil para anchors y detección de frases clave).
+
+    Args:
+        text (str): Texto fuente.
+        n (int): Tamaño del n-gram.
+
+    Returns:
+        List[str]: Lista de n-grams.
     """
     words = normalize_ws(text).split()
     if len(words) < n:

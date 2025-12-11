@@ -6,7 +6,7 @@ Todos los contratos del pipeline están aquí centralizados.
 from __future__ import annotations
 
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 # Compatibilidad automática pydantic v1/v2
 try:
@@ -26,14 +26,14 @@ else:
 # ==================== SEMrush ====================
 class SemrushKeyword(BaseModel):
     model_config = BaseConfig
-    keyword: str
-    search_volume: int = 0
+    keyword: str = Field(..., min_length=1, max_length=100, description="Keyword phrase")
+    search_volume: int = Field(default=0, ge=0, le=999999999, description="Monthly search volume")
 
 
 class SemrushResults(BaseModel):
     model_config = BaseConfig
     keyword_principal: SemrushKeyword
-    keywords_secundarias: List[SemrushKeyword] = Field(default_factory=list)
+    keywords_secundarias: List[SemrushKeyword] = Field(default_factory=list, max_length=100)
 
 
 # ==================== Auditoría ====================
@@ -43,23 +43,31 @@ class SchemaSignals(BaseModel):
     has_product: bool = False
     has_breadcrumb: bool = False
     has_faq: bool = False
-    raw_types: List[str] = Field(default_factory=list)
+    schema_types: List[str] = Field(default_factory=list)  # Renamed from raw_types to avoid Pydantic conflict
 
 
 class AuditEntry(BaseModel):
     if PYDANTIC_V2:
-        model_config = ConfigDict(protected_namespaces=())  # ← Esta línea ya evita el warning
+        model_config = ConfigDict(protected_namespaces=())
 
-    url: str
-    status_code: int = 0
-    title: str = ""
-    h1: str = ""
-    meta_desc: str = ""
-    word_count: int = 0
+    url: str = Field(..., min_length=1, max_length=2048, description="URL being audited")
+    status_code: int = Field(default=0, ge=0, le=599, description="HTTP status code")
+    title: str = Field(default="", max_length=100, description="Page title (max 100 chars)")
+    h1: str = Field(default="", max_length=100, description="H1 tag content")
+    meta_desc: str = Field(default="", max_length=200, description="Meta description")
+    word_count: int = Field(default=0, ge=0, le=50000, description="Word count (max 50k)")
     headings: Dict[str, List[str]] = Field(default_factory=dict)
-    schema_signals: SchemaSignals = Field(default_factory=SchemaSignals, alias="schema")  # ← Cambia nombre interno
+    schema_signals: SchemaSignals = Field(default_factory=SchemaSignals)
     is_pdf: bool = False
-    errors: List[str] = Field(default_factory=list)
+    errors: List[str] = Field(default_factory=list, max_length=50)
+
+    @field_validator('url')
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        """Ensure URL is not just whitespace."""
+        if not v.strip():
+            raise ValueError("URL cannot be empty or whitespace-only")
+        return v.strip()
 
 
 class AuditReport(BaseModel):
@@ -95,9 +103,49 @@ class GscCannibalization(BaseModel):
 # ==================== Anchors ====================
 class AnchorSet(BaseModel):
     model_config = BaseConfig
-    primary: List[str] = Field(default_factory=list, max_items=5)
-    secondary: List[str] = Field(default_factory=list, max_items=8)
-    internal: List[str] = Field(default_factory=list, max_items=10)
+    primary: List[str] = Field(default_factory=list, max_length=5)
+    secondary: List[str] = Field(default_factory=list, max_length=8)
+    internal: List[str] = Field(default_factory=list, max_length=12)
+
+
+# ==================== Briefing (Moved from blueprint.py) ====================
+class BriefingSection(BaseModel):
+    title: str = Field(..., description="Título de la sección (H2)")
+    content: str = Field(..., description="Contenido completo y accionable de la sección")
+
+
+class FAQItem(BaseModel):
+    question: str
+    answer: str
+
+
+class InternalLink(BaseModel):
+    anchor: str
+    target_url: str
+    reason: str = Field(..., description="Por qué este enlace mejora la arquitectura y el SEO")
+
+
+class ExternalLink(BaseModel):
+    url: str
+    anchor: str
+    authority: str = Field(..., description="DR, DA, tráfico orgánico estimado o motivo de autoridad")
+
+
+class SEOBriefing(BaseModel):
+    meta_title: str = Field(..., max_length=60)
+    meta_description: str = Field(..., max_length=160)
+    h1: str
+    tone_style: str = Field(..., description="Ej: profesional y cercano, conversacional experto, etc.")
+    unique_angle: str = Field(..., description="Diferenciador clave frente a la competencia actual")
+    longitud_recomendada: str = Field(default="2500–3500 palabras")
+    eeat_notas: str = Field(default="", description="Cómo demostrar Expertise, Experience, Authoritativeness y Trustworthiness")
+
+    headings: List[BriefingSection] = Field(..., min_length=8, max_length=20)
+    faqs: List[FAQItem] = Field(default_factory=list, max_length=12)
+    internal_inbound: List[InternalLink] = Field(default_factory=list, description="Enlaces que deberían apuntar a esta URL")
+    internal_outbound: List[InternalLink] = Field(default_factory=list, max_length=15)
+    external_links: List[ExternalLink] = Field(default_factory=list, max_length=10)
+    multimedia_suggestions: List[str] = Field(default_factory=list, description="Ideas concretas de imágenes, tablas, gráficos, vídeos incrustados...")
 
 
 # ==================== Row 24 columnas ====================
@@ -106,30 +154,49 @@ from seo_pipeline.constants import HEADERS_24
 class SheetRow24(BaseModel):
     model_config = BaseConfig
 
-    kw_principal: str
-    sv_principal: int = 0
-    kw_secundarias: List[str] = Field(default_factory=list)
-    url_objetivo: str = ""
-    title: str = ""
-    h1: str = ""
-    meta_desc: str = ""
-    slugs_relacionados: List[str] = Field(default_factory=list)
+    kw_principal: str = Field(..., min_length=1, max_length=100, description="Primary keyword")
+    sv_principal: int = Field(default=0, ge=0, le=9999999, description="Search volume")
+    kw_secundarias: List[str] = Field(default_factory=list, max_length=20)
+    url_objetivo: str = Field(default="", max_length=2048)
+    title: str = Field(default="", max_length=100)
+    h1: str = Field(default="", max_length=100)
+    meta_desc: str = Field(default="", max_length=200)
+    slugs_relacionados: List[str] = Field(default_factory=list, max_length=20)
     ai_overview_present: bool = False
-    paa_count: int = 0
-    related_count: int = 0
+    paa_count: int = Field(default=0, ge=0, le=100)
+    related_count: int = Field(default=0, ge=0, le=1000)
     kg_present: bool = False
     schema_article: bool = False
     schema_product: bool = False
     schema_breadcrumb: bool = False
     schema_faq: bool = False
-    top_competitor_1: str = ""
-    top_competitor_2: str = ""
-    top_competitor_3: str = ""
-    anchor_primary: List[str] = Field(default_factory=list)
-    anchor_secondary: List[str] = Field(default_factory=list)
-    anchor_internal: List[str] = Field(default_factory=list)
-    notes: str = ""
-    run_id: str = ""
+    top_competitor_1: str = Field(default="", max_length=2048)
+    top_competitor_2: str = Field(default="", max_length=2048)
+    top_competitor_3: str = Field(default="", max_length=2048)
+    anchor_primary: List[str] = Field(default_factory=list, max_length=10)
+    anchor_secondary: List[str] = Field(default_factory=list, max_length=15)
+    anchor_internal: List[str] = Field(default_factory=list, max_length=20)
+    notes: str = Field(default="", max_length=1000)
+    run_id: str = Field(default="", max_length=50)
+
+    @field_validator('kw_principal')
+    @classmethod
+    def validate_keyword(cls, v: str) -> str:
+        """Ensure keyword is not just whitespace."""
+        if not v.strip():
+            raise ValueError("Keyword cannot be empty or whitespace-only")
+        return v.strip()
+
+    @field_validator('kw_secundarias')
+    @classmethod
+    def validate_keywords_list(cls, v: List[str]) -> List[str]:
+        """Validate all keywords in list are non-empty and reasonable length."""
+        for kw in v:
+            if not kw.strip():
+                raise ValueError("Keywords cannot be empty")
+            if len(kw) > 100:
+                raise ValueError(f"Keyword too long: {kw[:50]}...")
+        return [kw.strip() for kw in v]
 
     def to_row(self) -> List[Any]:
         """Convierte el modelo a fila compatible con HEADERS_24."""

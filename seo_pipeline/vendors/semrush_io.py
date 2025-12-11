@@ -36,6 +36,15 @@ class SemrushClient:
         ttl_days: int = DEFAULT_CACHE_TTL_DAYS,
         min_units_required: int = DEFAULT_UNITS_MIN_REQUIRED
     ):
+        """
+        Inicializa el cliente SEMrush.
+
+        Args:
+            token (str): API Key de SEMrush.
+            cache_dir (Path): Directorio para almacenar caché de respuestas.
+            ttl_days (int): Tiempo de vida del caché en días.
+            min_units_required (int): Mínimo de unidades requeridas para operar.
+        """
         self.token = token[-6:]  # solo últimos 6 para logs
         self.full_token = token
         self.cache_dir = cache_dir
@@ -47,10 +56,12 @@ class SemrushClient:
     # Caché
     # ===================================================================
     def _cache_path(self, key: str) -> Path:
+        """Genera la ruta del archivo de caché para una clave dada."""
         safe_key = "".join(c if c.isalnum() else "_" for c in key)[:180]
         return self.cache_dir / f"{safe_key}.csv"
 
     def _is_fresh(self, path: Path) -> bool:
+        """Verifica si el archivo de caché es válido según el TTL."""
         if not path.exists():
             return False
         mtime = datetime.fromtimestamp(path.stat().st_mtime)
@@ -60,6 +71,15 @@ class SemrushClient:
     # Units control
     # ===================================================================
     def _check_units(self) -> int:
+        """
+        Consulta el saldo de unidades en SEMrush.
+
+        Returns:
+            int: Unidades restantes o -1 si falla la consulta.
+
+        Raises:
+            RuntimeError: Si las unidades son insuficientes.
+        """
         try:
             r = requests.get(UNITS_URL, params={"key": self.full_token}, timeout=10)
             units = int(r.text.strip())
@@ -80,6 +100,17 @@ class SemrushClient:
         database: str = "es",
         limit: int = 60
     ) -> SemrushResults:
+        """
+        Obtiene palabras clave relacionadas desde SEMrush.
+
+        Args:
+            keyword (str): Palabra clave semilla.
+            database (str): Base de datos de SEMrush (ej: "es", "us").
+            limit (int): Número máximo de resultados.
+
+        Returns:
+            SemrushResults: Objeto con keyword principal y lista de relacionadas.
+        """
         self._check_units()
 
         cache_key = f"related_{database}_{keyword}_{limit}"

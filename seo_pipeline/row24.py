@@ -22,6 +22,20 @@ def build_row24(
                run_id: str) -> SheetRow24:
     """
     Construye el objeto SheetRow24 listo para exportar a Google Sheets.
+
+    Args:
+        kw (str): Keyword principal.
+        sv (int): Volumen de búsqueda.
+        secondary_kws (List[str]): Keywords secundarias.
+        target_url (str): URL objetivo.
+        briefing (dict): Datos del briefing generado.
+        serp_data (dict): Datos de la SERP.
+        anchors (AnchorSet): Anchors generados.
+        top_competitors (List[str]): Lista de competidores.
+        run_id (str): ID de ejecución.
+
+    Returns:
+        SheetRow24: Objeto de fila formateado.
     """
     return SheetRow24(
         kw_principal=kw,

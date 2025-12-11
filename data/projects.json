@@ -1,0 +1,29 @@
+[
+  {
+    "project_id": "que es un seguro de decesos",
+    "client_id": "ADESLAS",
+    "name": "que es un seguro de decesos",
+    "base_domain": "https://www.segurcaixaadeslas.es/",
+    "gsc_property": "https://www.segurcaixaadeslas.es",
+    "sheets_id": "https://docs.google.com/spreadsheets/d/1AdwjuNcv-dgPyQaVk1m4zBWZOPZ6IaaIQvufA4zF-BY/edit",
+    "output_dir": "runs"
+  },
+  {
+    "project_id": "1",
+    "client_id": "1",
+    "name": "que es un seguro de decesos",
+    "base_domain": "https://www.segurcaixaadeslas.es/",
+    "gsc_property": "https://www.segurcaixaadeslas.es/",
+    "sheets_id": "https://docs.google.com/spreadsheets/d/1AdwjuNcv-dgPyQaVk1m4zBWZOPZ6IaaIQvufA4zF-BY/edit?gid=312615998#gid=312615998",
+    "output_dir": "runs"
+  },
+  {
+    "project_id": "2",
+    "client_id": "1",
+    "name": "\"lcs",
+    "base_domain": "Ley de Contrato de Seguro\"https://www.segurcaixaadeslas.es/particulares/",
+    "gsc_property": "sc-domain:segurcaixaadeslas.es",
+    "sheets_id": "https://docs.google.com/spreadsheets/d/1AdwjuNcv-dgPyQaVk1m4zBWZOPZ6IaaIQvufA4zF-BY/edit?gid=312615998#gid=312615998",
+    "output_dir": "runs"
+  }
+]

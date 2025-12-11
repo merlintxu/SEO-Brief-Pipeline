@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from seo_pipeline.models import SheetRow24
-from seo_pipeline.blueprint import SEOBriefing, BriefingSection
+from seo_pipeline.models import SEOBriefing, BriefingSection
 from seo_pipeline.exporter import export_all_formats
 
 
