@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SEO Briefing Pipeline 2025 – Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .lucide { width: 20px; height: 20px; }
+    .loading { opacity: 0.7; pointer-events: none; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white shadow-lg">
+      <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="file-text"></i>
+          <h1 class="text-2xl font-bold">SEO Briefing Pipeline 2025</h1>
+        </div>
+        <div id="status" class="text-sm opacity-90"></div>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
+      <div class="bg-white rounded-xl shadow-md p-8">
+        <h2 class="text-xl font-semibold mb-6 flex items-center">
+          <i data-lucide="zap" class="mr-2"></i>
+          Generar nuevo Briefing SEO
+        </h2>
+
+        <form id="briefingForm" class="space-y-6">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium mb-2">Keyword principal *</label>
+              <input type="text" name="keyword" required
+                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                     placeholder="mejor crema antiarrugas 2025"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">URL objetivo (opcional)</label>
+              <input type="url" name="target_url"
+                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                     placeholder="https://tudominio.com/crema-antiarrugas"/>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-6">
+            <div>
+              <label class="block text-sm font-medium mb-2">Keywords relacionadas (límite)</label>
+              <input type="number" name="related_limit" value="60" min="20" max="100"
+                     class="w-full px-4 py-2 border border-gray-300 rounded-lg"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Resultados SERP</label>
+              <input type="number" name="serp_num" value="12" min="10" max="30"
+                     class="w-full px-4 py-2 border border-gray-300 rounded-lg"/>
+            </div>
+            <div class="flex items-end">
+              <label class="flex items-center space-x-3">
+                <input type="checkbox" name="upload_to_sheets" checked class="w-5 h-5 text-indigo-600"/>
+                <span>Subir fila 24 a Google Sheets</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit"
+                  class="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition flex items-center justify-center space-x-2">
+            <i data-lucide="play" class="lucide"></i>
+            <span>Generar Briefing</span>
+          </button>
+        </form>
+
+        <!-- Resultados -->
+        <div id="results" class="mt-10 hidden">
+          <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <i data-lucide="check-circle" class="mr-2 text-green-600"></i>
+            Briefing generado correctamente
+          </h3>
+          <div id="links" class="grid md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden mt-8 text-center">
+          <i data-lucide="loader-2" class="lucide animate-spin mx-auto text-indigo-600"></i>
+          <p class="mt-3 text-gray-600">Generando briefing completo (30–90 segundos)...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="error" class="hidden mt-8 p-5 bg-red-50 border border-red-200 rounded-lg text-red-700"></div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-300 py-6 mt-auto">
+      <div class="max-w-6xl mx-auto px-6 text-center text-sm">
+        SEO Briefing Pipeline 2025 – Desarrollado con FastAPI + OpenAI + Instructor
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const API_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+      ? 'http://localhost:8000'
+      : location.origin;
+
+    // Estado del servidor
+    fetch(`${API_URL}/health`)
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('status').textContent = `Cliente activo: ${data.active_client || 'Ninguno'}`;
+      })
+      .catch(() => {
+        document.getElementById('status').textContent = 'API no disponible';
+      });
+
+    document.getElementById('briefingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = Object.fromEntries(new FormData(form));
+      data.upload_to_sheets = form.upload_to_sheets.checked;
+
+      // UI feedback
+      document.getElementById('results').classList.add('hidden');
+      document.getElementById('error').classList.add('hidden');
+      document.getElementById('loading').classList.remove('hidden');
+      form.classList.add('loading');
+
+      try {
+        const response = await fetch(`${API_URL}/briefing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || 'Error del servidor');
+        }
+
+        const result = await response.json();
+
+        // Mostrar enlaces de descarga
+        const linksDiv = document.getElementById('links');
+        linksDiv.innerHTML = '';
+        const icons = { json: 'file-code', markdown: 'file-text', csv: 'file-spreadsheet', xlsx: 'file-spreadsheet' };
+
+        Object.entries(result.files).forEach(([format, url]) => {
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.className = 'block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition text-center';
+          a.innerHTML = `
+            <i data-lucide="${icons[format] || 'download'}" class="lucide mx-auto mb-2 text-indigo-600"></i>
+            <div class="font-medium uppercase text-xs text-gray-600">${format}</div>
+          `;
+          linksDiv.appendChild(a);
+        });
+
+        document.getElementById('results').classList.remove('hidden');
+        lucide.createIcons();
+      } catch (err) {
+        document.getElementById('error').textContent = err.message;
+        document.getElementById('error').classList.remove('hidden');
+      } finally {
+        document.getElementById('loading').classList.add('hidden');
+        form.classList.remove('loading');
+      }
+    });
+  </script>
+</body>
+</html>

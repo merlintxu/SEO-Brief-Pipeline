@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  seo-pipeline-api:
+    build: .
+    container_name: seo_pipeline_api_2025
+    restart: unless-stopped
+    ports:
+      - "8000:8000"                  # ← API accesible desde fuera
+    volumes:
+      - ./config:/app/config
+      - ./runs:/app/runs
+      - ./credentials:/app/credentials
+      - ./.env:/app/.env
+    stdin_open: true
+    tty: true

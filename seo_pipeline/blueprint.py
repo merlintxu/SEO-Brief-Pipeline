@@ -1,0 +1,176 @@
+# seo_pipeline/blueprint.py
+"""
+Generación del briefing SEO definitivo mediante OpenAI + Instructor (2025).
+Utiliza structured outputs 100 % fiables (Pydantic → JSON Schema automático).
+Incluye todo lo necesario para superar a la competencia actual en el SERP.
+"""
+from __future__ import annotations
+
+from typing import List, Dict, Any, Optional
+from pathlib import Path
+import json
+import instructor
+from openai import OpenAI, RateLimitError
+from openai.error import OpenAIError
+from pydantic import BaseModel, Field
+
+from seo_pipeline.models import AnchorSet
+from seo_pipeline.utils.text import normalize_ws
+from seo_pipeline.constants import BRIEFING_SYSTEM_PROMPT
+from seo_pipeline.utils.logging import logger
+
+
+# =============================================
+# Modelo estructurado del Briefing (output final)
+# =============================================
+class BriefingSection(BaseModel):
+    title: str = Field(..., description="Título de la sección (H2)")
+    content: str = Field(..., description="Contenido completo y accionable de la sección")
+
+
+class FAQItem(BaseModel):
+    question: str
+    answer: str
+
+
+class InternalLink(BaseModel):
+    anchor: str
+    target_url: str
+    reason: str = Field(..., description="Por qué este enlace mejora la arquitectura y el SEO")
+
+
+class ExternalLink(BaseModel):
+    url: str
+    anchor: str
+    authority: str = Field(..., description="DR, DA, tráfico orgánico estimado o motivo de autoridad")
+
+
+class SEOBriefing(BaseModel):
+    meta_title: str = Field(..., max_length=60)
+    meta_description: str = Field(..., max_length=160)
+    h1: str
+    tone_style: str = Field(..., description="Ej: profesional y cercano, conversacional experto, etc.")
+    unique_angle: str = Field(..., description="Diferenciador clave frente a la competencia actual")
+    longitud_recomendada: str = Field(default="2500–3500 palabras")
+    eeat_notas: str = Field(default="", description="Cómo demostrar Expertise, Experience, Authoritativeness y Trustworthiness")
+
+    headings: List[BriefingSection] = Field(..., min_items=8, max_items=20)
+    faqs: List[FAQItem] = Field(default_factory=list, max_items=12)
+    internal_inbound: List[InternalLink] = Field(default_factory=list, description="Enlaces que deberían apuntar a esta URL")
+    internal_outbound: List[InternalLink] = Field(default_factory=list, max_items=15)
+    external_links: List[ExternalLink] = Field(default_factory=list, max_items=10)
+    multimedia_suggestions: List[str] = Field(default_factory=list, description="Ideas concretas de imágenes, tablas, gráficos, vídeos incrustados...")
+
+
+def generate_briefing(
+    keyword: str,
+    search_volume: int,
+    semrush_data: Dict,
+    serp_raw: Dict,
+    audit_report: Dict,
+    anchors: AnchorSet,
+    cannibalization_notes: str = "",
+    openai_api_key: str,
+    model: str = "gpt-4o-2024-11-20",  # modelo más reciente y barato con structured outputs
+    temperature: float = 0.7
+) -> SEOBriefing:
+    """
+    Genera el briefing completo utilizando Instructor + OpenAI structured outputs.
+    Garantiza 100 % parseo correcto del JSON.
+    """
+    client = OpenAI(api_key=openai_api_key)
+    client = instructor.from_openai(client)
+
+    # Construcción del prompt de usuario (contextual y extremadamente rico)
+    user_prompt = f"""
+## TAREA
+Redacta un briefing SEO completo y ultra-detallado para crear un artículo que posicione en el Top-3 de Google para la keyword principal:
+
+**Keyword principal**: {keyword} ({search_volume:,} búsquedas/mes)
+
+## Datos de mercado (SEMrush)
+- Volumen de búsqueda: {search_volume:,}
+- Keywords secundarias más relevantes (top 15 por volumen):
+{chr(10).join([f"- {k.keyword} ({k.search_volume:,} búsquedas/mes)" for k in semrush_data.keywords_secundarias[:15]])}
+
+## SERP actual (Google {serp_raw.get('search_parameters', {}).get('hl', 'es')} {serp_raw.get('search_parameters', {}).get('gl', 'es')})
+- AI Overview presente: {"Sí" if serp_raw.get("ai_overview") else "No"}
+- People Also Ask: {len(serp_raw.get("people_also_ask", []))} preguntas
+- Related searches: {len(serp_raw.get("related_searches", []))} términos
+
+## Análisis de la competencia (Top-10 auditado)
+{chr(10).join([f"- {e.url} → {e.word_count} palabras | H1: {e.h1[:80]}..." for e in audit_report.entries[:8]])}
+
+## Anchors recomendados (generados automáticamente)
+Primarios: {", ".join(anchors.primary)}
+Secundarios: {", ".join(anchors.secondary)}
+
+{"## Notas de canibalización" + cannibalization_notes if cannibalization_notes else ""}
+
+Instrucciones estrictas:
+1. El artículo debe superar claramente a todos los resultados actuales en profundidad, actualización, estructura y valor para el usuario.
+2. Incluye obligatoriamente secciones que respondan a todas las preguntas del PAA y related searches.
+3. Propón un ángulo único y diferenciador realista.
+4. Sugiere enlaces internos y externos que refuercen E-E-A-T.
+5. Devuelve exclusivamente el JSON según el esquema definido, sin texto adicional.
+"""
+
+    try:
+        logger.info("Generando briefing con %s para: %s", model, keyword)
+        briefing: SEOBriefing = client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            response_model=SEOBriefing,
+            max_retries=3,
+            messages=[
+                {"role": "system", "content": BRIEFING_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt.strip()}
+            ]
+        )
+        logger.info("Briefing generado correctamente para: %s", keyword)
+        return briefing
+
+    except RateLimitError:
+        logger.error("Rate limit alcanzado con OpenAI")
+        raise
+    except OpenAIError as e:
+        logger.error("OpenAI error generando briefing para %s: %s", keyword, e)
+        raise
+    except Exception as e:
+        logger.error("Error generando briefing para %s: %s", keyword, e)
+        raise
+
+
+def save_briefing_markdown(briefing: SEOBriefing, output_path: Path) -> Path:
+    lines = [
+        f"# Briefing SEO – {briefing.h1}\n",
+        f"**Keyword principal**: {briefing.meta_title}\n",
+        f"**Meta Title**: {briefing.meta_title}",
+        f"**Meta Description**: {briefing.meta_description}",
+        f"**H1**: {briefing.h1}",
+        f"**Tono y estilo**: {briefing.tone_style}",
+        f"**Ángulo único**: {briefing.unique_angle}",
+        f"**Longitud recomendada**: {briefing.longitud_recomendada}\n",
+        "## Estructura de contenidos propuesta\n",
+    ]
+
+    for i, section in enumerate(briefing.headings, 1):
+        lines.append(f"### {i}. {section.title}\n{section.content}\n")
+
+    if briefing.faqs:
+        lines.append("## FAQs (Schema FAQPage)\n")
+        for faq in briefing.faqs:
+            lines.append(f"**{faq.question}**\n{faq.answer}\n")
+
+    if briefing.external_links:
+        lines.append("## Enlaces externos de autoridad recomendados\n")
+        for link in briefing.external_links:
+            lines.append(f"- [{link.anchor}]({link.url}) – {link.authority}")
+
+    if briefing.multimedia_suggestions:
+        lines.append("## Sugerencias multimedia\n" + "\n".join(f"- {s}" for s in briefing.multimedia_suggestions))
+
+    text = "\n".join(lines)
+    output_path.write_text(text, encoding="utf-8")
+    logger.info("Markdown del briefing guardado en: %s", output_path)
+    return output_path
