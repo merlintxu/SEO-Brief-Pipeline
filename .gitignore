@@ -79,3 +79,4 @@ logs/
 *.bak
 *~
 .~lock.*
+".env" 
