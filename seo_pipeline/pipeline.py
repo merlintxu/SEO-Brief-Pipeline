@@ -27,7 +27,7 @@ from seo_pipeline.vendors.gsc_io import fetch_cannibalization
 from seo_pipeline.vendors.sheets_io import upsert_to_sheet
 from seo_pipeline.constants import HEADERS_24, SHEET_ROW_KEYCOLS
 from seo_pipeline.utils.logging import logger
-from time import sleep
+from seo_pipeline.utils.retry import retry_call
 from datetime import timedelta
 from seo_pipeline.utils.io import save_json
 
@@ -59,6 +59,9 @@ def run_full_pipeline(
 
     results = {"run_id": run_id, "keyword": keyword, "output_dir": str(output_dir)}
 
+    retry_attempts = 3
+    retry_base_delay = 2
+
     try:
         def _write_status(step: str, message: str = "", percent: int | None = None, state: str = "running"):
             if status_path:
@@ -68,16 +71,14 @@ def run_full_pipeline(
                 except (OSError, TypeError, ValueError) as e:
                     logger.debug(f"No se pudo escribir status en {status_path}: {e}")
 
-        def _retry_call(fn, *a, retries=3, delay=2, **kw):
-            last_exc = None
-            for i in range(retries):
-                try:
-                    return fn(*a, **kw)
-                except Exception as e:
-                    last_exc = e
-                    logger.warning(f"Intento {i+1}/{retries} fallo para {getattr(fn, '__name__', str(fn))}: {e}")
-                    sleep(delay)
-            raise last_exc
+        def _log_retry_factory(fn_name: str, total_retries: int):
+            def _log_retry(attempt: int, exc: Exception, delay: float) -> None:
+                logger.warning(
+                    f"Intento {attempt}/{total_retries} falló para {fn_name}: {exc} "
+                    f"(reintentando en {delay:.2f}s)"
+                )
+
+            return _log_retry
 
         _write_status(step="start", message="Pipeline iniciado", percent=0)
 
@@ -90,11 +91,15 @@ def run_full_pipeline(
             token=cfg.active_client.semrush_token,
             cache_dir=cfg.cache_dir,
         )
-        semrush_data = _retry_call(
+        semrush_data = retry_call(
             semrush_client.fetch_related,
             keyword=keyword,
             database=cfg.active_client.default_database,
             limit=related_limit,
+            retries=retry_attempts,
+            base_delay=retry_base_delay,
+            jitter=0.2,
+            on_retry=_log_retry_factory("fetch_related", retry_attempts),
         )
         results["semrush"] = semrush_data
 
@@ -103,13 +108,17 @@ def run_full_pipeline(
         # ===================================================================
         logger.info("2/8 Consultando SERP en tiempo real...")
         _write_status(step="serp", message="Consultando SERP en tiempo real", percent=20)
-        serp_raw = _retry_call(
+        serp_raw = retry_call(
             search_raw,
             query=keyword,
             api_key=cfg.active_client.serpapi_key,
             gl=cfg.active_client.default_gl,
             hl=cfg.active_client.default_hl,
             num=serp_num,
+            retries=retry_attempts,
+            base_delay=retry_base_delay,
+            jitter=0.2,
+            on_retry=_log_retry_factory("search_raw", retry_attempts),
         )
         serp_path = output_dir / "serp_raw.json"
         save_json(serp_path, serp_raw)
@@ -128,7 +137,14 @@ def run_full_pipeline(
         # ===================================================================
         logger.info(f"3/8 Auditando contenido de la competencia ({len(top_urls)} URLs)...")
         _write_status(step="audit", message="Auditando contenido competitivo", percent=40)
-        audit_report = _retry_call(audit_urls, top_urls)
+        audit_report = retry_call(
+            audit_urls,
+            top_urls,
+            retries=retry_attempts,
+            base_delay=retry_base_delay,
+            jitter=0.2,
+            on_retry=_log_retry_factory("audit_urls", retry_attempts),
+        )
         audit_path = output_dir / "audit_report.json"
         save_json(audit_path, audit_report.model_dump())
         results["audit_path"] = str(audit_path)
@@ -142,12 +158,16 @@ def run_full_pipeline(
                 logger.info("4/8 Detectando canibalización en GSC...")
                 _write_status(step="gsc", message="Detectando canibalización en GSC", percent=60)
                 start_date = (datetime.now() - timedelta(days=30 * gsc_months_back)).strftime("%Y-%m-%d")
-                cannibal = _retry_call(
+                cannibal = retry_call(
                     fetch_cannibalization,
                     site_url=cfg.active_project.gsc_property,
                     start_date=start_date,
                     end_date=datetime.now().strftime("%Y-%m-%d"),
                     sa_json_path=cfg.active_client.gsc_sa_path,
+                    retries=retry_attempts,
+                    base_delay=retry_base_delay,
+                    jitter=0.2,
+                    on_retry=_log_retry_factory("fetch_cannibalization", retry_attempts),
                 )
                 if cannibal.items:
                     cannibal_notes = "\n\n## Canibalización detectada\n" + "\n".join([
