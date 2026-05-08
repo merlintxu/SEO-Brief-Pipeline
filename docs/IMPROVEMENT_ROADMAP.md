@@ -114,12 +114,13 @@ Acceptance:
 
 Replace background-only state with SQLite or Redis.
 
-Status: in progress (SQLite store spike implemented in `api/job_store.py`, not yet wired into API endpoints).
+Status: in progress (SQLite store implemented in `api/job_store.py` and partially wired into API create/status flow with `status.json` fallback compatibility).
 
 Acceptance:
 
 - API restart does not lose queued/running/completed metadata.
 - Job list endpoint can be added later without scanning directories.
+- Remaining step: wire complete status lifecycle and retention/cleanup policy.
 
 ### Cache management commands
 
