@@ -10,7 +10,7 @@ import requests
 from typing import Optional, Dict, List
 from pathlib import Path
 
-from seo_pipeline.utils.io import save_json, ensure_dir
+from seo_pipeline.utils.io import save_json, load_json, ensure_dir
 from seo_pipeline.utils.logging import logger
 from seo_pipeline.config import get_config
 
@@ -47,7 +47,7 @@ def fetch_serp_dataforseo(
         cache_path = cache_dir / cache_key
         if cache_path.exists() and (time.time() - cache_path.stat().st_mtime) < 30*24*3600:
             logger.debug("Cache hit DataForSEO SERP: %s", keyword)
-            return save_json(cache_path, None)  # load_json
+            return load_json(cache_path, default={})
 
     payload = [
         {

@@ -23,6 +23,7 @@ dependencies = [
     "pandas>=2.2.3",
     "instructor>=1.3.3",
     "openai>=1.51.0",
+    "sentry-sdk>=2.0.0",
     "loguru>=0.7.2",
     "python-dotenv>=1.0.1",
     "rich>=13.9.2",
@@ -37,6 +38,26 @@ dependencies = [
 test = [
     "pytest>=7.0.0",
     "pytest-asyncio",
+]
+
+[tool.setuptools]
+py-modules = ["client_manager"]
+
+[tool.setuptools.packages.find]
+include = [
+    "api",
+    "api.*",
+    "seo_pipeline",
+    "seo_pipeline.*",
+]
+exclude = [
+    "data",
+    "logs",
+    "notebooks",
+    "outputs",
+    "public",
+    "runs",
+    "tests",
 ]
 
 [tool.pytest.ini_options]

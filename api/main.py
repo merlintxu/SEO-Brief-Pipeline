@@ -28,7 +28,6 @@ from fastapi import (
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from api.rate_limiter import RateLimitMiddleware
@@ -412,12 +411,7 @@ async def download_file(run_id: str, filename: str):
     return FileResponse(file_path, filename=filename)
 
 
-# ============================================================================
-# STATIC FILES
-# ============================================================================
-
 ensure_dir(Path("outputs"))
-app.mount("/static", StaticFiles(directory="outputs"), name="static")
 
 
 if __name__ == "__main__":
