@@ -66,6 +66,7 @@ class AuditEntry(BaseModel):
 
     url: str = Field(..., min_length=1, max_length=2048, description="URL being audited")
     status_code: int = Field(default=0, ge=0, le=599, description="HTTP status code")
+    elapsed_ms: int = Field(default=0, ge=0, le=120000, description="Fetch and parse elapsed time in milliseconds")
     title: str = Field(default="", max_length=100, description="Page title (max 100 chars)")
     h1: str = Field(default="", max_length=100, description="H1 tag content")
     meta_desc: str = Field(default="", max_length=200, description="Meta description")

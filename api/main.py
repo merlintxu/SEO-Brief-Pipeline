@@ -35,6 +35,7 @@ from api.rate_limiter import RateLimitMiddleware
 from seo_pipeline.config import get_config
 from seo_pipeline.pipeline import run_full_pipeline
 from seo_pipeline.artifacts import DOWNLOADABLE_ARTIFACTS
+from seo_pipeline.utils.errors import classify_error
 from api.schemas import BriefingRequest, BriefingResponse
 from seo_pipeline.utils.io import save_json, ensure_dir, load_json
 
@@ -275,10 +276,12 @@ async def create_briefing(
                 )
             except Exception as e:
                 try:
+                    error_category = classify_error(e)
                     save_json(status_path, {
                         "status": "failed",
                         "step": "error",
-                        "message": str(e)
+                        "message": str(e),
+                        "error_category": error_category,
                     })
                 except Exception:
                     pass

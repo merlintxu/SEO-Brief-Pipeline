@@ -6,6 +6,8 @@ Evita duplicados en Colab y permite control total desde un único punto.
 from __future__ import annotations
 import logging
 import sys
+import json
+from typing import Any
 from loguru import logger
 from pathlib import Path
 
@@ -61,3 +63,17 @@ def setup_logging(
 
 # Configuración automática al importar el módulo (conveniente en notebooks)
 setup_logging(level="INFO")
+
+
+def log_event(level: str, event: str, **fields: Any) -> None:
+    """
+    Emit a structured JSON-like event through Loguru.
+    Keeps text logs machine-parsable for later analysis.
+    """
+    payload = {"event": event, **fields}
+    message = json.dumps(payload, ensure_ascii=False, default=str, sort_keys=True)
+    level_name = level.lower()
+    if hasattr(logger, level_name):
+        getattr(logger, level_name)(message)
+    else:
+        logger.info(message)

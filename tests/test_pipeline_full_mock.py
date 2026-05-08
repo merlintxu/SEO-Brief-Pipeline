@@ -107,4 +107,8 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
     metrics = json.loads((output_dir / "run_metrics.json").read_text(encoding="utf-8"))
     assert metrics["status"] == "done"
     assert set(metrics["stages"]) >= {"semrush", "serp", "audit", "anchors", "briefing", "export"}
+    for stage in ("semrush", "serp", "audit", "anchors", "briefing", "export"):
+        assert "provider" in metrics["stages"][stage]
+        assert "retries" in metrics["stages"][stage]
+        assert "status" in metrics["stages"][stage]
     assert json.loads(status_path.read_text(encoding="utf-8"))["status"] == "done"

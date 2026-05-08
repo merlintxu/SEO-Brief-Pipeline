@@ -122,18 +122,29 @@ The status payload includes:
 - `step`
 - `message`
 - `percent`
+- `error_category` (only when failed)
 
 ## Generated Artifacts
 
 Common files:
 
 - `status.json`
+- `run_metrics.json`
 - `serp_raw.json`
 - `audit_report.json`
 - briefing JSON
 - briefing Markdown
 - row24 CSV
 - row24 XLSX
+
+`run_metrics.json` now includes per-stage observability fields:
+
+- `provider`
+- `status`
+- `retries`
+- `items_processed`
+- `error_category` (when a stage fails)
+- audit-specific fields: `slowest_item_url`, `slowest_item_ms`, `failed_urls`
 
 Generated files are ignored by Git.
 
