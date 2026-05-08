@@ -114,6 +114,8 @@ Acceptance:
 
 Replace background-only state with SQLite or Redis.
 
+Status: in progress (SQLite store spike implemented in `api/job_store.py`, not yet wired into API endpoints).
+
 Acceptance:
 
 - API restart does not lose queued/running/completed metadata.
