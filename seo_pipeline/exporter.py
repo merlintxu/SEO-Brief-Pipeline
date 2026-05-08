@@ -13,6 +13,7 @@ from typing import Any
 import pandas as pd
 
 from seo_pipeline.models import SheetRow24, SEOBriefing
+from seo_pipeline.artifacts import BRIEFING_JSON, BRIEFING_MARKDOWN, ROW24_CSV, ROW24_XLSX
 from seo_pipeline.utils.io import save_json, save_text
 from seo_pipeline.blueprint import save_briefing_markdown
 from seo_pipeline.constants import HEADERS_24
@@ -44,12 +45,12 @@ def export_all_formats(
     exports = {}
 
     # 1. JSON completo (briefing estructurado)
-    json_path = output_dir / f"{run_id}_{keyword}_briefing.json"
+    json_path = output_dir / BRIEFING_JSON
     save_json(json_path, briefing.model_dump())
     exports["json"] = json_path
 
     # 2. Markdown legible
-    md_path = output_dir / f"{run_id}_{keyword}_briefing.md"
+    md_path = output_dir / BRIEFING_MARKDOWN
     save_briefing_markdown(briefing, md_path)
     exports["markdown"] = md_path
 
@@ -57,13 +58,13 @@ def export_all_formats(
     row_data = row24.to_row()
 
     # CSV
-    csv_path = output_dir / f"{run_id}_row24.csv"
+    csv_path = output_dir / ROW24_CSV
     df_csv = pd.DataFrame([row_data], columns=HEADERS_24)
     df_csv.to_csv(csv_path, index=False, encoding="utf-8")
     exports["csv"] = csv_path
 
     # XLSX
-    xlsx_path = output_dir / f"{run_id}_row24.xlsx"
+    xlsx_path = output_dir / ROW24_XLSX
     df_csv.to_excel(xlsx_path, index=False, engine="openpyxl")
     exports["xlsx"] = xlsx_path
 

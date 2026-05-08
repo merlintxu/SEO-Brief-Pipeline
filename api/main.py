@@ -34,6 +34,7 @@ from api.rate_limiter import RateLimitMiddleware
 
 from seo_pipeline.config import get_config
 from seo_pipeline.pipeline import run_full_pipeline
+from seo_pipeline.artifacts import DOWNLOADABLE_ARTIFACTS
 from api.schemas import BriefingRequest, BriefingResponse
 from seo_pipeline.utils.io import save_json, ensure_dir, load_json
 
@@ -53,12 +54,7 @@ API_KEY_NAME = "X-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 # Allowed output files (whitelist to prevent path traversal)
-ALLOWED_FILES = {
-    "briefing.json", "briefing.md", 
-    "row24.csv", "row24.xlsx", 
-    "status.json", "audit_report.json", 
-    "serp_raw.json", "run_metrics.json"
-}
+ALLOWED_FILES = DOWNLOADABLE_ARTIFACTS
 
 # ============================================================================
 # APP INITIALIZATION WITH LIFESPAN & MIDDLEWARE

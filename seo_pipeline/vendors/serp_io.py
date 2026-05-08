@@ -17,6 +17,7 @@ import requests
 from seo_pipeline.utils.io import save_json, load_json
 from seo_pipeline.utils.text import uniq_preserve
 from seo_pipeline.config import get_config
+from seo_pipeline.models import SerpSnapshot
 from seo_pipeline.utils.logging import logger
 
 # La librería oficial es 'google-search-results' → expone serpapi
@@ -162,6 +163,22 @@ def extract_top_urls(serp_data: Dict, max_urls: int = 12, include_ai_citations: 
                     urls.append(link)
 
     return uniq_preserve(urls)[:max_urls]
+
+
+def normalize_serp_snapshot(serp_data: Dict, provider: str = "unknown") -> SerpSnapshot:
+    """Build a provider-neutral summary for metrics and downstream contracts."""
+    params = serp_data.get("search_parameters", {}) or {}
+    return SerpSnapshot(
+        provider=provider,
+        query=params.get("q", ""),
+        gl=params.get("gl", ""),
+        hl=params.get("hl", ""),
+        organic_results_count=len(serp_data.get("organic_results", []) or []),
+        top_urls=extract_top_urls(serp_data, max_urls=12),
+        people_also_ask_count=len(serp_data.get("people_also_ask", []) or []),
+        related_searches_count=len(serp_data.get("related_searches", []) or []),
+        ai_overview_present=bool(serp_data.get("ai_overview")),
+    )
 
 
 def extract_competitor_domains(

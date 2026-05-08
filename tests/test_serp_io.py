@@ -2,7 +2,12 @@ import pytest
 
 from seo_pipeline.config import ClientConfig, get_config
 from seo_pipeline.vendors import serp_io
-from seo_pipeline.vendors.serp_io import extract_competitor_domains, normalize_domain, search_raw
+from seo_pipeline.vendors.serp_io import (
+    extract_competitor_domains,
+    normalize_domain,
+    normalize_serp_snapshot,
+    search_raw,
+)
 
 
 def test_normalize_domain_accepts_url_domain_and_subdomain():
@@ -28,6 +33,33 @@ def test_extract_competitor_domains_excludes_domain_variants():
     )
 
     assert domains == ["competitor.com", "other.com"]
+
+
+def test_normalize_serp_snapshot_counts_core_fields():
+    serp_data = {
+        "search_parameters": {"q": "kw", "gl": "es", "hl": "es-es"},
+        "organic_results": [
+            {"link": "https://a.example/page"},
+            {"link": "https://b.example/page"},
+        ],
+        "people_also_ask": [{"question": "Q1"}],
+        "related_searches": [{"query": "kw guide"}, {"query": "kw tips"}],
+        "ai_overview": {"sources": [{"link": "https://source.example"}]},
+    }
+
+    snapshot = normalize_serp_snapshot(serp_data, provider="serpapi")
+
+    assert snapshot.provider == "serpapi"
+    assert snapshot.query == "kw"
+    assert snapshot.organic_results_count == 2
+    assert snapshot.people_also_ask_count == 1
+    assert snapshot.related_searches_count == 2
+    assert snapshot.ai_overview_present is True
+    assert snapshot.top_urls == [
+        "https://a.example/page",
+        "https://b.example/page",
+        "https://source.example",
+    ]
 
 
 def test_dataforseo_fallback_requires_credentials(monkeypatch, tmp_path):
