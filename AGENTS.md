@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Recent work is being shipped through PR #11 (`codex/validation-serp-normalization`).
+- Recent work is being shipped through PR #15 (`codex/api-job-retention-startup`).
 
 ## Documented Changes (Recent)
 
@@ -30,23 +30,41 @@ This file is the entrypoint for coding agents working in this repository.
 - API run id now includes microseconds to avoid collision under burst requests.
 - Docs updated: `docs/RUNTIME_OPERATIONS.md`, `docs/IMMEDIATE_ACTION_PLAN.md`, `TROUBLESHOOTING.md`.
 - Test coverage added/updated for input validation, typed SERP normalization, API smoke/job-store flows.
+- Added run metrics contract tests to lock backward-compatible root keys and stage observability shape.
+- Added human-readable log correlation in pipeline text logs with `run_id` and `stage` prefixes.
+- Added job-store retention helpers:
+  - `delete_job(run_id)`
+  - `cleanup_old_jobs(max_age_days, statuses)`
+- Added API startup retention cleanup path:
+  - env config `JOB_STORE_RETENTION_DAYS` (default `30`)
+  - retention cleanup executes on API startup and does not block service boot if cleanup fails.
 
 ## Next Actions (Post-PR)
 
-1. Merge PR #11 after CI is green and re-check `main` CI.
-2. Wire `JobStore` deeper into API lifecycle:
-   - read path consistency between `status.json` and DB.
-   - add list/status admin endpoint only if needed (no public API break by default).
+1. Merge PR #15 after CI is green and re-check `main` CI.
+2. Wire complete `JobStore` lifecycle in API:
+   - retention policy is now present at store/startup level;
+   - next step is admin/list endpoints only if required.
 3. Continue normalization contracts:
-   - move additional consumers away from raw SERP dicts to typed models.
+   - move additional consumers away from raw SERP dicts to typed models;
    - keep raw payload persisted for debugging only.
 4. Improve observability operations:
-   - add run-level log correlation by `run_id` in shipped logs.
-   - add alerts for retry spikes and repeated provider `error_category`.
+   - add alerting for retry spikes and repeated provider `error_category`.
 5. Contract hardening:
-   - add snapshot/contract tests for exported artifacts and metrics shape evolution.
+   - extend snapshot/contract tests for exports and metrics evolution.
 6. Controlled UTF-8 cleanup:
    - docs first, then user-facing strings; avoid mixing with behavior changes.
+
+## Documentation Discipline (Mandatory)
+
+- Every functional code change must include:
+  - `AGENTS.md` update (status + next actions).
+  - at least one relevant docs update under `docs/` (operations/roadmap/architecture/troubleshooting).
+- Every PR description must include:
+  - summary of behavior changes,
+  - test commands executed,
+  - explicit note if no doc changes were needed (exception case).
+- Work is not considered complete until docs + agent status are updated.
 
 ## Safe Commands
 
