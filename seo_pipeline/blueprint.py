@@ -12,7 +12,7 @@ import json
 from openai import OpenAI, RateLimitError, OpenAIError
 from pydantic import BaseModel, Field
 
-from seo_pipeline.models import AnchorSet, SEOBriefing
+from seo_pipeline.models import AnchorSet, SEOBriefing, SerpSnapshot
 from seo_pipeline.utils.text import normalize_ws
 from seo_pipeline.constants import BRIEFING_SYSTEM_PROMPT
 from seo_pipeline.utils.logging import logger
@@ -24,7 +24,7 @@ def generate_briefing(
     keyword: str,
     search_volume: int,
     semrush_data: Dict,
-    serp_raw: Dict,
+    serp_snapshot: SerpSnapshot,
     audit_report: Dict,
     anchors: AnchorSet,
     openai_api_key: str,
@@ -35,6 +35,7 @@ def generate_briefing(
     """
     Genera el briefing completo utilizando OpenAI structured outputs nativos.
     Garantiza 100 % parseo correcto del JSON sin necesidad de instructor.
+    Ahora usa SerpSnapshot normalizado en lugar de raw SERP JSON.
     """
     client = OpenAI(api_key=openai_api_key)
 
@@ -50,10 +51,12 @@ Redacta un briefing SEO completo y ultra-detallado para crear un artículo que p
 - Keywords secundarias más relevantes (top 15 por volumen):
 {chr(10).join([f"- {k['keyword']} ({k['search_volume']:,} búsquedas/mes)" for k in semrush_data.get('keywords_secundarias', [])[:15]])}
 
-## SERP actual (Google {serp_raw.get('search_parameters', {}).get('hl', 'es')} {serp_raw.get('search_parameters', {}).get('gl', 'es')})
-- AI Overview presente: {"Sí" if serp_raw.get("ai_overview") else "No"}
-- People Also Ask: {len(serp_raw.get("people_also_ask", []))} preguntas
-- Related searches: {len(serp_raw.get("related_searches", []))} términos
+## SERP actual (Google {serp_snapshot.hl} {serp_snapshot.gl})
+- Resultados orgánicos: {serp_snapshot.organic_results_count}
+- AI Overview presente: {"Sí" if serp_snapshot.ai_overview_present else "No"}
+- People Also Ask: {serp_snapshot.people_also_ask_count} preguntas
+- Related searches: {serp_snapshot.related_searches_count} términos
+- Provider: {serp_snapshot.provider}
 
 ## Análisis de la competencia (Top-10 auditado)
 {chr(10).join([f"- {e['url']} → {e['word_count']} palabras | H1: {e.get('h1', '')[:80]}..." for e in audit_report.get('entries', [])[:8]])}
