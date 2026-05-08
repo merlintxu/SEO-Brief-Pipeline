@@ -48,6 +48,7 @@ class SerpSnapshot(BaseModel):
     people_also_ask_count: int = Field(default=0, ge=0)
     related_searches_count: int = Field(default=0, ge=0)
     ai_overview_present: bool = False
+    knowledge_graph_present: bool = False
 
 
 # ==================== Auditoría ====================

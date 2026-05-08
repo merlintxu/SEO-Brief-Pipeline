@@ -294,7 +294,7 @@ def run_full_pipeline(
             secondary_kws=[k.keyword for k in semrush_data.keywords_secundarias[:20]],
             target_url=target_url or "",
             briefing=briefing,
-            serp_data=serp_raw,
+            serp_snapshot=serp_snapshot,
             anchors=anchors,
             top_competitors=top_competitors,
             run_id=run_id,
