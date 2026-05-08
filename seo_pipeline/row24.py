@@ -6,20 +6,19 @@ Centraliza toda la lógica de mapeo y transformación.
 from __future__ import annotations
 
 from typing import List
-from seo_pipeline.models import SheetRow24, AnchorSet
-from seo_pipeline.constants import HEADERS_24
-from seo_pipeline.utils.text import uniq_preserve
+from seo_pipeline.models import SheetRow24, AnchorSet, SEOBriefing
 
 def build_row24(
     kw: str,
-               sv: int,
-               secondary_kws: List[str],
-               target_url: str,
-               briefing: dict,
-               serp_data: dict,
-               anchors: AnchorSet,
-               top_competitors: List[str],
-               run_id: str) -> SheetRow24:
+    sv: int,
+    secondary_kws: List[str],
+    target_url: str,
+    briefing: SEOBriefing,
+    serp_data: dict,
+    anchors: AnchorSet,
+    top_competitors: List[str],
+    run_id: str,
+) -> SheetRow24:
     """
     Construye el objeto SheetRow24 listo para exportar a Google Sheets.
 
@@ -28,7 +27,7 @@ def build_row24(
         sv (int): Volumen de búsqueda.
         secondary_kws (List[str]): Keywords secundarias.
         target_url (str): URL objetivo.
-        briefing (dict): Datos del briefing generado.
+        briefing (SEOBriefing): Datos del briefing generado.
         serp_data (dict): Datos de la SERP.
         anchors (AnchorSet): Anchors generados.
         top_competitors (List[str]): Lista de competidores.
@@ -60,6 +59,6 @@ def build_row24(
         anchor_primary=anchors.primary,
         anchor_secondary=anchors.secondary,
         anchor_internal=anchors.internal,
-        notes=briefing.get("unique_angle", "")[:200],
+        notes=briefing.unique_angle[:200],
         run_id=run_id
     )

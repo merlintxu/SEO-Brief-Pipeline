@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import List, Dict, Any, Optional
 import logging
+from urllib.parse import urlparse
 
 from seo_pipeline.utils.io import ensure_dir
 
@@ -30,6 +31,18 @@ def _ensure_gspread() -> None:
         raise RuntimeError("gspread no instalado. Ejecuta: pip install gspread")
 
 
+def normalize_spreadsheet_id(spreadsheet_id_or_url: str) -> str:
+    """Accept a raw spreadsheet id or a Google Sheets URL and return the id."""
+    value = spreadsheet_id_or_url.strip()
+    if "docs.google.com" not in value:
+        return value
+    path_parts = [part for part in urlparse(value).path.split("/") if part]
+    try:
+        return path_parts[path_parts.index("d") + 1]
+    except (ValueError, IndexError) as exc:
+        raise ValueError("No se pudo extraer spreadsheet_id de la URL de Google Sheets") from exc
+
+
 class SheetHandler:
     def __init__(self, spreadsheet_id: str, sa_json_path: str):
         """
@@ -42,7 +55,8 @@ class SheetHandler:
         _ensure_gspread()
         self.sa_path = sa_json_path
         self.gc = gspread.service_account(filename=sa_json_path)
-        self.sh = self.gc.open_by_key(spreadsheet_id)
+        self.spreadsheet_id = normalize_spreadsheet_id(spreadsheet_id)
+        self.sh = self.gc.open_by_key(self.spreadsheet_id)
 
     def get_or_create_worksheet(self, title: str, rows: int = 1000, cols: int = 30) -> gspread.Worksheet:
         """Obtiene una pestaña por nombre o la crea si no existe."""

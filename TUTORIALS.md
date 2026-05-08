@@ -65,7 +65,7 @@ import time
 from pathlib import Path
 
 class SEOBriefClient:
-    def __init__(self, base_url="http://localhost:8000", api_key="secret-token-2025"):
+    def __init__(self, base_url="http://localhost:8000", api_key="replace-with-your-api-key"):
         self.base_url = base_url
         self.api_key = api_key
         self.headers = {"X-API-Key": api_key}
@@ -190,7 +190,7 @@ if __name__ == "__main__":
    ```python
    response = requests.post(
        "http://localhost:8000/briefing",
-       headers={"X-API-Key": "secret-token-2025"},
+       headers={"X-API-Key": "replace-with-your-api-key"},
        json={
            "keyword": "seo best practices",
            "upload_to_sheets": True  # Enable upload

@@ -18,7 +18,7 @@ This document outlines security best practices, credential management, and incid
 2. **Required Variables**:
    - `SEMRUSH_TOKEN` - Semrush API token
    - `SERPAPI_KEY` - SerpAPI key
-   - `OPENAI_API_KEY` - OpenAI API key (sk-proj-...)
+   - `OPENAI_API_KEY` - OpenAI API key
    - `API_KEY` - FastAPI authentication key (>= 20 characters)
 
 3. **Optional Variables**:
@@ -45,7 +45,7 @@ openai_key = os.getenv("OPENAI_API_KEY")
 ❌ **Never hardcode API keys in source files**:
 ```python
 # WRONG ❌
-openai_key = "sk-proj-2L2eOghRrmJp2QX-AHjLKd3uAl_T-wCel9slxjRxHtQSzyooDruKktHHCwCjVipvhabBb9OTkz..."
+openai_key = "replace-with-a-real-key-only-in-local-env"
 ```
 
 ❌ **Never commit `.env` to Git**:
@@ -56,7 +56,7 @@ openai_key = "sk-proj-2L2eOghRrmJp2QX-AHjLKd3uAl_T-wCel9slxjRxHtQSzyooDruKktHHCw
 ❌ **Never pass credentials as command-line arguments**:
 ```bash
 # WRONG ❌
-python client_manager.py --openai-key "sk-proj-..."
+python client_manager.py --openai-key "replace-with-a-real-key"
 ```
 
 ---
@@ -73,7 +73,7 @@ If any API key is exposed (accidentally committed, shared, etc.), rotate it imme
 4. Copy the new key
 5. Update `.env`:
    ```env
-   OPENAI_API_KEY=sk-proj-[YOUR_NEW_KEY]
+   OPENAI_API_KEY=replace-with-your-new-key
    ```
 6. Restart the application
 
@@ -86,7 +86,7 @@ If any API key is exposed (accidentally committed, shared, etc.), rotate it imme
 3. Copy the new key
 4. Update `.env`:
    ```env
-   SERPAPI_KEY=[YOUR_NEW_KEY]
+   SERPAPI_KEY=replace-with-your-new-key
    ```
 5. Restart the application
 
@@ -100,7 +100,7 @@ If any API key is exposed (accidentally committed, shared, etc.), rotate it imme
 4. Generate a new token (if available in your Semrush plan)
 5. Update `.env`:
    ```env
-   SEMRUSH_TOKEN=[YOUR_NEW_TOKEN]
+   SEMRUSH_TOKEN=replace-with-your-new-token
    ```
 6. Restart the application
 
@@ -114,7 +114,7 @@ If any API key is exposed (accidentally committed, shared, etc.), rotate it imme
    ```
 2. Update `.env`:
    ```env
-   API_KEY=[YOUR_NEW_SECURE_KEY]
+   API_KEY=replace-with-your-new-secure-key
    ```
 3. Restart the API server
 
@@ -127,7 +127,7 @@ If any API key is exposed (accidentally committed, shared, etc.), rotate it imme
 3. Update `.env`:
    ```env
    DFSP_USERNAME=your_email@example.com
-   DFSP_PASSWORD=[YOUR_NEW_PASSWORD]
+   DFSP_PASSWORD=replace-with-your-new-password
    ```
 4. Restart the application
 
@@ -155,10 +155,7 @@ remote:   - Push cannot contain secrets
 Scan your local repository for exposed keys:
 
 ```bash
-# Look for OpenAI keys (pattern: sk-proj-*)
-grep -r "sk-proj-" . --include="*.py" --include="*.json" --exclude-dir=.git
-
-# Look for API patterns
+# Look for common API key field names without printing ignored local .env values.
 grep -r "api.key\|api_key\|apikey" . --include="*.py" --include="*.json" --exclude-dir=.git
 ```
 

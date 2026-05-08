@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from seo_pipeline.config import get_config, ClientConfig, ProjectConfig
-from seo_pipeline.models import SemrushResults, SemrushKeyword, SheetRow24
+from seo_pipeline.models import AnchorSet, SemrushResults, SemrushKeyword, SheetRow24
 
 # Set API_KEY before importing api.main (which validates it at import time)
 os.environ['API_KEY'] = 'secret-token-2025-test-key-long-enough'
@@ -19,7 +19,7 @@ def setup_cfg(tmp_path: Path):
         client_id='c1',
         name='c1',
         semrush_token='token',
-        serpapi_key=None,
+        serpapi_key='serp',
         openai_key='ok',
         gsc_sa_path=None,
         sheets_sa_path=None
@@ -57,7 +57,7 @@ def test_api_background_success(tmp_path, monkeypatch):
     monkeypatch.setattr('seo_pipeline.pipeline.SemrushClient.fetch_related', lambda *a, **k: SemrushResults(keyword_principal=SemrushKeyword(keyword='kw', search_volume=10), keywords_secundarias=[]))
     monkeypatch.setattr('seo_pipeline.pipeline.search_raw', lambda *a, **k: {'organic_results': [], 'search_parameters': {}})
     monkeypatch.setattr('seo_pipeline.pipeline.audit_urls', lambda urls: type('R', (), {'entries': [], 'model_dump': lambda self=None: {}})())
-    monkeypatch.setattr('seo_pipeline.pipeline.generate_anchors', lambda **kw: type('A', (), {'model_dump': lambda self=None: {}})())
+    monkeypatch.setattr('seo_pipeline.pipeline.generate_anchors', lambda **kw: AnchorSet(primary=[], secondary=[], internal=[]))
     
     def fake_briefing(*a, **kw):
         return type('B', (), {'model_dump': lambda self=None: {}, 'headings': [] , 'meta_title':'mt','meta_description':'md','h1':'h1','tone_style':'t','unique_angle':'u','longitud_recomendada':'lr','eeat_notas':'','faqs':[],'external_links':[],'multimedia_suggestions':[]})()
@@ -87,7 +87,7 @@ def test_api_background_sheets_failure_logs_but_completes(tmp_path, monkeypatch)
     monkeypatch.setattr('seo_pipeline.pipeline.SemrushClient.fetch_related', lambda *a, **k: SemrushResults(keyword_principal=SemrushKeyword(keyword='kw', search_volume=10), keywords_secundarias=[]))
     monkeypatch.setattr('seo_pipeline.pipeline.search_raw', lambda *a, **k: {'organic_results': [], 'search_parameters': {}})
     monkeypatch.setattr('seo_pipeline.pipeline.audit_urls', lambda urls: type('R', (), {'entries': [], 'model_dump': lambda self=None: {}})())
-    monkeypatch.setattr('seo_pipeline.pipeline.generate_anchors', lambda **kw: type('A', (), {'model_dump': lambda self=None: {}})())
+    monkeypatch.setattr('seo_pipeline.pipeline.generate_anchors', lambda **kw: AnchorSet(primary=[], secondary=[], internal=[]))
     monkeypatch.setattr('seo_pipeline.pipeline.generate_briefing', lambda *a, **k: type('B', (), {'model_dump': lambda self=None: {}, 'headings': [] , 'meta_title':'mt','meta_description':'md','h1':'h1','tone_style':'t','unique_angle':'u','longitud_recomendada':'lr','eeat_notas':'','faqs':[],'external_links':[],'multimedia_suggestions':[]})())
     monkeypatch.setattr('seo_pipeline.pipeline.build_row24', lambda *a, **k: SheetRow24(kw_principal='kw', run_id='r1'))
     monkeypatch.setattr('seo_pipeline.pipeline.export_all_formats', lambda *a, **k: {'json': Path('x.json')})
@@ -120,7 +120,7 @@ def test_api_background_gsc_failure_handled(tmp_path, monkeypatch):
     monkeypatch.setattr('seo_pipeline.pipeline.SemrushClient.fetch_related', lambda *a, **k: SemrushResults(keyword_principal=SemrushKeyword(keyword='kw', search_volume=10), keywords_secundarias=[]))
     monkeypatch.setattr('seo_pipeline.pipeline.search_raw', lambda *a, **k: {'organic_results': [], 'search_parameters': {}})
     monkeypatch.setattr('seo_pipeline.pipeline.audit_urls', lambda urls: type('R', (), {'entries': [], 'model_dump': lambda self=None: {}})())
-    monkeypatch.setattr('seo_pipeline.pipeline.generate_anchors', lambda **kw: type('A', (), {'model_dump': lambda self=None: {}})())
+    monkeypatch.setattr('seo_pipeline.pipeline.generate_anchors', lambda **kw: AnchorSet(primary=[], secondary=[], internal=[]))
     monkeypatch.setattr('seo_pipeline.pipeline.generate_briefing', lambda *a, **k: type('B', (), {'model_dump': lambda self=None: {}, 'headings': [] , 'meta_title':'mt','meta_description':'md','h1':'h1','tone_style':'t','unique_angle':'u','longitud_recomendada':'lr','eeat_notas':'','faqs':[],'external_links':[],'multimedia_suggestions':[]})())
     monkeypatch.setattr('seo_pipeline.pipeline.build_row24', lambda *a, **k: SheetRow24(kw_principal='kw', run_id='r1'))
     monkeypatch.setattr('seo_pipeline.pipeline.export_all_formats', lambda *a, **k: {'json': Path('x.json')})

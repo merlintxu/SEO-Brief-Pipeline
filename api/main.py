@@ -57,7 +57,7 @@ ALLOWED_FILES = {
     "briefing.json", "briefing.md", 
     "row24.csv", "row24.xlsx", 
     "status.json", "audit_report.json", 
-    "serp_raw.json"
+    "serp_raw.json", "run_metrics.json"
 }
 
 # ============================================================================
@@ -270,10 +270,12 @@ async def create_briefing(
                 run_full_pipeline(
                     keyword=req.keyword,
                     target_url=req.target_url,
+                    run_id=run_id,
                     upload_to_sheets=req.upload_to_sheets,
                     related_limit=req.related_limit,
                     serp_num=req.serp_num,
                     status_path=status_path,
+                    output_dir=run_dir,
                 )
             except Exception as e:
                 try:
