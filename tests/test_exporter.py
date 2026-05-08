@@ -6,6 +6,7 @@ from seo_pipeline.models import SheetRow24
 from seo_pipeline.models import SEOBriefing, BriefingSection
 from seo_pipeline.exporter import export_all_formats
 from seo_pipeline.artifacts import BRIEFING_JSON, BRIEFING_MARKDOWN, ROW24_CSV, ROW24_XLSX
+from seo_pipeline.constants import HEADERS_24
 
 
 def make_briefing():
@@ -53,3 +54,22 @@ def test_export_all_formats(tmp_path: Path):
     # Load CSV and check headers count
     df = pd.read_csv(exports["csv"])
     assert df.shape[0] == 1
+
+    # CSV snapshot: stable header contract + representative values
+    assert list(df.columns) == HEADERS_24
+    row = df.iloc[0].to_dict()
+    assert row["kw_principal"] == "kw"
+    assert row["sv_principal"] == 100
+    assert row["kw_secundarias"] == "a, b"
+    assert row["run_id"] == "r1"
+
+    # Markdown snapshot: key sections and ordering
+    markdown = exports["markdown"].read_text(encoding="utf-8")
+    assert markdown.startswith("# Briefing SEO")
+    assert "**Keyword principal**: MT" in markdown
+    assert "**Meta Description**: MD" in markdown
+    assert "**Tono y estilo**: neutral" in markdown
+    assert "**Longitud recomendada**: 2500" in markdown
+    assert "## Estructura de contenidos propuesta" in markdown
+    assert "### 1. S1\nContenido\n" in markdown
+    assert "### 8. S8\nContenido\n" in markdown
