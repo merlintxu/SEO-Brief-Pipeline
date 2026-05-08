@@ -36,6 +36,16 @@ def _ensure_serpapi() -> None:
         )
 
 
+def normalize_domain(value: Optional[str]) -> str:
+    """Return a comparable hostname without scheme, path, port, or leading www."""
+    if not value:
+        return ""
+    raw = value.strip().lower()
+    parsed = urlparse(raw if "://" in raw else f"//{raw}")
+    host = parsed.hostname or raw.split("/", 1)[0].split(":", 1)[0]
+    return host[4:] if host.startswith("www.") else host
+
+
 def search_raw(
     query: str,
     api_key: str = None,
@@ -77,7 +87,12 @@ def search_raw(
             logger.warning(f"SerpAPI falló: {e} → intentando DataForSEO")
 
     # 2. Fallback a DataForSEO
-    if use_dataforseo_fallback and client and hasattr(client, "dataforseo_login"):
+    has_dataforseo_credentials = bool(
+        client
+        and getattr(client, "dataforseo_login", None)
+        and getattr(client, "dataforseo_password", None)
+    )
+    if use_dataforseo_fallback and has_dataforseo_credentials:
         logger.info(f"Usando DataForSEO como fallback para: {query}")
         from .dataforseo_serp import fetch_serp_dataforseo
         fallback = fetch_serp_dataforseo(
@@ -161,13 +176,14 @@ def extract_competitor_domains(
     urls = extract_top_urls(serp_data, max_urls=50, include_ai_citations=True)
     domains: List[str] = []
     seen: set[str] = set()
+    excluded = normalize_domain(exclude_domain)
 
     for url in urls:
         try:
-            domain = urlparse(url).netloc
+            domain = normalize_domain(url)
             if not domain:
                 continue
-            if exclude_domain and exclude_domain in domain:
+            if excluded and (domain == excluded or domain.endswith(f".{excluded}")):
                 continue
             if domain not in seen:
                 seen.add(domain)

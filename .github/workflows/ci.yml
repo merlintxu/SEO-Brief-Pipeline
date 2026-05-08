@@ -20,7 +20,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -e ".[test]"
+
+      - name: Check tracked files for local secrets and bytecode
+        run: |
+          tracked_forbidden="$(git ls-files '.env' '*__pycache__*' '*.pyc')"
+          if [ -n "$tracked_forbidden" ]; then
+            echo "Forbidden tracked files:"
+            echo "$tracked_forbidden"
+            exit 1
+          fi
+          if git grep -nE 'sk-proj-[A-Za-z0-9_-]{20,}|[A-Fa-f0-9]{32,}' -- ':!*.md' ':!.env.example' ':!HISTORY_REWRITE.md' ':!SECURITY.md'; then
+            echo "Potential secret-like value found in tracked source files."
+            exit 1
+          fi
 
       - name: Run tests
         run: |
