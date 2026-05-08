@@ -49,11 +49,10 @@ def save_json(path: Path, data: Any) -> Path:
         return path
     except (OSError, TypeError, ValueError) as e:
         logger.error(f"Error guardando JSON {path}: {e}")
-        logger.error(f"OpenAI error generando briefing para {keyword}: {e}")
         raise
 
 
-def load_json(path: Path) -> Any:
+def load_json(path: Path, default: Any = None) -> Any:
     """
     Carga datos desde un archivo JSON.
 
@@ -61,13 +60,17 @@ def load_json(path: Path) -> Any:
         path (Path): Ruta del archivo.
 
     Returns:
-        Any: Datos cargados o None si no existe.
+        Any: Datos cargados o default si no existe.
     """
     path = Path(path)
     if not path.exists():
-        return None
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
+        return default
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning(f"No se pudo cargar JSON {path}: {e}")
+        return default
 
 
 def save_text(path: Path, text: str) -> Path:

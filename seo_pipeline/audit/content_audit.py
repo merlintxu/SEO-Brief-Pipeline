@@ -10,11 +10,10 @@ Auditoría técnica y de contenido para URLs (top-10 competidores + propia).
 from __future__ import annotations
 
 import logging
-from typing import List, Dict
-from pathlib import Path
+from typing import List
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import requests
 from bs4 import BeautifulSoup
 from seo_pipeline.models import AuditEntry, AuditReport, SchemaSignals
 from seo_pipeline.utils.text import normalize_ws
@@ -22,19 +21,6 @@ from seo_pipeline.utils.text import normalize_ws
 from seo_pipeline.vendors.scrapers import scrape_with_failover
 from seo_pipeline.config import get_config
 log = logging.getLogger("audit")
-
-HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; SEOAuditBot/2025)"}
-
-
-def _fetch_html(url: str, timeout: int = 15) -> str | None:
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
-        if r.status_code != 200:
-            return None
-        return r.text
-    except requests.exceptions.RequestException as e:
-        log.warning("Error fetching %s: %s", url, e)
-        return None
 
 
 def audit_single_url(url: str) -> AuditEntry:
@@ -113,15 +99,20 @@ def audit_urls(urls: List[str], max_workers: int = 5) -> AuditReport:
     Returns:
         AuditReport: Reporte consolidado de todas las URLs.
     """
-    report = AuditReport(label="top10_audit", entries=[], generated_at=Path().stem)
+    entries: list[AuditEntry | None] = [None] * len(urls)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(audit_single_url, url): url for url in urls}
+        futures = {executor.submit(audit_single_url, url): index for index, url in enumerate(urls)}
         for future in as_completed(futures):
+            index = futures[future]
             entry = future.result()
-            report.entries.append(entry)
+            entries[index] = entry
 
-    return report
+    return AuditReport(
+        label="top10_audit",
+        entries=[entry for entry in entries if entry is not None],
+        generated_at=datetime.now().isoformat(timespec="seconds"),
+    )
 
 def _fetch_html(url: str, timeout: int = 20) -> str | None:
     cfg = get_config()
@@ -129,8 +120,8 @@ def _fetch_html(url: str, timeout: int = 20) -> str | None:
 
     return scrape_with_failover(
         url=url,
-        piloterr_key=client.piloterr_key if hasattr(client, "piloterr_key") else None,
-        dataforseo_login=client.dataforseo_login if hasattr(client, "dataforseo_login") else None,
-        dataforseo_password=client.dataforseo_password if hasattr(client, "dataforseo_password") else None,
+        piloterr_key=getattr(client, "piloterr_key", None) if client else None,
+        dataforseo_login=getattr(client, "dataforseo_login", None) if client else None,
+        dataforseo_password=getattr(client, "dataforseo_password", None) if client else None,
         timeout=timeout
     )

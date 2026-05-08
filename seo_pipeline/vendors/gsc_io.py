@@ -115,7 +115,7 @@ def fetch_cannibalization(
             weighted_pos = stats["pos_sum"] / stats["weight"] if stats["weight"] > 0 else 99.0
             page_list.append(GscPage(
                 url=page,
-                clickable=stats["clicks"],
+                clicks=stats["clicks"],
                 impressions=stats["impressions"],
                 position=round(weighted_pos, 2)
             ))

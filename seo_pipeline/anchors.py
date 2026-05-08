@@ -6,7 +6,7 @@ Produce anchors mucho más efectivos y realistas que la versión heurística ori
 """
 from __future__ import annotations
 
-from typing import List
+from typing import List, Set
 import re
 
 from .utils.text import normalize_ws, uniq_preserve

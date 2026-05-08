@@ -17,8 +17,8 @@ def setup_config(tmp_path: Path):
         client_id='c1',
         name='c1',
         semrush_token='token',
-        serpapi_key=None,
-        openai_key=None,
+        serpapi_key='serp',
+        openai_key='ok',
         gsc_sa_path=None,
         sheets_sa_path=None
     )
