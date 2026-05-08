@@ -1,135 +1,108 @@
-# SEO Briefing Pipeline 2025
+# SEO Brief Pipeline
 
-An advanced, automated SEO pipeline that generates comprehensive content briefings using **Semrush**, **SerpAPI**, **OpenAI**, and **Google Search Console**.
+Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditoria de competidores, OpenAI structured outputs, Google Search Console y Google Sheets.
 
-## Documentation
-- 📘 **[Architecture Guide](ARCHITECTURE.md)**: Detailed component descriptions, data flow, and performance optimization
-- 🚀 **[Tutorials](TUTORIALS.md)**: Step-by-step guides for common use cases
-- 🔧 **[Troubleshooting](TROUBLESHOOTING.md)**: Common issues and solutions
-- 📡 **[API Reference](#api-usage)**: See below for API endpoints
-- 📁 **[Project Structure](#project-structure)**: File organization
+## Documentacion
 
-## Features
+- [AGENTS.md](AGENTS.md): guia principal para agentes y mantenedores.
+- [Architecture](ARCHITECTURE.md): arquitectura, flujo de datos y contratos.
+- [Project map](docs/PROJECT_MAP.md): relacion de ficheros, funciones y artefactos.
+- [External APIs](docs/EXTERNAL_APIS.md): proveedores externos, credenciales y fallos esperados.
+- [Pipeline deep dive](docs/PIPELINE_DEEP_DIVE.md): analisis paso a paso, riesgos y mejoras por etapa.
+- [Runtime operations](docs/RUNTIME_OPERATIONS.md): ejecucion local, API, debugging y despliegue.
+- [Immediate action plan](docs/IMMEDIATE_ACTION_PLAN.md): proximas acciones operativas y criterios de aceptacion.
+- [Improvement roadmap](docs/IMPROVEMENT_ROADMAP.md): plan priorizado de mejoras.
+- [Troubleshooting](TROUBLESHOOTING.md): diagnostico de fallos frecuentes.
+- [Security](SECURITY.md): normas de credenciales e incident response.
 
-- **Automated Keyword Research**: Fetches related keywords and search volumes via Semrush.
-- **SERP Analysis**: Analyzes top competitors in real-time using SerpAPI.
-- **Content Audit**: Scrapes and audits top competitor content (H1, H2, word count, etc.).
-- **Cannibalization Detection**: Checks Google Search Console for existing pages competing for the same keyword.
-- **AI Briefing Generation**: Uses OpenAI (GPT-4o) to generate detailed content briefs with structured output.
-- **Google Sheets Integration**: Automatically exports results to Google Sheets.
-- **API & CLI**: Available as both a REST API (FastAPI) and an interactive CLI.
+## Capacidades
 
-## 🛠️ Architecture
+- Investigacion de keywords con SEMrush.
+- Analisis SERP con SerpAPI y fallback opcional a DataForSEO.
+- Auditoria de URLs competidoras: title, H1, meta description, word count, headings y schema signals.
+- Deteccion opcional de canibalizacion con Google Search Console.
+- Generacion de anchors internos y externos.
+- Generacion de briefing SEO con OpenAI y modelo Pydantic `SEOBriefing`.
+- Exportacion a JSON, Markdown, CSV/XLSX y subida opcional a Google Sheets.
+- API FastAPI con autenticacion por `X-API-Key`, rate limiting y descargas por whitelist.
 
-```mermaid
-graph TD
-    A[Input: Keyword] --> B(Semrush API)
-    A --> C(SerpAPI)
-    C --> D[Top Competitors]
-    D --> E(Content Audit / Scraper)
-    E --> F[Anchors & NLP Analysis]
-    B --> G[Briefing Generator]
-    F --> G
-    H(GSC API) -->|Cannibalization Check| G
-    G --> I[Output: JSON/Markdown]
-    I --> J(Google Sheets)
-```
+## Instalacion
 
-## 📦 Setup
-
-1.  **Clone the repository**:
-    ```bash
-    git clone <repo-url>
-    cd SEO-Brief-Pipeline
-    ```
-
-2.  **Install dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-## ⚡ Quick Commands
+Runtime simple:
 
 ```bash
-# Reiniciar pipeline (limpia cache + inicia client manager)
-./restart_pipeline.sh
-
-# Ejecutar client manager directamente
-python client_manager.py
-
-# Ejecutar API server
-uvicorn api.main:app --reload
-
-# Ejecutar tests
-pytest
-
-# Limpiar cache Python manualmente
-find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+python -m pip install -r requirements.txt
 ```
 
-3.  **Environment Configuration** (⚠️ IMPORTANT for security):
-    
-    a. Copy `.env.example` to `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-    
-    b. Edit `.env` and fill in your API credentials (**never commit `.env` to Git**):
-    ```env
-    SEMRUSH_TOKEN=your_token_here
-    SERPAPI_KEY=your_key_here
-    OPENAI_API_KEY=sk-proj-your_key_here
-    API_KEY=your_strong_api_key_here  # Must be >= 20 chars
-    DFSP_USERNAME=your_username       # Optional
-    DFSP_PASSWORD=your_password       # Optional
-    ```
-    
-    c. **Security Best Practices**:
-    - ✅ **DO**: Store credentials in `.env` (local, never committed)
-    - ✅ **DO**: Use environment variables in production (Docker, cloud platforms)
-    - ❌ **DON'T**: Hardcode secrets in Python files
-    - ❌ **DON'T**: Commit `.env` to version control (already in `.gitignore`)
-    - ⚠️ **ROTATE keys** if ever exposed publicly
-    
-    d. **Service Accounts** (Google Cloud):
-    For GSC (Google Search Console) and Google Sheets integration, place your Service Account JSON files in:
-    - `credentials/client_secret.json` (OAuth credentials)
-    - `credentials/token_gsc.json` (cached token)
-    
-    See [TUTORIALS.md](TUTORIALS.md) for setup instructions.
+Desarrollo y tests:
 
-## 💻 Usage
+```bash
+python -m pip install -e ".[test]"
+```
 
-### Interactive CLI
-The easiest way to manage clients, projects, and runs.
+## Configuracion
+
+1. Copia el ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+2. Rellena `.env` con tus valores reales. No los pegues en issues, commits, logs ni documentacion.
+
+Variables principales:
+
+```env
+SEMRUSH_TOKEN=replace_with_semrush_token
+SERPAPI_KEY=replace_with_serpapi_key
+OPENAI_API_KEY=replace_with_openai_key
+API_KEY=replace_with_strong_api_key_at_least_20_chars
+DFSP_USERNAME=replace_with_dataforseo_login
+DFSP_PASSWORD=replace_with_dataforseo_password
+SENTRY_DSN=
+```
+
+3. Configura clientes y proyectos en:
+
+- `data/clients.json`
+- `data/projects.json`
+
+Los service accounts de Google deben vivir en `credentials/`, que esta ignorado por Git.
+
+## Uso Rapido
+
+CLI:
+
 ```bash
 python client_manager.py
 ```
 
-### API Usage
+API:
 
-Start the API server:
 ```bash
 uvicorn api.main:app --reload
 ```
 
-The API is available at `http://localhost:8000`. All endpoints require authentication via API key.
+Tests:
 
-#### Authentication
-Include the API key in the `X-API-Key` header:
 ```bash
-export API_KEY="your-secret-key"  # Set in .env or environment
+pytest -q
 ```
 
-#### Create a Briefing
+## API
 
-**Endpoint**: `POST /briefing`
+Todos los endpoints salvo `/health`, `/docs`, `/openapi.json` y `/redoc` requieren header:
 
-**curl Example**:
+```http
+X-API-Key: replace_with_api_key
+```
+
+Crear briefing:
+
 ```bash
 curl -X POST "http://localhost:8000/briefing" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: secret-token-2025" \
+  -H "X-API-Key: replace_with_api_key" \
   -d '{
     "keyword": "marketing digital",
     "target_url": null,
@@ -139,145 +112,38 @@ curl -X POST "http://localhost:8000/briefing" \
   }'
 ```
 
-**Python Example**:
-```python
-import requests
+Consultar estado:
 
-response = requests.post(
-    "http://localhost:8000/briefing",
-    headers={"X-API-Key": "secret-token-2025"},
-    json={
-        "keyword": "marketing digital",
-        "target_url": None,
-        "upload_to_sheets": False,
-        "related_limit": 30,
-        "serp_num": 10
-    }
-)
-
-data = response.json()
-run_id = data["run_id"]
-print(f"Briefing started: {run_id}")
-```
-
-**Response**:
-```json
-{
-  "run_id": "20251124_210530",
-  "keyword": "marketing digital",
-  "output_dir": "outputs/20251124_210530",
-  "files": {
-    "status": "/outputs/20251124_210530/status.json"
-  }
-}
-```
-
-#### Check Status
-
-**Endpoint**: `GET /briefing/{run_id}`
-
-**curl Example**:
 ```bash
-curl "http://localhost:8000/briefing/20251124_210530"
+curl -H "X-API-Key: replace_with_api_key" \
+  "http://localhost:8000/briefing/20260508_120000"
 ```
 
-**Python Example** (with polling):
-```python
-import time
+Descargar artefactos:
 
-def wait_for_completion(run_id, timeout=300):
-    start = time.time()
-    while time.time() - start < timeout:
-        resp = requests.get(f"http://localhost:8000/briefing/{run_id}")
-        status = resp.json()
-        
-        if status["status"] == "done":
-            print("✓ Briefing complete!")
-            return status
-        elif status["status"] == "failed":
-            print(f"✗ Failed: {status.get('message')}")
-            return status
-        
-        print(f"⏳ {status.get('step', 'processing')}...")
-        time.sleep(5)
-    
-    raise TimeoutError("Briefing took too long")
-
-result = wait_for_completion(run_id)
-```
-
-**Response** (in progress):
-```json
-{
-  "status": "running",
-  "step": "3/8 Auditando competidores...",
-  "message": "Processing"
-}
-```
-
-**Response** (complete):
-```json
-{
-  "status": "done",
-  "step": "completed",
-  "message": "Pipeline completado",
-  "files": {
-    "json": "/outputs/20251124_210530/briefing.json",
-    "markdown": "/outputs/20251124_210530/briefing.md",
-    "xlsx": "/outputs/20251124_210530/row24.xlsx"
-  }
-}
-```
-
-#### Download Results
-
-**Endpoints**: 
-- `GET /outputs/{run_id}/{filename}`
-
-**curl Example**:
 ```bash
-# Download JSON briefing
-curl "http://localhost:8000/outputs/20251124_210530/briefing.json" -o briefing.json
-
-# Download Markdown
-curl "http://localhost:8000/outputs/20251124_210530/briefing.md" -o briefing.md
+curl -H "X-API-Key: replace_with_api_key" \
+  "http://localhost:8000/outputs/20260508_120000/status.json"
 ```
 
-#### Error Responses
+Las descargas solo permiten nombres incluidos en la whitelist de `api/main.py`; no existe mount `/static` para exponer todo `outputs/`. Cada run tambien escribe `run_metrics.json` con duraciones y conteos por etapa.
 
-**401 Unauthorized** (missing API key):
-```json
-{
-  "detail": "Could not validate credentials"
-}
-```
+## Seguridad
 
-**404 Not Found** (invalid run_id):
-```json
-{
-  "detail": "Run_id no encontrado"
-}
-```
+- `.env`, `credentials/`, `outputs/`, `runs/`, caches y bytecode no deben versionarse.
+- CI bloquea `.env`, `__pycache__`, `.pyc` y patrones de secretos en archivos trackeados.
+- No imprimas valores de `.env` al depurar.
+- Las claves reales se gestionan fuera del repo.
 
-**500 Internal Server Error**:
-```json
-{
-  "detail": "SEMrush: solo 50 units (mínimo requerido: 100)"
-}
-```
+## Estado De Calidad
 
+Comandos esperados antes de entregar cambios:
 
-## 📂 Project Structure
-
-- `seo_pipeline/`: Core logic (vendors, audit, blueprint generation).
-- `api/`: FastAPI application.
-- `data/`: Local storage for clients/projects JSONs.
-- `outputs/`: Generated artifacts (briefings, raw data).
-- `tests/`: Pytest suite.
-
-## 🧪 Testing
-
-Run the test suite:
 ```bash
-pytest
+python -m pip install -e ".[test]"
+pytest -q
+git diff --check
+git ls-files '.env' '*__pycache__*' '*.pyc'
 ```
+
+El ultimo comando debe devolver vacio.
