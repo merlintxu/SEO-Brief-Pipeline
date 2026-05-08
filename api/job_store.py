@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -98,6 +98,30 @@ class JobStore:
                 (limit,),
             ).fetchall()
             return [self._row_to_record(row) for row in rows]
+
+    def delete_job(self, run_id: str) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM jobs WHERE run_id = ?", (run_id,))
+            conn.commit()
+            return cursor.rowcount
+
+    def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
+        if max_age_days < 1:
+            raise ValueError("max_age_days must be >= 1")
+        if not statuses:
+            raise ValueError("statuses must not be empty")
+
+        cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat(timespec="seconds")
+        placeholders = ", ".join("?" for _ in statuses)
+        query = f"""
+            DELETE FROM jobs
+            WHERE updated_at < ?
+              AND status IN ({placeholders})
+        """
+        with self._connect() as conn:
+            cursor = conn.execute(query, (cutoff, *statuses))
+            conn.commit()
+            return cursor.rowcount
 
     @staticmethod
     def _row_to_record(row: sqlite3.Row) -> JobRecord:
