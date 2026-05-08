@@ -1,32 +1,32 @@
 # SEO Brief Pipeline
 
-Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditoria de competidores, OpenAI structured outputs, Google Search Console y Google Sheets.
+Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditoría de competidores, OpenAI structured outputs, Google Search Console y Google Sheets.
 
-## Documentacion
+## Documentación
 
-- [AGENTS.md](AGENTS.md): guia principal para agentes y mantenedores.
+- [AGENTS.md](AGENTS.md): guía principal para agentes y mantenedores.
 - [Architecture](ARCHITECTURE.md): arquitectura, flujo de datos y contratos.
-- [Project map](docs/PROJECT_MAP.md): relacion de ficheros, funciones y artefactos.
+- [Project map](docs/PROJECT_MAP.md): relación de ficheros, funciones y artefactos.
 - [External APIs](docs/EXTERNAL_APIS.md): proveedores externos, credenciales y fallos esperados.
-- [Pipeline deep dive](docs/PIPELINE_DEEP_DIVE.md): analisis paso a paso, riesgos y mejoras por etapa.
-- [Runtime operations](docs/RUNTIME_OPERATIONS.md): ejecucion local, API, debugging y despliegue.
-- [Immediate action plan](docs/IMMEDIATE_ACTION_PLAN.md): proximas acciones operativas y criterios de aceptacion.
+- [Pipeline deep dive](docs/PIPELINE_DEEP_DIVE.md): análisis paso a paso, riesgos y mejoras por etapa.
+- [Runtime operations](docs/RUNTIME_OPERATIONS.md): ejecución local, API, debugging y despliegue.
+- [Immediate action plan](docs/IMMEDIATE_ACTION_PLAN.md): próximas acciones operativas y criterios de aceptación.
 - [Improvement roadmap](docs/IMPROVEMENT_ROADMAP.md): plan priorizado de mejoras.
-- [Troubleshooting](TROUBLESHOOTING.md): diagnostico de fallos frecuentes.
+- [Troubleshooting](TROUBLESHOOTING.md): diagnóstico de fallos frecuentes.
 - [Security](SECURITY.md): normas de credenciales e incident response.
 
 ## Capacidades
 
-- Investigacion de keywords con SEMrush.
-- Analisis SERP con SerpAPI y fallback opcional a DataForSEO.
-- Auditoria de URLs competidoras: title, H1, meta description, word count, headings y schema signals.
-- Deteccion opcional de canibalizacion con Google Search Console.
-- Generacion de anchors internos y externos.
-- Generacion de briefing SEO con OpenAI y modelo Pydantic `SEOBriefing`.
-- Exportacion a JSON, Markdown, CSV/XLSX y subida opcional a Google Sheets.
-- API FastAPI con autenticacion por `X-API-Key`, rate limiting y descargas por whitelist.
+- Investigación de keywords con SEMrush.
+- Análisis SERP con SerpAPI y fallback opcional a DataForSEO.
+- Auditoría de URLs competidoras: title, H1, meta description, word count, headings y schema signals.
+- Detección opcional de canibalización con Google Search Console.
+- Generación de anchors internos y externos.
+- Generación de briefing SEO con OpenAI y modelo Pydantic `SEOBriefing`.
+- Exportación a JSON, Markdown, CSV/XLSX y subida opcional a Google Sheets.
+- API FastAPI con autenticación por `X-API-Key`, rate limiting y descargas por whitelist.
 
-## Instalacion
+## Instalación
 
 Runtime simple:
 
@@ -40,7 +40,7 @@ Desarrollo y tests:
 python -m pip install -e ".[test]"
 ```
 
-## Configuracion
+## Configuración
 
 1. Copia el ejemplo:
 
@@ -48,7 +48,7 @@ python -m pip install -e ".[test]"
 cp .env.example .env
 ```
 
-2. Rellena `.env` con tus valores reales. No los pegues en issues, commits, logs ni documentacion.
+2. Rellena `.env` con tus valores reales. No los pegues en issues, commits, logs ni documentación.
 
 Variables principales:
 
@@ -67,9 +67,9 @@ SENTRY_DSN=
 - `data/clients.json`
 - `data/projects.json`
 
-Los service accounts de Google deben vivir en `credentials/`, que esta ignorado por Git.
+Los service accounts de Google deben vivir en `credentials/`, que está ignorado por Git.
 
-## Uso Rapido
+## Uso Rápido
 
 CLI:
 
@@ -126,7 +126,7 @@ curl -H "X-API-Key: replace_with_api_key" \
   "http://localhost:8000/outputs/20260508_120000/status.json"
 ```
 
-Las descargas solo permiten nombres incluidos en la whitelist de `api/main.py`; no existe mount `/static` para exponer todo `outputs/`. Cada run tambien escribe `run_metrics.json` con duraciones y conteos por etapa.
+Las descargas solo permiten nombres incluidos en la whitelist de `api/main.py`; no existe mount `/static` para exponer todo `outputs/`. Cada run también escribe `run_metrics.json` con duraciones y conteos por etapa.
 
 ## Seguridad
 
@@ -146,4 +146,4 @@ git diff --check
 git ls-files '.env' '*__pycache__*' '*.pyc'
 ```
 
-El ultimo comando debe devolver vacio.
+El último comando debe devolver vacío.
