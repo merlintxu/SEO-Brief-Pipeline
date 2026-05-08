@@ -42,11 +42,14 @@ def poll_status(client, run_id, timeout=5.0):
     start = time.time()
     while time.time() - start < timeout:
         r = client.get(f"/briefing/{run_id}")
+        if r.status_code == 429:
+            time.sleep(1.0)
+            continue
         if r.status_code == 200:
             data = r.json()
             if data.get("status") in ("done", "failed"):
                 return data
-        time.sleep(0.2)
+        time.sleep(0.5)
     return None
 
 
