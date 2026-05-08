@@ -58,6 +58,17 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 # Allowed output files (whitelist to prevent path traversal)
 ALLOWED_FILES = DOWNLOADABLE_ARTIFACTS
 
+
+def _get_job_retention_days() -> int:
+    raw = os.getenv("JOB_STORE_RETENTION_DAYS", "30").strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError("JOB_STORE_RETENTION_DAYS must be an integer >= 1") from exc
+    if value < 1:
+        raise RuntimeError("JOB_STORE_RETENTION_DAYS must be >= 1")
+    return value
+
 # ============================================================================
 # APP INITIALIZATION WITH LIFESPAN & MIDDLEWARE
 # ============================================================================
@@ -80,6 +91,12 @@ async def lifespan(app: FastAPI):
         )
     
     ensure_dir(Path("outputs"))
+    try:
+        retention_days = _get_job_retention_days()
+        job_store.cleanup_old_jobs(max_age_days=retention_days)
+    except Exception:
+        # Startup must not fail if retention cleanup fails.
+        pass
     yield
 
 
@@ -298,7 +315,7 @@ async def create_briefing(
                     })
                     job_store.update_status(
                         run_id,
-                        "failed",
+                        status="failed",
                         step="error",
                         message=str(e),
                         error_category=error_category,

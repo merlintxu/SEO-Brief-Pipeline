@@ -20,6 +20,7 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
 - GSC click totals map to `GscPage.clicks`.
 - Google Sheets accepts either a raw spreadsheet id or a full Google Sheets URL.
 - Documentation entrypoints exist for agents, project map, external APIs, runtime operations, pipeline deep dive and roadmap.
+- Documentation governance is mandatory: each functional change must update `AGENTS.md` plus relevant docs under `docs/`.
 
 ## Next 24 Hours
 
@@ -69,6 +70,7 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
 - API status and download routes read from the same run directory.
 - Provider failures are categorized without printing secret values.
 - Future agents can start from `AGENTS.md` and `docs/PIPELINE_DEEP_DIVE.md` without rediscovering system structure.
+- Every merged PR includes synchronized updates to status docs and `AGENTS.md`.
 
 ## Commands Before Publishing
 
