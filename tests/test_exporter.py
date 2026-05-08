@@ -5,6 +5,7 @@ import pandas as pd
 from seo_pipeline.models import SheetRow24
 from seo_pipeline.models import SEOBriefing, BriefingSection
 from seo_pipeline.exporter import export_all_formats
+from seo_pipeline.artifacts import BRIEFING_JSON, BRIEFING_MARKDOWN, ROW24_CSV, ROW24_XLSX
 
 
 def make_briefing():
@@ -44,6 +45,10 @@ def test_export_all_formats(tmp_path: Path):
     assert "markdown" in exports and exports["markdown"].exists()
     assert "csv" in exports and exports["csv"].exists()
     assert "xlsx" in exports and exports["xlsx"].exists()
+    assert exports["json"].name == BRIEFING_JSON
+    assert exports["markdown"].name == BRIEFING_MARKDOWN
+    assert exports["csv"].name == ROW24_CSV
+    assert exports["xlsx"].name == ROW24_XLSX
 
     # Load CSV and check headers count
     df = pd.read_csv(exports["csv"])

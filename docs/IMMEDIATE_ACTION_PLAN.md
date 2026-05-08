@@ -12,6 +12,9 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
 - `.env` is ignored and must remain local-only.
 - API-triggered runs write status, artifacts and `run_metrics.json` under the same run directory.
 - Downloads are restricted by the API whitelist.
+- Downloadable artifact names are centralized in `seo_pipeline/artifacts.py`.
+- Required runtime providers are validated through `seo_pipeline/runtime_validation.py`.
+- SERP responses have an initial provider-neutral `SerpSnapshot` summary for metrics and future contracts.
 - GSC click totals map to `GscPage.clicks`.
 - Google Sheets accepts either a raw spreadsheet id or a full Google Sheets URL.
 - Documentation entrypoints exist for agents, project map, external APIs, runtime operations, pipeline deep dive and roadmap.
@@ -30,23 +33,17 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
 
 ## Next 3-5 Days
 
-1. Centralize runtime validation:
-   - create one validation function for active client/project requirements;
-   - return structured missing-capability errors;
-   - keep optional providers optional.
-2. Formalize SERP normalization:
-   - add a provider-neutral `SerpSnapshot` model;
+1. Extend SERP normalization:
    - add SerpAPI and DataForSEO fixture tests;
-   - record provider name and normalized counts in metrics.
-3. Improve operational observability:
+   - move more downstream consumers from raw SERP JSON to `SerpSnapshot`;
+   - preserve raw provider payload for debugging.
+2. Improve operational observability:
    - add structured logs keyed by `run_id`;
    - add stage error categories;
    - add slowest competitor URL and provider retry counts to `run_metrics.json`.
-4. Strengthen export contracts:
-   - define downloadable artifact names in one module;
-   - use that definition in both `exporter.py` and `api/main.py`;
+3. Strengthen export contracts:
    - add snapshot tests for Markdown and CSV exports.
-5. Finish controlled UTF-8 cleanup:
+4. Finish controlled UTF-8 cleanup:
    - clean docs first;
    - clean user-facing strings second;
    - avoid mixing encoding cleanup with behavior changes.

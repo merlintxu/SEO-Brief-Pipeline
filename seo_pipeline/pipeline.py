@@ -12,13 +12,19 @@ import time
 from typing import Optional
 
 from seo_pipeline.config import get_config
+from seo_pipeline.artifacts import AUDIT_REPORT_JSON, RUN_METRICS_JSON, SERP_RAW_JSON
 from seo_pipeline.constants import (
     DEFAULT_RELATED_LIMIT,
     DEFAULT_SERP_NUM,
     DEFAULT_TOP_COMPETITORS,
 )
 from seo_pipeline.vendors.semrush_io import SemrushClient
-from seo_pipeline.vendors.serp_io import search_raw, extract_top_urls, extract_competitor_domains
+from seo_pipeline.vendors.serp_io import (
+    search_raw,
+    extract_top_urls,
+    extract_competitor_domains,
+    normalize_serp_snapshot,
+)
 from seo_pipeline.audit.content_audit import audit_urls
 from seo_pipeline.anchors import generate_anchors
 from seo_pipeline.blueprint import generate_briefing
@@ -29,6 +35,7 @@ from seo_pipeline.vendors.sheets_io import upsert_to_sheet
 from seo_pipeline.constants import HEADERS_24, SHEET_ROW_KEYCOLS
 from seo_pipeline.utils.logging import logger
 from seo_pipeline.utils.retry import retry_call
+from seo_pipeline.runtime_validation import validate_runtime_requirements
 from datetime import timedelta
 from seo_pipeline.utils.io import save_json
 
@@ -49,8 +56,7 @@ def run_full_pipeline(
     Ejecuta el pipeline SEO completo y devuelve un diccionario con rutas a todos los artefactos generados.
     """
     cfg = get_config()
-    if not cfg.active_client or not cfg.active_project:
-        raise RuntimeError("Cliente y proyecto deben estar configurados antes de ejecutar el pipeline.")
+    runtime_requirements = validate_runtime_requirements(cfg)
 
     run_id = run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path(output_dir) if output_dir else cfg.get_output_dir() / run_id
@@ -101,7 +107,7 @@ def run_full_pipeline(
         def _write_metrics(state: str) -> None:
             metrics["status"] = state
             metrics["finished_at"] = datetime.now().isoformat(timespec="seconds")
-            save_json(output_dir / "run_metrics.json", metrics)
+            save_json(output_dir / RUN_METRICS_JSON, metrics)
 
         _write_status(step="start", message="Pipeline iniciado", percent=0)
 
@@ -111,8 +117,6 @@ def run_full_pipeline(
         logger.info("1/8 Obteniendo datos SEMrush...")
         _write_status(step="semrush", message="Obteniendo datos SEMrush", percent=5)
         stage_started = _stage_start("semrush")
-        if not cfg.active_client.semrush_token:
-            raise RuntimeError("SEMRUSH_TOKEN no configurado para el cliente activo")
         semrush_client = SemrushClient(
             token=cfg.active_client.semrush_token,
             cache_dir=cfg.cache_dir,
@@ -141,10 +145,6 @@ def run_full_pipeline(
         logger.info("2/8 Consultando SERP en tiempo real...")
         _write_status(step="serp", message="Consultando SERP en tiempo real", percent=20)
         stage_started = _stage_start("serp")
-        has_serpapi = bool(cfg.active_client.serpapi_key)
-        has_dataforseo = bool(cfg.active_client.dataforseo_login and cfg.active_client.dataforseo_password)
-        if not has_serpapi and not has_dataforseo:
-            raise RuntimeError("SERP no configurado: falta SERPAPI_KEY o credenciales DataForSEO completas")
         serp_raw = retry_call(
             search_raw,
             query=keyword,
@@ -157,11 +157,13 @@ def run_full_pipeline(
             jitter=0.2,
             on_retry=_log_retry_factory("search_raw", retry_attempts),
         )
-        serp_path = output_dir / "serp_raw.json"
+        serp_path = output_dir / SERP_RAW_JSON
         save_json(serp_path, serp_raw)
         results["serp_raw_path"] = str(serp_path)
+        serp_snapshot = normalize_serp_snapshot(serp_raw, provider="serpapi_or_dataforseo")
+        results["serp_snapshot"] = serp_snapshot.model_dump()
 
-        top_urls = extract_top_urls(serp_raw, max_urls=12)
+        top_urls = serp_snapshot.top_urls
         top_competitors = extract_competitor_domains(
             serp_raw,
             exclude_domain=cfg.active_project.base_domain,
@@ -173,7 +175,10 @@ def run_full_pipeline(
             stage_started,
             top_urls=len(top_urls),
             top_competitors=len(top_competitors),
-            ai_overview_present=bool(serp_raw.get("ai_overview")),
+            organic_results=serp_snapshot.organic_results_count,
+            people_also_ask=serp_snapshot.people_also_ask_count,
+            related_searches=serp_snapshot.related_searches_count,
+            ai_overview_present=serp_snapshot.ai_overview_present,
         )
 
         # ===================================================================
@@ -190,7 +195,7 @@ def run_full_pipeline(
             jitter=0.2,
             on_retry=_log_retry_factory("audit_urls", retry_attempts),
         )
-        audit_path = output_dir / "audit_report.json"
+        audit_path = output_dir / AUDIT_REPORT_JSON
         save_json(audit_path, audit_report.model_dump())
         results["audit_path"] = str(audit_path)
         _stage_finish("audit", stage_started, audited_urls=len(audit_report.entries))
@@ -199,7 +204,7 @@ def run_full_pipeline(
         # 4. Detección de canibalización (GSC)
         # ===================================================================
         cannibal_notes = ""
-        if cfg.active_client.gsc_sa_path:
+        if runtime_requirements.can_run_gsc:
             try:
                 logger.info("4/8 Detectando canibalización en GSC...")
                 _write_status(step="gsc", message="Detectando canibalización en GSC", percent=60)
@@ -264,8 +269,6 @@ def run_full_pipeline(
         logger.info("6/8 Generando briefing con OpenAI (gpt-4o)...")
         _write_status(step="briefing", message="Generando briefing con OpenAI", percent=80)
         stage_started = _stage_start("briefing")
-        if not cfg.active_client.openai_key:
-            raise RuntimeError("OPENAI_API_KEY no configurada para el cliente activo")
         briefing = generate_briefing(
             keyword=keyword,
             search_volume=semrush_data.keyword_principal.search_volume,
@@ -310,7 +313,7 @@ def run_full_pipeline(
         # ===================================================================
         # 8. Subida automática a Google Sheets (opcional)
         # ===================================================================
-        if upload_to_sheets and cfg.active_client.sheets_sa_path and cfg.active_project.sheets_id:
+        if upload_to_sheets and runtime_requirements.can_upload_sheets:
             logger.info("8/8 Subiendo fila 24 a Google Sheets...")
             _write_status(step="sheets", message="Subida a Google Sheets (opcional)", percent=95)
             stage_started = _stage_start("sheets")
@@ -336,7 +339,7 @@ def run_full_pipeline(
 
         logger.info("=== PIPELINE COMPLETADO CON ÉXITO ===\n")
         _write_metrics("done")
-        results["metrics_path"] = str(output_dir / "run_metrics.json")
+        results["metrics_path"] = str(output_dir / RUN_METRICS_JSON)
         _write_status(step="done", message="Pipeline completado", percent=100, state="done")
         return results
 

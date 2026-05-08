@@ -36,6 +36,20 @@ class SemrushResults(BaseModel):
     keywords_secundarias: List[SemrushKeyword] = Field(default_factory=list, max_length=100)
 
 
+# ==================== SERP ====================
+class SerpSnapshot(BaseModel):
+    model_config = BaseConfig
+    provider: str = Field(default="unknown")
+    query: str = Field(default="")
+    gl: str = Field(default="")
+    hl: str = Field(default="")
+    organic_results_count: int = Field(default=0, ge=0)
+    top_urls: List[str] = Field(default_factory=list)
+    people_also_ask_count: int = Field(default=0, ge=0)
+    related_searches_count: int = Field(default=0, ge=0)
+    ai_overview_present: bool = False
+
+
 # ==================== Auditoría ====================
 class SchemaSignals(BaseModel):
     model_config = BaseConfig
