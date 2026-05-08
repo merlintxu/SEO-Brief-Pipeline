@@ -80,7 +80,7 @@ def run_full_pipeline(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("=== INICIO PIPELINE SEO 2025 ===")
-    logger.info(f"Keyword: {keyword} | Run ID: {run_id}")
+    logger.info(f"[run_id={run_id}] Keyword: {keyword}")
     log_event("info", "pipeline.start", run_id=run_id, keyword=keyword)
 
     results = {"run_id": run_id, "keyword": keyword, "output_dir": str(output_dir)}
@@ -97,6 +97,18 @@ def run_full_pipeline(
     pipeline_started = time.perf_counter()
 
     try:
+        def _log(level: str, message: str, stage: str | None = None) -> None:
+            prefix = f"[run_id={run_id}]"
+            if stage:
+                prefix = f"{prefix} [stage={stage}]"
+            text = f"{prefix} {message}"
+            if level == "warning":
+                logger.warning(text)
+            elif level == "error":
+                logger.error(text)
+            else:
+                logger.info(text)
+
         def _write_status(
             step: str,
             message: str = "",
@@ -120,9 +132,11 @@ def run_full_pipeline(
         def _log_retry_factory(fn_name: str, total_retries: int, stage: str, provider: str):
             def _log_retry(attempt: int, exc: Exception, delay: float) -> None:
                 stage_retries[stage] = stage_retries.get(stage, 0) + 1
-                logger.warning(
+                _log(
+                    "warning",
                     f"Intento {attempt}/{total_retries} fallÃ³ para {fn_name}: {exc} "
-                    f"(reintentando en {delay:.2f}s)"
+                    f"(reintentando en {delay:.2f}s)",
+                    stage=stage,
                 )
                 log_event(
                     "warning",
@@ -176,7 +190,7 @@ def run_full_pipeline(
         # ===================================================================
         # 1. SEMrush â€“ Volumen + keywords secundarias
         # ===================================================================
-        logger.info("1/8 Obteniendo datos SEMrush...")
+        _log("info", "1/8 Obteniendo datos SEMrush...", stage="semrush")
         _write_status(step="semrush", message="Obteniendo datos SEMrush", percent=5)
         stage_started = _stage_start("semrush", provider="semrush")
         semrush_client = SemrushClient(
@@ -206,7 +220,7 @@ def run_full_pipeline(
         # ===================================================================
         # 2. SERP Google (SerpAPI)
         # ===================================================================
-        logger.info("2/8 Consultando SERP en tiempo real...")
+        _log("info", "2/8 Consultando SERP en tiempo real...", stage="serp")
         _write_status(step="serp", message="Consultando SERP en tiempo real", percent=20)
         stage_started = _stage_start("serp", provider="serpapi_or_dataforseo")
         serp_raw = retry_call(
@@ -250,7 +264,7 @@ def run_full_pipeline(
         # ===================================================================
         # 3. AuditorÃ­a de contenido Top-10
         # ===================================================================
-        logger.info(f"3/8 Auditando contenido de la competencia ({len(top_urls)} URLs)...")
+        _log("info", f"3/8 Auditando contenido de la competencia ({len(top_urls)} URLs)...", stage="audit")
         _write_status(step="audit", message="Auditando contenido competitivo", percent=40)
         stage_started = _stage_start("audit", provider="scrape_failover")
         audit_report = retry_call(
@@ -283,7 +297,7 @@ def run_full_pipeline(
         cannibal_notes = ""
         if runtime_requirements.can_run_gsc:
             try:
-                logger.info("4/8 Detectando canibalizaciÃ³n en GSC...")
+                _log("info", "4/8 Detectando canibalizaciÃ³n en GSC...", stage="gsc")
                 _write_status(step="gsc", message="Detectando canibalizaciÃ³n en GSC", percent=60)
                 stage_started = _stage_start("gsc", provider="gsc")
                 start_date = (datetime.now() - timedelta(days=30 * gsc_months_back)).strftime("%Y-%m-%d")
@@ -313,7 +327,7 @@ def run_full_pipeline(
                 )
             except RuntimeError as e:
                 error_category = classify_error(e)
-                logger.warning(f"Canibalización no disponible: {e}")
+                _log("warning", f"Canibalización no disponible: {e}", stage="gsc")
                 if "gsc" in metrics["stages"]:
                     _stage_finish(
                         "gsc",
@@ -324,7 +338,7 @@ def run_full_pipeline(
                         error_category=error_category,
                     )
         else:
-            logger.info("4/8 GSC no configurado â†’ omitiendo canibalizaciÃ³n")
+            _log("info", "4/8 GSC no configurado â†’ omitiendo canibalizaciÃ³n", stage="gsc")
             metrics["stages"]["gsc"] = {
                 "skipped": True,
                 "reason": "not_configured",
@@ -336,7 +350,7 @@ def run_full_pipeline(
         # ===================================================================
         # 5. GeneraciÃ³n inteligente de anchors
         # ===================================================================
-        logger.info("5/8 Generando anchor texts optimizados...")
+        _log("info", "5/8 Generando anchor texts optimizados...", stage="anchors")
         _write_status(step="anchors", message="Generando anchors", percent=70)
         stage_started = _stage_start("anchors", provider="internal")
         competitor_titles = [
@@ -365,7 +379,7 @@ def run_full_pipeline(
         # ===================================================================
         # 6. Briefing con OpenAI + Instructor (structured output)
         # ===================================================================
-        logger.info("6/8 Generando briefing con OpenAI (gpt-4o)...")
+        _log("info", "6/8 Generando briefing con OpenAI (gpt-4o)...", stage="briefing")
         _write_status(step="briefing", message="Generando briefing con OpenAI", percent=80)
         stage_started = _stage_start("briefing", provider="openai")
         briefing = generate_briefing(
@@ -391,7 +405,7 @@ def run_full_pipeline(
         # ===================================================================
         # 7. ConstrucciÃ³n fila 24 columnas + exportaciÃ³n mÃºltiple
         # ===================================================================
-        logger.info("7/8 Construyendo fila 24 columnas y exportando...")
+        _log("info", "7/8 Construyendo fila 24 columnas y exportando...", stage="export")
         _write_status(step="export", message="Construyendo fila y exportando", percent=90)
         stage_started = _stage_start("export", provider="internal")
         row24 = build_row24(
@@ -426,7 +440,7 @@ def run_full_pipeline(
         # 8. Subida automÃ¡tica a Google Sheets (opcional)
         # ===================================================================
         if upload_to_sheets and runtime_requirements.can_upload_sheets:
-            logger.info("8/8 Subiendo fila 24 a Google Sheets...")
+            _log("info", "8/8 Subiendo fila 24 a Google Sheets...", stage="sheets")
             _write_status(step="sheets", message="Subida a Google Sheets (opcional)", percent=95)
             stage_started = _stage_start("sheets", provider="google_sheets")
             try:
@@ -440,7 +454,7 @@ def run_full_pipeline(
                 )
                 results["sheets"] = sheets_result
                 _stage_finish("sheets", stage_started, provider="google_sheets", items_processed=1, **sheets_result)
-                logger.info("Fila subida correctamente a Sheets")
+                _log("info", "Fila subida correctamente a Sheets", stage="sheets")
             except Exception as e:
                 error_category = classify_error(e)
                 results["sheets_error"] = str(e)
@@ -453,9 +467,9 @@ def run_full_pipeline(
                     error=str(e),
                     error_category=error_category,
                 )
-                logger.error(f"Error subiendo a Sheets: {e}")
+                _log("error", f"Error subiendo a Sheets: {e}", stage="sheets")
         else:
-            logger.info("8/8 Subida a Sheets desactivada o no configurada")
+            _log("info", "8/8 Subida a Sheets desactivada o no configurada", stage="sheets")
             metrics["stages"]["sheets"] = {
                 "skipped": True,
                 "reason": "disabled_or_not_configured",
@@ -464,7 +478,7 @@ def run_full_pipeline(
                 "retries": 0,
             }
 
-        logger.info("=== PIPELINE COMPLETADO CON Ã‰XITO ===\n")
+        _log("info", "=== PIPELINE COMPLETADO CON Ã‰XITO ===")
         _write_metrics("done")
         results["metrics_path"] = str(output_dir / RUN_METRICS_JSON)
         _write_status(step="done", message="Pipeline completado", percent=100, state="done")
@@ -479,7 +493,7 @@ def run_full_pipeline(
 
     except Exception as e:
         error_category = classify_error(e)
-        logger.error(f"Pipeline fallido para '{keyword}': {e}", exc_info=True)
+        logger.error(f"[run_id={run_id}] [stage=error] Pipeline fallido para '{keyword}': {e}", exc_info=True)
         log_event("error", "pipeline.failed", run_id=run_id, stage="error", error_category=error_category, message=str(e))
         try:
             metrics["error"] = str(e)
