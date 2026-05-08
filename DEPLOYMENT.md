@@ -35,10 +35,10 @@ See [deployment_walkthrough.md](file:///Users/marcos/.gemini/antigravity/brain/b
 ## Required Environment Variables
 
 ```bash
-API_KEY=your-secure-key-min-20-chars
-SEMRUSH_TOKEN=your_semrush_token
-SERPAPI_KEY=your_serpapi_key
-OPENAI_API_KEY=your_openai_key
+API_KEY=replace-with-your-secure-key-min-20-chars
+SEMRUSH_TOKEN=replace-with-your-semrush-token
+SERPAPI_KEY=replace-with-your-serpapi-key
+OPENAI_API_KEY=replace-with-your-openai-key
 ```
 
 Optional but recommended:

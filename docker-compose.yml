@@ -10,7 +10,7 @@ services:
     
     # Environment variables (override with .env file)
     environment:
-      - API_KEY=${API_KEY:-secret-token-2025}
+      - API_KEY=${API_KEY:?API_KEY must be set and at least 20 characters}
       - SEMRUSH_TOKEN=${SEMRUSH_TOKEN}
       - SERPAPI_KEY=${SERPAPI_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
