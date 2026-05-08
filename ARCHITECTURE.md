@@ -127,12 +127,13 @@ See `docs/EXTERNAL_APIS.md` for credentials, calls and failure modes.
 Typical generated files:
 
 - `status.json`
+- `run_metrics.json`
 - `serp_raw.json`
 - `audit_report.json`
-- `{run_id}_{keyword}_briefing.json`
-- `{run_id}_{keyword}_briefing.md`
-- `{run_id}_row24.csv`
-- `{run_id}_row24.xlsx`
+- `briefing.json`
+- `briefing.md`
+- `row24.csv`
+- `row24.xlsx`
 
 Generated outputs are ignored by Git.
 
@@ -155,7 +156,7 @@ CI also fails if tracked files include:
 
 ## Known Technical Debt
 
-- Mojibake remains in several code comments/docstrings and should be fixed in a controlled UTF-8 pass.
+- Some legacy code comments/docstrings still need a controlled UTF-8 cleanup pass.
 - Provider-neutral SERP normalization should be formalized into a typed contract.
 - API jobs still use in-process background tasks; durable queue state is a production improvement.
 - Credential validation can be centralized further, although required SEMrush, SERP and OpenAI checks already fail fast.
