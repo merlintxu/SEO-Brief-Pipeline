@@ -45,12 +45,17 @@ def test_semrush_network_failure_writes_status(tmp_path, monkeypatch):
     monkeypatch.setattr(SemrushClient, 'fetch_related', raise_req)
 
     status_path = tmp_path / 'status.json'
+    output_dir = tmp_path / "run_network"
     with pytest.raises(requests.exceptions.RequestException):
-        run_full_pipeline('kw', status_path=status_path, upload_to_sheets=False)
+        run_full_pipeline('kw', status_path=status_path, upload_to_sheets=False, output_dir=output_dir)
 
     assert status_path.exists()
     data = json.loads(status_path.read_text(encoding='utf-8'))
     assert data.get('status') == 'failed'
+    assert data.get('error_category') == 'network'
+    metrics = json.loads((output_dir / "run_metrics.json").read_text(encoding="utf-8"))
+    assert metrics.get("status") == "failed"
+    assert metrics.get("error_category") == "network"
 
 
 def test_openai_failure_writes_status(tmp_path, monkeypatch):
@@ -83,9 +88,39 @@ def test_openai_failure_writes_status(tmp_path, monkeypatch):
     monkeypatch.setattr('seo_pipeline.pipeline.generate_briefing', raise_openai)
 
     status_path = tmp_path / 'status.json'
+    output_dir = tmp_path / "run_openai"
     with pytest.raises(OpenAIError):
-        run_full_pipeline('kw', status_path=status_path, upload_to_sheets=False)
+        run_full_pipeline('kw', status_path=status_path, upload_to_sheets=False, output_dir=output_dir)
 
     assert status_path.exists()
     data = json.loads(status_path.read_text(encoding='utf-8'))
     assert data.get('status') == 'failed'
+    assert data.get('error_category') == 'unknown'
+    metrics = json.loads((output_dir / "run_metrics.json").read_text(encoding="utf-8"))
+    assert metrics.get("status") == "failed"
+    assert metrics.get("error_category") == "unknown"
+
+
+def test_serp_failure_writes_rate_limit_category(tmp_path, monkeypatch):
+    setup_config(tmp_path)
+
+    def semrush_ok(self, *a, **kw):
+        return SemrushResults(
+            keyword_principal=SemrushKeyword(keyword='kw', search_volume=10),
+            keywords_secundarias=[]
+        )
+
+    monkeypatch.setattr(SemrushClient, 'fetch_related', semrush_ok)
+    monkeypatch.setattr('seo_pipeline.pipeline.search_raw', lambda *a, **k: (_ for _ in ()).throw(RuntimeError("rate limit exceeded")))
+
+    status_path = tmp_path / 'status.json'
+    output_dir = tmp_path / "run_serp"
+    with pytest.raises(RuntimeError, match="rate limit exceeded"):
+        run_full_pipeline('kw', status_path=status_path, upload_to_sheets=False, output_dir=output_dir)
+
+    data = json.loads(status_path.read_text(encoding='utf-8'))
+    assert data.get('status') == 'failed'
+    assert data.get('error_category') == 'rate_limit'
+    metrics = json.loads((output_dir / "run_metrics.json").read_text(encoding="utf-8"))
+    assert metrics.get("status") == "failed"
+    assert metrics.get("error_category") == "rate_limit"

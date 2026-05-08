@@ -10,6 +10,7 @@ Auditoría técnica y de contenido para URLs (top-10 competidores + propia).
 from __future__ import annotations
 
 import logging
+import time
 from typing import List
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -35,9 +36,11 @@ def audit_single_url(url: str) -> AuditEntry:
     """
     entry = AuditEntry(url=url)
 
+    started = time.perf_counter()
     html = _fetch_html(url)
     if not html:
         entry.status_code = 0
+        entry.elapsed_ms = round((time.perf_counter() - started) * 1000)
         entry.errors.append("No response")
         return entry
 
@@ -84,6 +87,7 @@ def audit_single_url(url: str) -> AuditEntry:
         except (TypeError, ValueError, AttributeError):
             continue
     entry.schema_signals.schema_types = schema_types[:5]
+    entry.elapsed_ms = round((time.perf_counter() - started) * 1000)
 
     return entry
 

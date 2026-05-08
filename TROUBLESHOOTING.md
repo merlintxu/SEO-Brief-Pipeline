@@ -208,6 +208,16 @@ If it returns `404`, check:
 
 Path unification is a roadmap item.
 
+Before deep provider debugging, read `error_category` in `status.json` and `run_metrics.json`:
+
+- `auth`: credentials/permissions
+- `quota`: exhausted plan or billing cap
+- `rate_limit`: provider throttling
+- `timeout`: slow upstream or network timeout
+- `network`: transport/connectivity errors
+- `validation`: malformed payload/config shape
+- `unknown`: uncategorized runtime failure
+
 ## CI Failures
 
 ### Secret or bytecode guard fails

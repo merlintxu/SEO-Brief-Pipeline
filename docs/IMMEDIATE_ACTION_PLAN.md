@@ -15,6 +15,8 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
 - Downloadable artifact names are centralized in `seo_pipeline/artifacts.py`.
 - Required runtime providers are validated through `seo_pipeline/runtime_validation.py`.
 - SERP responses have an initial provider-neutral `SerpSnapshot` summary for metrics and future contracts.
+- Pipeline metrics include per-stage `provider`, `status`, `retries`, `items_processed` and `error_category`.
+- Failed status payloads include `error_category` for faster diagnosis.
 - GSC click totals map to `GscPage.clicks`.
 - Google Sheets accepts either a raw spreadsheet id or a full Google Sheets URL.
 - Documentation entrypoints exist for agents, project map, external APIs, runtime operations, pipeline deep dive and roadmap.
@@ -37,10 +39,10 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
    - add SerpAPI and DataForSEO fixture tests;
    - move more downstream consumers from raw SERP JSON to `SerpSnapshot`;
    - preserve raw provider payload for debugging.
-2. Improve operational observability:
-   - add structured logs keyed by `run_id`;
-   - add stage error categories;
-   - add slowest competitor URL and provider retry counts to `run_metrics.json`.
+2. Continue operational observability:
+   - add log shipping/aggregation for structured events keyed by `run_id`;
+   - add dashboards/alerts for `error_category` and retry spikes;
+   - track rolling stage latency baselines from `run_metrics.json`.
 3. Strengthen export contracts:
    - add snapshot tests for Markdown and CSV exports.
 4. Finish controlled UTF-8 cleanup:
