@@ -6,7 +6,7 @@ Centraliza toda la lógica de mapeo y transformación.
 from __future__ import annotations
 
 from typing import List
-from seo_pipeline.models import SheetRow24, AnchorSet, SEOBriefing
+from seo_pipeline.models import SheetRow24, AnchorSet, SEOBriefing, SerpSnapshot
 
 def build_row24(
     kw: str,
@@ -14,7 +14,7 @@ def build_row24(
     secondary_kws: List[str],
     target_url: str,
     briefing: SEOBriefing,
-    serp_data: dict,
+    serp_snapshot: SerpSnapshot,
     anchors: AnchorSet,
     top_competitors: List[str],
     run_id: str,
@@ -28,7 +28,7 @@ def build_row24(
         secondary_kws (List[str]): Keywords secundarias.
         target_url (str): URL objetivo.
         briefing (SEOBriefing): Datos del briefing generado.
-        serp_data (dict): Datos de la SERP.
+        serp_snapshot (SerpSnapshot): Resumen normalizado de la SERP.
         anchors (AnchorSet): Anchors generados.
         top_competitors (List[str]): Lista de competidores.
         run_id (str): ID de ejecución.
@@ -45,10 +45,10 @@ def build_row24(
         h1=briefing.h1,
         meta_desc=briefing.meta_description,
         slugs_relacionados=[],  # opcional futuro
-        ai_overview_present=bool(serp_data.get("ai_overview")),
-        paa_count=len(serp_data.get("people_also_ask", [])),
-        related_count=len(serp_data.get("related_searches", [])),
-        kg_present=bool(serp_data.get("knowledge_graph")),
+        ai_overview_present=serp_snapshot.ai_overview_present,
+        paa_count=serp_snapshot.people_also_ask_count,
+        related_count=serp_snapshot.related_searches_count,
+        kg_present=serp_snapshot.knowledge_graph_present,
         schema_article=False,  # futuro: detectar en auditoría propia
         schema_product=False,
         schema_breadcrumb=False,

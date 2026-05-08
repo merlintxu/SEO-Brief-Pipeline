@@ -178,6 +178,7 @@ def normalize_serp_snapshot(serp_data: Dict, provider: str = "unknown") -> SerpS
         people_also_ask_count=len(serp_data.get("people_also_ask", []) or []),
         related_searches_count=len(serp_data.get("related_searches", []) or []),
         ai_overview_present=bool(serp_data.get("ai_overview")),
+        knowledge_graph_present=bool(serp_data.get("knowledge_graph")),
     )
 
 
