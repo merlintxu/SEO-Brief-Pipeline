@@ -1,0 +1,46 @@
+from pathlib import Path
+
+from api.job_store import JobStore
+
+
+def test_job_store_create_and_get(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run1", "keyword one", "outputs/run1")
+
+    job = store.get_job("run1")
+    assert job is not None
+    assert job.run_id == "run1"
+    assert job.keyword == "keyword one"
+    assert job.status == "queued"
+    assert job.step == "queued"
+    assert job.error_category is None
+
+
+def test_job_store_update_status(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run2", "keyword two", "outputs/run2")
+    store.update_status(
+        "run2",
+        status="failed",
+        step="error",
+        message="rate limited",
+        error_category="rate_limit",
+    )
+
+    job = store.get_job("run2")
+    assert job is not None
+    assert job.status == "failed"
+    assert job.step == "error"
+    assert job.message == "rate limited"
+    assert job.error_category == "rate_limit"
+
+
+def test_job_store_list_jobs_desc_order(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("runA", "a", "outputs/runA")
+    store.create_job("runB", "b", "outputs/runB")
+
+    jobs = store.list_jobs(limit=10)
+    assert len(jobs) == 2
+    assert jobs[0].run_id == "runB"
+    assert jobs[1].run_id == "runA"

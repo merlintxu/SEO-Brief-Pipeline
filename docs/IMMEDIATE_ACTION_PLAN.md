@@ -53,6 +53,8 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
 ## Next 2-4 Weeks
 
 1. Replace in-process background tasks with durable job state using SQLite or Redis.
+   - Current step: SQLite store module exists (`api/job_store.py`) with create/update/get/list.
+   - Next step: wire create/update reads in `api/main.py` while keeping `status.json` backward compatible.
 2. Add resumable batch keyword processing.
 3. Add provider cache TTL and safe cache cleanup commands.
 4. Add deployment smoke tests for auth, status polling and downloads.
