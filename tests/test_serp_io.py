@@ -62,6 +62,25 @@ def test_normalize_serp_snapshot_counts_core_fields():
     ]
 
 
+def test_normalize_serp_snapshot_handles_untyped_payload():
+    snapshot = normalize_serp_snapshot(
+        {
+            "search_parameters": {"q": 123, "gl": None, "hl": []},
+            "organic_results": [{"link": "https://ok.com"}, {"link": 999}],
+            "people_also_ask": "bad-shape",
+            "related_searches": None,
+            "ai_overview": {"sources": [{"source": "https://source.example"}]},
+        },
+        provider="serpapi",
+    )
+
+    assert snapshot.provider == "serpapi"
+    assert snapshot.organic_results_count == 0
+    assert snapshot.people_also_ask_count == 0
+    assert snapshot.related_searches_count == 0
+    assert snapshot.top_urls == []
+
+
 def test_dataforseo_fallback_requires_credentials(monkeypatch, tmp_path):
     cfg = get_config()
     cfg.cache_dir = tmp_path

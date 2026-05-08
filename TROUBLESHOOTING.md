@@ -128,9 +128,22 @@ Checklist:
 - Network access is available.
 - Provider quotas are not exhausted.
 
+Tip: check `error_category` in `status.json`/`run_metrics.json` first. `auth`, `quota`, `rate_limit`, `timeout` and `network` usually map directly to provider-side remediation.
+
 ### DataForSEO is not called
 
 Expected behavior if either DataForSEO credential is missing. The fallback requires both login and password.
+
+### `ValidationError` before provider calls
+
+Cause: centralized runtime input validation rejected request values (`seo_pipeline/input_validation.py`).
+
+Checklist:
+
+- `keyword` length between 2 and 100 and not whitespace.
+- `serp_num` between 1 and 50.
+- `related_limit` between 5 and 100.
+- `target_url` is a valid URL when provided.
 
 ## OpenAI
 

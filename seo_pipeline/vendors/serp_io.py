@@ -9,7 +9,7 @@ Cliente SerpAPI optimizado para Google SERP en 2025.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse
 import logging
 import requests
@@ -17,7 +17,8 @@ import requests
 from seo_pipeline.utils.io import save_json, load_json
 from seo_pipeline.utils.text import uniq_preserve
 from seo_pipeline.config import get_config
-from seo_pipeline.models import SerpSnapshot
+from pydantic import ValidationError
+from seo_pipeline.models import SerpRawPayload, SerpSnapshot
 from seo_pipeline.utils.logging import logger
 
 # La librería oficial es 'google-search-results' → expone serpapi
@@ -140,25 +141,35 @@ def search_and_cache(
     return results
 
 
+def _coerce_serp_payload(serp_data: Dict[str, Any]) -> SerpRawPayload:
+    try:
+        return SerpRawPayload.model_validate(serp_data or {})
+    except ValidationError:
+        return SerpRawPayload()
+
+
 def extract_top_urls(serp_data: Dict, max_urls: int = 12, include_ai_citations: bool = True) -> List[str]:
     """
     Extrae URLs orgánicas + citas del AI Overview (si existen).
     Preserva orden y elimina duplicados.
     """
+    payload = _coerce_serp_payload(serp_data)
     urls: List[str] = []
 
     # 1. Resultados orgánicos
-    for item in serp_data.get("organic_results", []) or []:
-        link = item.get("link")
+    for item in payload.organic_results:
+        link = item.link
         if link:
             urls.append(link)
 
     # 2. AI Overview citations (estructura variable según año/mes)
     if include_ai_citations:
-        aio = serp_data.get("ai_overview") or {}
-        for container in (aio.get("sources", []) or [], aio.get("citations", []) or []):
+        aio = payload.ai_overview
+        if aio is None:
+            return uniq_preserve(urls)[:max_urls]
+        for container in (aio.sources, aio.citations):
             for cite in container:
-                link = cite.get("link") or cite.get("source") or cite.get("url")
+                link = cite.link or cite.source or cite.url
                 if link:
                     urls.append(link)
 
@@ -167,18 +178,19 @@ def extract_top_urls(serp_data: Dict, max_urls: int = 12, include_ai_citations: 
 
 def normalize_serp_snapshot(serp_data: Dict, provider: str = "unknown") -> SerpSnapshot:
     """Build a provider-neutral summary for metrics and downstream contracts."""
-    params = serp_data.get("search_parameters", {}) or {}
+    payload = _coerce_serp_payload(serp_data)
+    params = payload.search_parameters
     return SerpSnapshot(
         provider=provider,
-        query=params.get("q", ""),
-        gl=params.get("gl", ""),
-        hl=params.get("hl", ""),
-        organic_results_count=len(serp_data.get("organic_results", []) or []),
+        query=params.q,
+        gl=params.gl,
+        hl=params.hl,
+        organic_results_count=len(payload.organic_results),
         top_urls=extract_top_urls(serp_data, max_urls=12),
-        people_also_ask_count=len(serp_data.get("people_also_ask", []) or []),
-        related_searches_count=len(serp_data.get("related_searches", []) or []),
-        ai_overview_present=bool(serp_data.get("ai_overview")),
-        knowledge_graph_present=bool(serp_data.get("knowledge_graph")),
+        people_also_ask_count=len(payload.people_also_ask),
+        related_searches_count=len(payload.related_searches),
+        ai_overview_present=payload.ai_overview is not None,
+        knowledge_graph_present=payload.knowledge_graph is not None,
     )
 
 

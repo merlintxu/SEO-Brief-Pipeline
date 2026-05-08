@@ -39,6 +39,7 @@ from seo_pipeline.runtime_validation import validate_runtime_requirements
 from seo_pipeline.utils.errors import classify_error
 from datetime import timedelta
 from seo_pipeline.utils.io import save_json
+from seo_pipeline.input_validation import PipelineInput
 
 
 def run_full_pipeline(
@@ -56,6 +57,21 @@ def run_full_pipeline(
     """
     Ejecuta el pipeline SEO completo y devuelve un diccionario con rutas a todos los artefactos generados.
     """
+    validated = PipelineInput(
+        keyword=keyword,
+        target_url=target_url,
+        related_limit=related_limit,
+        serp_num=serp_num,
+        top_competitors_count=top_competitors_count,
+        gsc_months_back=gsc_months_back,
+    )
+    keyword = validated.keyword
+    target_url = str(validated.target_url) if validated.target_url else None
+    related_limit = validated.related_limit
+    serp_num = validated.serp_num
+    top_competitors_count = validated.top_competitors_count
+    gsc_months_back = validated.gsc_months_back
+
     cfg = get_config()
     runtime_requirements = validate_runtime_requirements(cfg)
 
