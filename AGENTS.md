@@ -8,6 +8,45 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
+- Recent work is being shipped through PR #11 (`codex/validation-serp-normalization`).
+
+## Documented Changes (Recent)
+
+- Pipeline observability baseline is active:
+  - structured stage metrics in `run_metrics.json` with `provider`, `status`, `retries`, `items_processed`, `error_category`.
+  - failed runs persist `error_category` in `status.json` and metrics.
+- Runtime contracts and artifact naming are centralized:
+  - canonical artifact names in `seo_pipeline/artifacts.py`.
+  - API download whitelist aligned to those names.
+- SERP normalization was migrated to `SerpSnapshot` for downstream usage.
+- Runtime preflight checks are centralized in `seo_pipeline/runtime_validation.py`.
+- Added centralized runtime input validation in `seo_pipeline/input_validation.py`:
+  - validates `keyword`, `target_url`, `related_limit`, `serp_num`, `top_competitors_count`, `gsc_months_back`.
+- Added typed SERP raw payload models in `seo_pipeline/models.py` and typed coercion in `seo_pipeline/vendors/serp_io.py`.
+- Added SQLite job-store spike and partial API integration:
+  - store module: `api/job_store.py`.
+  - API writes/updates job status in SQLite while keeping `status.json` compatibility.
+  - `GET /briefing/{run_id}` falls back to job store if status file is missing.
+- API run id now includes microseconds to avoid collision under burst requests.
+- Docs updated: `docs/RUNTIME_OPERATIONS.md`, `docs/IMMEDIATE_ACTION_PLAN.md`, `TROUBLESHOOTING.md`.
+- Test coverage added/updated for input validation, typed SERP normalization, API smoke/job-store flows.
+
+## Next Actions (Post-PR)
+
+1. Merge PR #11 after CI is green and re-check `main` CI.
+2. Wire `JobStore` deeper into API lifecycle:
+   - read path consistency between `status.json` and DB.
+   - add list/status admin endpoint only if needed (no public API break by default).
+3. Continue normalization contracts:
+   - move additional consumers away from raw SERP dicts to typed models.
+   - keep raw payload persisted for debugging only.
+4. Improve observability operations:
+   - add run-level log correlation by `run_id` in shipped logs.
+   - add alerts for retry spikes and repeated provider `error_category`.
+5. Contract hardening:
+   - add snapshot/contract tests for exported artifacts and metrics shape evolution.
+6. Controlled UTF-8 cleanup:
+   - docs first, then user-facing strings; avoid mixing with behavior changes.
 
 ## Safe Commands
 

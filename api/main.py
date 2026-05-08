@@ -31,6 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from api.rate_limiter import RateLimitMiddleware
+from api.job_store import JobStore
 
 from seo_pipeline.config import get_config
 from seo_pipeline.pipeline import run_full_pipeline
@@ -177,6 +178,7 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
 # ============================================================================
 
 cfg = get_config()
+job_store = JobStore(Path("outputs") / "jobs.db")
 
 
 @app.get(
@@ -251,7 +253,7 @@ async def create_briefing(
 
     try:
         # Create run_id and initial status file
-        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         outputs_dir = Path("outputs")
         run_dir = outputs_dir / run_id
         ensure_dir(run_dir)
@@ -261,9 +263,12 @@ async def create_briefing(
             "step": "queued",
             "message": "Tarea en cola"
         })
+        job_store.create_job(run_id=run_id, keyword=request.keyword, output_dir=str(run_dir))
+        job_store.update_status(run_id, status="queued", step="queued", message="Tarea en cola")
 
         def _bg_task(req: BriefingRequest, run_id: str, status_path: Path):
             try:
+                job_store.update_status(run_id, status="running", step="start", message="Pipeline iniciado")
                 run_full_pipeline(
                     keyword=req.keyword,
                     target_url=req.target_url,
@@ -274,6 +279,14 @@ async def create_briefing(
                     status_path=status_path,
                     output_dir=run_dir,
                 )
+                final_status = load_json(status_path, default={})
+                job_store.update_status(
+                    run_id,
+                    status=final_status.get("status", "done"),
+                    step=final_status.get("step", "done"),
+                    message=final_status.get("message", "Pipeline completado"),
+                    error_category=final_status.get("error_category"),
+                )
             except Exception as e:
                 try:
                     error_category = classify_error(e)
@@ -283,6 +296,13 @@ async def create_briefing(
                         "message": str(e),
                         "error_category": error_category,
                     })
+                    job_store.update_status(
+                        run_id,
+                        "failed",
+                        step="error",
+                        message=str(e),
+                        error_category=error_category,
+                    )
                 except Exception:
                     pass
 
@@ -351,9 +371,20 @@ async def create_briefing(
 async def briefing_status(run_id: str):
     """Get status of a briefing run"""
     path = Path("outputs") / run_id / "status.json"
-    if not path.exists():
+    if path.exists():
+        data = load_json(path)
+        return JSONResponse(content=data)
+
+    job = job_store.get_job(run_id)
+    if job is None:
         raise HTTPException(status_code=404, detail="Run_id no encontrado")
-    data = load_json(path)
+
+    data = {
+        "status": job.status,
+        "step": job.step,
+        "message": job.message,
+        "error_category": job.error_category,
+    }
     return JSONResponse(content=data)
 
 

@@ -107,6 +107,8 @@ http://localhost:8000/docs
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 
+Before any provider call, `run_full_pipeline()` validates runtime inputs through `seo_pipeline/input_validation.py` (keyword, URL and execution limits). Invalid values fail fast with a validation error.
+
 ## Status Values
 
 Typical states:

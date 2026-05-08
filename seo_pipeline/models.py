@@ -51,6 +51,51 @@ class SerpSnapshot(BaseModel):
     knowledge_graph_present: bool = False
 
 
+class SerpSearchParameters(BaseModel):
+    model_config = BaseConfig
+    q: str = ""
+    gl: str = ""
+    hl: str = ""
+
+
+class SerpOrganicResult(BaseModel):
+    model_config = BaseConfig
+    link: str = ""
+
+
+class SerpPeopleAlsoAskItem(BaseModel):
+    model_config = BaseConfig
+    question: str = ""
+
+
+class SerpRelatedSearchItem(BaseModel):
+    model_config = BaseConfig
+    query: str = ""
+
+
+class SerpAiOverviewCitation(BaseModel):
+    model_config = BaseConfig
+    link: str = ""
+    source: str = ""
+    url: str = ""
+
+
+class SerpAiOverview(BaseModel):
+    model_config = BaseConfig
+    sources: List[SerpAiOverviewCitation] = Field(default_factory=list)
+    citations: List[SerpAiOverviewCitation] = Field(default_factory=list)
+
+
+class SerpRawPayload(BaseModel):
+    model_config = BaseConfig
+    search_parameters: SerpSearchParameters = Field(default_factory=SerpSearchParameters)
+    organic_results: List[SerpOrganicResult] = Field(default_factory=list)
+    people_also_ask: List[SerpPeopleAlsoAskItem] = Field(default_factory=list)
+    related_searches: List[SerpRelatedSearchItem] = Field(default_factory=list)
+    ai_overview: Optional[SerpAiOverview] = None
+    knowledge_graph: Optional[Dict[str, Any]] = None
+
+
 # ==================== Auditoría ====================
 class SchemaSignals(BaseModel):
     model_config = BaseConfig

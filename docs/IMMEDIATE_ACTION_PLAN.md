@@ -38,6 +38,7 @@ Stabilize the SEO Brief Pipeline for reliable API execution, make future agent w
 1. Extend SERP normalization:
    - add SerpAPI and DataForSEO fixture tests;
    - move more downstream consumers from raw SERP JSON to `SerpSnapshot`;
+   - enforce typed SERP payload parsing (`SerpRawPayload`) before normalization;
    - preserve raw provider payload for debugging.
 2. Continue operational observability:
    - add log shipping/aggregation for structured events keyed by `run_id`;

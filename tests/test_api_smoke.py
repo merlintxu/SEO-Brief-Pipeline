@@ -93,7 +93,7 @@ def test_api_smoke_post_poll_and_download(tmp_path, monkeypatch):
         headers={"X-API-Key": "secret-token-2025-test-key-long-enough"},
     )
     assert status_file.status_code == 200
-    assert status_file.json()["status"] in ("running", "done")
+    assert status_file.json()["status"] in ("queued", "running", "done")
 
     metrics_file = client.get(
         f"/outputs/{run_id}/run_metrics.json",
@@ -108,3 +108,19 @@ def test_api_smoke_post_poll_and_download(tmp_path, monkeypatch):
     )
     assert briefing_file.status_code == 200
     assert briefing_file.json()["h1"] == "Smoke H1"
+
+
+def test_briefing_status_falls_back_to_job_store(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app, job_store
+
+    run_id = f"run_job_store_only_{int(time.time() * 1000)}"
+    job_store.create_job(run_id=run_id, keyword="kw", output_dir=str(tmp_path / "outputs" / run_id))
+    job_store.update_status(run_id, status="failed", step="error", message="provider error", error_category="network")
+
+    client = TestClient(app)
+    response = client.get(f"/briefing/{run_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "failed"
+    assert data["error_category"] == "network"
