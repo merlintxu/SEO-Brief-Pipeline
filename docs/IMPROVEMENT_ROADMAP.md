@@ -120,7 +120,7 @@ Acceptance:
 
 - API restart does not lose queued/running/completed metadata.
 - Job list endpoint can be added later without scanning directories.
-- Remaining step: wire complete status lifecycle and retention/cleanup policy.
+- Remaining step: wire complete status lifecycle. Basic retention helpers (`delete_job`, `cleanup_old_jobs`) are now implemented in the store layer.
 
 ### Cache management commands
 
