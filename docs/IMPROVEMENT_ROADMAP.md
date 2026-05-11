@@ -139,6 +139,10 @@ Acceptance:
 
 Status: implemented.
 
+Progress update:
+
+- jobs admin endpoints now declare explicit response models to stabilize API contract evolution.
+
 Acceptance:
 
 - Generated OpenAPI JSON is versioned or published as an artifact.

@@ -65,3 +65,50 @@ class JobsCleanupRequest(BaseModel):
         if len(set(normalized)) != len(normalized):
             raise ValueError("statuses must not contain duplicates")
         return normalized
+
+
+class JobResponse(BaseModel):
+    run_id: str
+    keyword: str
+    status: str
+    step: str
+    message: str
+    error_category: str | None = None
+    output_dir: str
+    source_run_id: str | None = None
+    created_at: str
+    updated_at: str
+
+
+class JobsListResponse(BaseModel):
+    items: list[JobResponse]
+    count: int
+    next_cursor: int | None = None
+
+
+class JobDetailResponse(BaseModel):
+    job: JobResponse
+    status_file: dict | None = None
+
+
+class JobDeleteResponse(BaseModel):
+    deleted: bool
+    run_id: str
+
+
+class JobsCleanupResponse(BaseModel):
+    deleted_count: int
+    max_age_days: int
+    statuses: list[str]
+
+
+class JobRetryResponse(BaseModel):
+    source_run_id: str
+    run_id: str
+    status: str
+
+
+class JobCancelResponse(BaseModel):
+    run_id: str
+    status: str
+    step: str

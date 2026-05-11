@@ -38,8 +38,17 @@ from seo_pipeline.config import get_config
 from seo_pipeline.pipeline import run_full_pipeline
 from seo_pipeline.artifacts import DOWNLOADABLE_ARTIFACTS
 from seo_pipeline.utils.errors import classify_error
-from api.schemas import BriefingRequest, BriefingResponse
-from api.schemas import JobsCleanupRequest
+from api.schemas import (
+    BriefingRequest,
+    BriefingResponse,
+    JobCancelResponse,
+    JobDeleteResponse,
+    JobDetailResponse,
+    JobRetryResponse,
+    JobsCleanupRequest,
+    JobsCleanupResponse,
+    JobsListResponse,
+)
 from seo_pipeline.utils.io import save_json, ensure_dir, load_json
 
 # ============================================================================
@@ -457,6 +466,7 @@ async def briefing_status(run_id: str):
 @app.get(
     "/jobs",
     tags=["jobs"],
+    response_model=JobsListResponse,
     summary="List Jobs",
     description="List recent job metadata from the SQLite job store (operational endpoint).",
 )
@@ -481,6 +491,7 @@ async def list_jobs(
 @app.get(
     "/jobs/{run_id}",
     tags=["jobs"],
+    response_model=JobDetailResponse,
     summary="Get Job Detail",
     description="Get job metadata and current status snapshot for a single run.",
 )
@@ -496,6 +507,7 @@ async def get_job(run_id: str, api_key: str = Depends(get_api_key)):
 @app.delete(
     "/jobs/{run_id}",
     tags=["jobs"],
+    response_model=JobDeleteResponse,
     summary="Delete Job Metadata",
     description="Delete job metadata from SQLite. Does not delete output artifacts.",
 )
@@ -509,6 +521,7 @@ async def delete_job(run_id: str, api_key: str = Depends(get_api_key)):
 @app.post(
     "/jobs/cleanup",
     tags=["jobs"],
+    response_model=JobsCleanupResponse,
     summary="Run Job Cleanup",
     description="Run manual retention cleanup for terminal jobs.",
 )
@@ -529,6 +542,7 @@ async def cleanup_jobs(payload: JobsCleanupRequest, api_key: str = Depends(get_a
 @app.post(
     "/jobs/{run_id}/retry",
     tags=["jobs"],
+    response_model=JobRetryResponse,
     summary="Retry Failed Job",
     description="Requeue a failed job as a new run.",
 )
@@ -566,6 +580,7 @@ async def retry_job(run_id: str, background: BackgroundTasks, api_key: str = Dep
 @app.post(
     "/jobs/{run_id}/cancel",
     tags=["jobs"],
+    response_model=JobCancelResponse,
     summary="Cancel Job",
     description="Logical cancellation for queued/running jobs (no process hard-kill).",
 )

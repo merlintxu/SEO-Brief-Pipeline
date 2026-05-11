@@ -243,7 +243,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobsListResponse"
+                }
               }
             }
           },
@@ -289,7 +291,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetailResponse"
+                }
               }
             }
           },
@@ -333,7 +337,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobDeleteResponse"
+                }
               }
             }
           },
@@ -373,7 +379,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobsCleanupResponse"
+                }
               }
             }
           },
@@ -424,7 +432,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobRetryResponse"
+                }
               }
             }
           },
@@ -470,7 +480,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobCancelResponse"
+                }
               }
             }
           },
@@ -646,6 +658,164 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "JobCancelResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "step": {
+            "type": "string",
+            "title": "Step"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "status",
+          "step"
+        ],
+        "title": "JobCancelResponse"
+      },
+      "JobDeleteResponse": {
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "title": "Deleted"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted",
+          "run_id"
+        ],
+        "title": "JobDeleteResponse"
+      },
+      "JobDetailResponse": {
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/JobResponse"
+          },
+          "status_file": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job"
+        ],
+        "title": "JobDetailResponse"
+      },
+      "JobResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "keyword": {
+            "type": "string",
+            "title": "Keyword"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "step": {
+            "type": "string",
+            "title": "Step"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Category"
+          },
+          "output_dir": {
+            "type": "string",
+            "title": "Output Dir"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Run Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "keyword",
+          "status",
+          "step",
+          "message",
+          "output_dir",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobResponse"
+      },
+      "JobRetryResponse": {
+        "properties": {
+          "source_run_id": {
+            "type": "string",
+            "title": "Source Run Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_run_id",
+          "run_id",
+          "status"
+        ],
+        "title": "JobRetryResponse"
+      },
       "JobsCleanupRequest": {
         "properties": {
           "max_age_days": {
@@ -667,6 +837,64 @@
         },
         "type": "object",
         "title": "JobsCleanupRequest"
+      },
+      "JobsCleanupResponse": {
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          },
+          "max_age_days": {
+            "type": "integer",
+            "title": "Max Age Days"
+          },
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Statuses"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_count",
+          "max_age_days",
+          "statuses"
+        ],
+        "title": "JobsCleanupResponse"
+      },
+      "JobsListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/JobResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "JobsListResponse"
       },
       "ValidationError": {
         "properties": {
