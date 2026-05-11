@@ -56,13 +56,14 @@ def search_raw(
     num: int = 12,
     include_ai_overview: bool = True,
     timeout: int = 30,
-    use_dataforseo_fallback: bool = True
+    use_dataforseo_fallback: bool = True,
+    force_disable_serpapi: bool = False,
 ) -> Dict:
     cfg = get_config()
     client = cfg.active_client
 
     # 1. Intentar SerpAPI (principal)
-    if api_key or (client and client.serpapi_key):
+    if not force_disable_serpapi and (api_key or (client and client.serpapi_key)):
         params = {
             "engine": "google",
             "q": query,
