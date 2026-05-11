@@ -15,6 +15,16 @@ def test_job_store_create_and_get(tmp_path: Path):
     assert job.status == "queued"
     assert job.step == "queued"
     assert job.error_category is None
+    assert job.source_run_id is None
+
+
+def test_job_store_create_with_source_run_id(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run-retry", "keyword retry", "outputs/run-retry", source_run_id="run-parent")
+
+    job = store.get_job("run-retry")
+    assert job is not None
+    assert job.source_run_id == "run-parent"
 
 
 def test_job_store_update_status(tmp_path: Path):

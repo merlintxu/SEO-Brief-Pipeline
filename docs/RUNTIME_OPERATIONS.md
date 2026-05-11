@@ -131,6 +131,9 @@ docs/contracts/openapi.json
    - `POST /jobs/cleanup`
    - `POST /jobs/{run_id}/retry`
    - `POST /jobs/{run_id}/cancel`
+10. Retry lineage is persisted in `JobStore`:
+   - retried jobs store `source_run_id` (parent failed run).
+   - this enables operational traceability for repeated retries/chains.
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 
@@ -242,3 +245,35 @@ curl -X POST -H "X-API-Key: replace_with_api_key" -H "Content-Type: application/
 ```
 
 For a real briefing, start with `upload_to_sheets=false` until provider credentials and output files are verified.
+
+## Admin Jobs Operational Checklist
+
+1. List recent jobs and filter failures:
+
+```bash
+curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs?limit=50&status=failed"
+```
+
+2. Inspect a specific failed run (check `error_category`, `message`, `source_run_id`):
+
+```bash
+curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs/replace_with_run_id"
+```
+
+3. Retry only failed runs and track lineage:
+
+```bash
+curl -X POST -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs/replace_with_run_id/retry"
+```
+
+4. Cancel only queued/running runs:
+
+```bash
+curl -X POST -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs/replace_with_run_id/cancel"
+```
+
+5. Run bounded retention cleanup for terminal states:
+
+```bash
+curl -X POST -H "X-API-Key: replace_with_api_key" -H "Content-Type: application/json" -d "{\"max_age_days\":30,\"statuses\":[\"done\",\"failed\"]}" http://localhost:8000/jobs/cleanup
+```

@@ -214,6 +214,7 @@ def _job_to_dict(job) -> dict:
         "message": job.message,
         "error_category": job.error_category,
         "output_dir": job.output_dir,
+        "source_run_id": job.source_run_id,
         "created_at": job.created_at,
         "updated_at": job.updated_at,
     }
@@ -227,6 +228,7 @@ def _queue_pipeline_run(
     run_dir: Path,
     status_path: Path,
     initial_message: str = "Tarea en cola",
+    source_run_id: str | None = None,
 ) -> None:
     save_json(
         status_path,
@@ -236,7 +238,7 @@ def _queue_pipeline_run(
             "message": initial_message,
         },
     )
-    job_store.create_job(run_id=run_id, keyword=request.keyword, output_dir=str(run_dir))
+    job_store.create_job(run_id=run_id, keyword=request.keyword, output_dir=str(run_dir), source_run_id=source_run_id)
     job_store.update_status(run_id, status="queued", step="queued", message=initial_message)
 
     def _bg_task(req: BriefingRequest, current_run_id: str, current_status_path: Path, current_run_dir: Path):
@@ -369,6 +371,7 @@ async def create_briefing(
             run_dir=run_dir,
             status_path=status_path,
             initial_message="Tarea en cola",
+            source_run_id=None,
         )
 
         # Return immediate response with run_id
@@ -555,6 +558,7 @@ async def retry_job(run_id: str, background: BackgroundTasks, api_key: str = Dep
         run_dir=run_dir,
         status_path=status_path,
         initial_message=f"Retry queued from run {run_id}",
+        source_run_id=run_id,
     )
     return JSONResponse(content={"source_run_id": run_id, "run_id": new_run_id, "status": "queued"})
 

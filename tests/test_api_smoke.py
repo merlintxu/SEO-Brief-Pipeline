@@ -260,6 +260,9 @@ def test_jobs_cancel_and_retry_endpoints(tmp_path, monkeypatch):
     retry_body = retry_resp.json()
     assert retry_body["source_run_id"] == run_failed
     assert retry_body["status"] == "queued"
+    retried_run = job_store.get_job(retry_body["run_id"])
+    assert retried_run is not None
+    assert retried_run.source_run_id == run_failed
 
     cancel_resp = client.post(f"/jobs/{run_running}/cancel", headers=headers)
     assert cancel_resp.status_code == 200

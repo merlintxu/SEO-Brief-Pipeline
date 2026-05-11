@@ -116,6 +116,10 @@ Replace background-only state with SQLite or Redis.
 
 Status: in progress (SQLite store implemented and wired into API create/status/admin flow with `status.json` fallback compatibility).
 
+Progress update:
+
+- retry lineage persisted via `source_run_id` in `JobStore` and jobs API payloads.
+
 Acceptance:
 
 - API restart does not lose queued/running/completed metadata.
