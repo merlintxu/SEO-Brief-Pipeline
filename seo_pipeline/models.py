@@ -96,6 +96,50 @@ class SerpRawPayload(BaseModel):
     knowledge_graph: Optional[Dict[str, Any]] = None
 
 
+# ==================== Stage Contracts (A1) ====================
+class PipelineInput(BaseModel):
+    model_config = BaseConfig
+    keyword: str = Field(..., min_length=2, max_length=100)
+    target_url: Optional[str] = Field(default=None, max_length=2048)
+    related_limit: int = Field(default=30, ge=5, le=100)
+    serp_num: int = Field(default=10, ge=1, le=50)
+    top_competitors_count: int = Field(default=3, ge=1, le=20)
+    gsc_months_back: int = Field(default=12, ge=1, le=36)
+    upload_to_sheets: bool = True
+
+
+class KeywordSet(BaseModel):
+    model_config = BaseConfig
+    principal: SemrushKeyword
+    related: List[SemrushKeyword] = Field(default_factory=list, max_length=100)
+    source: str = Field(default="semrush")
+
+
+class CompetitorSet(BaseModel):
+    model_config = BaseConfig
+    top_urls: List[str] = Field(default_factory=list, max_length=50)
+    domains: List[str] = Field(default_factory=list, max_length=50)
+    source: str = Field(default="serp")
+
+
+class EnrichmentSet(BaseModel):
+    model_config = BaseConfig
+    serp_snapshot: SerpSnapshot
+    audit_report: "AuditReport"
+    cannibalization: Optional["GscCannibalization"] = None
+    anchors: Optional["AnchorSet"] = None
+
+
+class BriefingPlan(BaseModel):
+    model_config = BaseConfig
+    keyword: str = Field(..., min_length=2, max_length=100)
+    intent_summary: str = Field(default="", max_length=1000)
+    required_sections: List[str] = Field(default_factory=list, max_length=30)
+    evidence_points: List[str] = Field(default_factory=list, max_length=50)
+    constraints: List[str] = Field(default_factory=list, max_length=30)
+    prompt_version: str = Field(default="v1")
+
+
 # ==================== Auditoría ====================
 class SchemaSignals(BaseModel):
     model_config = BaseConfig

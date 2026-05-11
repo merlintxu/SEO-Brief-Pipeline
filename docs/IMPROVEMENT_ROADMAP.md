@@ -104,6 +104,10 @@ Acceptance:
 
 ## P2 - Product And Scale
 
+Execution checkpoint:
+
+- A1 stage contracts baseline implemented in models (`PipelineInput`, `KeywordSet`, `CompetitorSet`, `EnrichmentSet`, `BriefingPlan`) with dedicated tests.
+
 ### Batch keyword processing
 
 Add a batch runner for multiple keywords with isolated statuses.
