@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #24 (`codex/job-state-machine-hardening`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #25 (`codex/stage-contracts-a1`).
 
 ## Documented Changes (Recent)
 
@@ -76,11 +76,14 @@ This file is the entrypoint for coding agents working in this repository.
     - `done -> done`
     - `failed -> failed`
   - invalid transitions raise `InvalidJobTransitionError`.
+- Added stage contracts baseline (A1) in `seo_pipeline/models.py`:
+  - `PipelineInput`, `KeywordSet`, `CompetitorSet`, `EnrichmentSet`, `BriefingPlan`.
+  - initial contract tests in `tests/test_stage_contracts.py`.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: stage contracts A1 (`PipelineInput`, `KeywordSet`, `CompetitorSet`, `EnrichmentSet`, `BriefingPlan`).
+2. Immediate next PR focus after merge: wire A1 contracts into `run_full_pipeline()` stage handoff.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
