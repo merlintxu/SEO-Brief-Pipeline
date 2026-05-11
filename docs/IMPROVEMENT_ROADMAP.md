@@ -107,6 +107,7 @@ Acceptance:
 Execution checkpoint:
 
 - A1 stage contracts baseline implemented in models (`PipelineInput`, `KeywordSet`, `CompetitorSet`, `EnrichmentSet`, `BriefingPlan`) with dedicated tests.
+- A1 contracts wired into `run_full_pipeline()` handoff with backward-compatible outputs.
 
 ### Batch keyword processing
 

@@ -40,6 +40,14 @@ from seo_pipeline.utils.errors import classify_error
 from datetime import timedelta
 from seo_pipeline.utils.io import save_json
 from seo_pipeline.input_validation import PipelineInput
+from seo_pipeline.models import (
+    AuditReport,
+    BriefingPlan,
+    CompetitorSet,
+    EnrichmentSet,
+    KeywordSet,
+    PipelineInput as PipelineInputContract,
+)
 
 
 def run_full_pipeline(
@@ -71,6 +79,15 @@ def run_full_pipeline(
     serp_num = validated.serp_num
     top_competitors_count = validated.top_competitors_count
     gsc_months_back = validated.gsc_months_back
+    pipeline_input = PipelineInputContract(
+        keyword=keyword,
+        target_url=target_url,
+        related_limit=related_limit,
+        serp_num=serp_num,
+        top_competitors_count=top_competitors_count,
+        gsc_months_back=gsc_months_back,
+        upload_to_sheets=upload_to_sheets,
+    )
 
     cfg = get_config()
     runtime_requirements = validate_runtime_requirements(cfg)
@@ -84,6 +101,7 @@ def run_full_pipeline(
     log_event("info", "pipeline.start", run_id=run_id, keyword=keyword)
 
     results = {"run_id": run_id, "keyword": keyword, "output_dir": str(output_dir)}
+    results["pipeline_input"] = pipeline_input.model_dump()
     metrics = {
         "run_id": run_id,
         "keyword": keyword,
@@ -208,6 +226,12 @@ def run_full_pipeline(
             on_retry=_log_retry_factory("fetch_related", retry_attempts, stage="semrush", provider="semrush"),
         )
         results["semrush"] = semrush_data
+        keyword_set = KeywordSet(
+            principal=semrush_data.keyword_principal,
+            related=semrush_data.keywords_secundarias,
+            source="semrush",
+        )
+        results["keyword_set"] = keyword_set.model_dump()
         _stage_finish(
             "semrush",
             stage_started,
@@ -248,6 +272,12 @@ def run_full_pipeline(
             max_domains=top_competitors_count
         )
         results["top_competitors"] = top_competitors
+        competitor_set = CompetitorSet(
+            top_urls=top_urls,
+            domains=top_competitors,
+            source=serp_snapshot.provider,
+        )
+        results["competitor_set"] = competitor_set.model_dump()
         _stage_finish(
             "serp",
             stage_started,
@@ -295,6 +325,7 @@ def run_full_pipeline(
         # 4. DetecciÃ³n de canibalizaciÃ³n (GSC)
         # ===================================================================
         cannibal_notes = ""
+        cannibal = None
         if runtime_requirements.can_run_gsc:
             try:
                 _log("info", "4/8 Detectando canibalizaciÃ³n en GSC...", stage="gsc")
@@ -366,6 +397,25 @@ def run_full_pipeline(
             competitor_titles=competitor_titles,
         )
         results["anchors"] = anchors.model_dump()
+        if isinstance(audit_report, AuditReport):
+            audit_report_contract = audit_report
+        else:
+            audit_report_contract = AuditReport(
+                label=getattr(audit_report, "label", "top10_audit"),
+                entries=getattr(audit_report, "entries", []),
+                generated_at=getattr(
+                    audit_report,
+                    "generated_at",
+                    datetime.now().isoformat(timespec="seconds"),
+                ),
+            )
+        enrichment = EnrichmentSet(
+            serp_snapshot=serp_snapshot,
+            audit_report=audit_report_contract,
+            cannibalization=cannibal,
+            anchors=anchors,
+        )
+        results["enrichment_set"] = enrichment.model_dump()
         _stage_finish(
             "anchors",
             stage_started,
@@ -382,12 +432,21 @@ def run_full_pipeline(
         _log("info", "6/8 Generando briefing con OpenAI (gpt-4o)...", stage="briefing")
         _write_status(step="briefing", message="Generando briefing con OpenAI", percent=80)
         stage_started = _stage_start("briefing", provider="openai")
+        briefing_plan = BriefingPlan(
+            keyword=keyword,
+            required_sections=[entry.h1 for entry in audit_report.entries if entry.h1][:12],
+            evidence_points=[url for url in top_urls[:10]],
+            constraints=["Return structured JSON response"],
+            prompt_version="v1",
+        )
+        results["briefing_plan"] = briefing_plan.model_dump()
+
         briefing = generate_briefing(
             keyword=keyword,
             search_volume=semrush_data.keyword_principal.search_volume,
             semrush_data=semrush_data.model_dump(),
             serp_snapshot=serp_snapshot,
-            audit_report=audit_report.model_dump(),
+            audit_report=enrichment.audit_report.model_dump(),
             anchors=anchors,
             cannibalization_notes=cannibal_notes,
             openai_api_key=cfg.active_client.openai_key,

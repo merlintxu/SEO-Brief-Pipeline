@@ -96,6 +96,10 @@ When the API launches a run, it passes its own `outputs/{run_id}` directory into
 11. Export with `export_all_formats`.
 12. Optional Google Sheets upsert.
 
+Stage contract note:
+
+- The runtime now builds typed stage handoff snapshots (`PipelineInput`, `KeywordSet`, `CompetitorSet`, `EnrichmentSet`, `BriefingPlan`) for internal consistency and traceability.
+
 Transient vendor calls use `retry_call` with:
 
 - `retries=3`
