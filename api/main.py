@@ -39,6 +39,7 @@ from seo_pipeline.pipeline import run_full_pipeline
 from seo_pipeline.artifacts import DOWNLOADABLE_ARTIFACTS
 from seo_pipeline.utils.errors import classify_error
 from api.schemas import BriefingRequest, BriefingResponse
+from api.schemas import JobsCleanupRequest
 from seo_pipeline.utils.io import save_json, ensure_dir, load_json
 
 # ============================================================================
@@ -201,6 +202,87 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
 
 cfg = get_config()
 job_store = JobStore(Path("outputs") / "jobs.db")
+JOB_STATUS_VALUES = {"queued", "running", "done", "failed"}
+
+
+def _job_to_dict(job) -> dict:
+    return {
+        "run_id": job.run_id,
+        "keyword": job.keyword,
+        "status": job.status,
+        "step": job.step,
+        "message": job.message,
+        "error_category": job.error_category,
+        "output_dir": job.output_dir,
+        "created_at": job.created_at,
+        "updated_at": job.updated_at,
+    }
+
+
+def _queue_pipeline_run(
+    *,
+    background: BackgroundTasks,
+    request: BriefingRequest,
+    run_id: str,
+    run_dir: Path,
+    status_path: Path,
+    initial_message: str = "Tarea en cola",
+) -> None:
+    save_json(
+        status_path,
+        {
+            "status": "queued",
+            "step": "queued",
+            "message": initial_message,
+        },
+    )
+    job_store.create_job(run_id=run_id, keyword=request.keyword, output_dir=str(run_dir))
+    job_store.update_status(run_id, status="queued", step="queued", message=initial_message)
+
+    def _bg_task(req: BriefingRequest, current_run_id: str, current_status_path: Path, current_run_dir: Path):
+        try:
+            job_store.update_status(current_run_id, status="running", step="start", message="Pipeline iniciado")
+            run_full_pipeline(
+                keyword=req.keyword,
+                target_url=req.target_url,
+                run_id=current_run_id,
+                upload_to_sheets=req.upload_to_sheets,
+                related_limit=req.related_limit,
+                serp_num=req.serp_num,
+                status_path=current_status_path,
+                output_dir=current_run_dir,
+            )
+            final_status = load_json(current_status_path, default={})
+            job_store.update_status(
+                current_run_id,
+                status=final_status.get("status", "done"),
+                step=final_status.get("step", "done"),
+                message=final_status.get("message", "Pipeline completado"),
+                error_category=final_status.get("error_category"),
+            )
+        except Exception as e:
+            try:
+                error_category = classify_error(e)
+                save_json(
+                    current_status_path,
+                    {
+                        "status": "failed",
+                        "step": "error",
+                        "message": str(e),
+                        "error_category": error_category,
+                    },
+                )
+                job_store.update_status(
+                    current_run_id,
+                    status="failed",
+                    step="error",
+                    message=str(e),
+                    error_category=error_category,
+                )
+            except Exception:
+                pass
+
+    background.add_task(_bg_task, request, run_id, status_path, run_dir)
 
 
 @app.get(
@@ -280,55 +362,14 @@ async def create_briefing(
         run_dir = outputs_dir / run_id
         ensure_dir(run_dir)
         status_path = run_dir / "status.json"
-        save_json(status_path, {
-            "status": "queued",
-            "step": "queued",
-            "message": "Tarea en cola"
-        })
-        job_store.create_job(run_id=run_id, keyword=request.keyword, output_dir=str(run_dir))
-        job_store.update_status(run_id, status="queued", step="queued", message="Tarea en cola")
-
-        def _bg_task(req: BriefingRequest, run_id: str, status_path: Path):
-            try:
-                job_store.update_status(run_id, status="running", step="start", message="Pipeline iniciado")
-                run_full_pipeline(
-                    keyword=req.keyword,
-                    target_url=req.target_url,
-                    run_id=run_id,
-                    upload_to_sheets=req.upload_to_sheets,
-                    related_limit=req.related_limit,
-                    serp_num=req.serp_num,
-                    status_path=status_path,
-                    output_dir=run_dir,
-                )
-                final_status = load_json(status_path, default={})
-                job_store.update_status(
-                    run_id,
-                    status=final_status.get("status", "done"),
-                    step=final_status.get("step", "done"),
-                    message=final_status.get("message", "Pipeline completado"),
-                    error_category=final_status.get("error_category"),
-                )
-            except Exception as e:
-                try:
-                    error_category = classify_error(e)
-                    save_json(status_path, {
-                        "status": "failed",
-                        "step": "error",
-                        "message": str(e),
-                        "error_category": error_category,
-                    })
-                    job_store.update_status(
-                        run_id,
-                        status="failed",
-                        step="error",
-                        message=str(e),
-                        error_category=error_category,
-                    )
-                except Exception:
-                    pass
-
-        background.add_task(_bg_task, request, run_id, status_path)
+        _queue_pipeline_run(
+            background=background,
+            request=request,
+            run_id=run_id,
+            run_dir=run_dir,
+            status_path=status_path,
+            initial_message="Tarea en cola",
+        )
 
         # Return immediate response with run_id
         base_url = f"/outputs/{run_id}"
@@ -418,24 +459,138 @@ async def briefing_status(run_id: str):
 )
 async def list_jobs(
     limit: int = Query(default=20, ge=1, le=200),
+    cursor: int = Query(default=0, ge=0),
+    status_filter: str | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, min_length=1, max_length=100),
     api_key: str = Depends(get_api_key),
 ):
-    records = job_store.list_jobs(limit=limit)
-    payload = [
-        {
-            "run_id": job.run_id,
-            "keyword": job.keyword,
-            "status": job.status,
-            "step": job.step,
-            "message": job.message,
-            "error_category": job.error_category,
-            "output_dir": job.output_dir,
-            "created_at": job.created_at,
-            "updated_at": job.updated_at,
+    if status_filter and status_filter not in JOB_STATUS_VALUES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid status filter '{status_filter}'. Allowed: {', '.join(sorted(JOB_STATUS_VALUES))}",
+        )
+    records = job_store.list_jobs(limit=limit, offset=cursor, status=status_filter, search=q)
+    payload = [_job_to_dict(job) for job in records]
+    next_cursor = cursor + limit if len(payload) == limit else None
+    return JSONResponse(content={"items": payload, "count": len(payload), "next_cursor": next_cursor})
+
+
+@app.get(
+    "/jobs/{run_id}",
+    tags=["jobs"],
+    summary="Get Job Detail",
+    description="Get job metadata and current status snapshot for a single run.",
+)
+async def get_job(run_id: str, api_key: str = Depends(get_api_key)):
+    job = job_store.get_job(run_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Run_id no encontrado")
+    status_path = Path(job.output_dir) / "status.json"
+    status_payload = load_json(status_path, default={}) if status_path.exists() else None
+    return JSONResponse(content={"job": _job_to_dict(job), "status_file": status_payload})
+
+
+@app.delete(
+    "/jobs/{run_id}",
+    tags=["jobs"],
+    summary="Delete Job Metadata",
+    description="Delete job metadata from SQLite. Does not delete output artifacts.",
+)
+async def delete_job(run_id: str, api_key: str = Depends(get_api_key)):
+    deleted = job_store.delete_job(run_id)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Run_id no encontrado")
+    return JSONResponse(content={"deleted": True, "run_id": run_id})
+
+
+@app.post(
+    "/jobs/cleanup",
+    tags=["jobs"],
+    summary="Run Job Cleanup",
+    description="Run manual retention cleanup for terminal jobs.",
+)
+async def cleanup_jobs(payload: JobsCleanupRequest, api_key: str = Depends(get_api_key)):
+    deleted = job_store.cleanup_old_jobs(
+        max_age_days=payload.max_age_days,
+        statuses=tuple(payload.statuses),
+    )
+    return JSONResponse(
+        content={
+            "deleted_count": deleted,
+            "max_age_days": payload.max_age_days,
+            "statuses": payload.statuses,
         }
-        for job in records
-    ]
-    return JSONResponse(content={"items": payload, "count": len(payload)})
+    )
+
+
+@app.post(
+    "/jobs/{run_id}/retry",
+    tags=["jobs"],
+    summary="Retry Failed Job",
+    description="Requeue a failed job as a new run.",
+)
+async def retry_job(run_id: str, background: BackgroundTasks, api_key: str = Depends(get_api_key)):
+    job = job_store.get_job(run_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Run_id no encontrado")
+    if job.status != "failed":
+        raise HTTPException(status_code=409, detail="Only failed jobs can be retried")
+
+    new_run_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    outputs_dir = Path("outputs")
+    run_dir = outputs_dir / new_run_id
+    ensure_dir(run_dir)
+    status_path = run_dir / "status.json"
+    retry_request = BriefingRequest(
+        keyword=job.keyword,
+        target_url=None,
+        upload_to_sheets=True,
+        related_limit=30,
+        serp_num=10,
+    )
+    _queue_pipeline_run(
+        background=background,
+        request=retry_request,
+        run_id=new_run_id,
+        run_dir=run_dir,
+        status_path=status_path,
+        initial_message=f"Retry queued from run {run_id}",
+    )
+    return JSONResponse(content={"source_run_id": run_id, "run_id": new_run_id, "status": "queued"})
+
+
+@app.post(
+    "/jobs/{run_id}/cancel",
+    tags=["jobs"],
+    summary="Cancel Job",
+    description="Logical cancellation for queued/running jobs (no process hard-kill).",
+)
+async def cancel_job(run_id: str, api_key: str = Depends(get_api_key)):
+    job = job_store.get_job(run_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Run_id no encontrado")
+    if job.status not in {"queued", "running"}:
+        raise HTTPException(status_code=409, detail="Only queued/running jobs can be canceled")
+
+    job_store.update_status(
+        run_id,
+        status="failed",
+        step="canceled",
+        message="Canceled by operator",
+        error_category="unknown",
+    )
+    status_path = Path(job.output_dir) / "status.json"
+    if status_path.exists():
+        save_json(
+            status_path,
+            {
+                "status": "failed",
+                "step": "canceled",
+                "message": "Canceled by operator",
+                "error_category": "unknown",
+            },
+        )
+    return JSONResponse(content={"run_id": run_id, "status": "failed", "step": "canceled"})
 
 
 @app.get(

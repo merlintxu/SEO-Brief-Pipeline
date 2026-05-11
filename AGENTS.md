@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Recent work is being shipped through PR #17 (`codex/jobs-endpoint-validation`).
+- Recent work is being shipped through PR #18 (`codex/jobs-admin-suite`).
 
 ## Documented Changes (Recent)
 
@@ -44,14 +44,21 @@ This file is the entrypoint for coding agents working in this repository.
 - Added `/jobs` limit validation coverage:
   - `limit` supports `1..200`.
   - invalid limits return `422` via FastAPI validation.
+- Added jobs administration suite (authenticated):
+  - `GET /jobs` supports limit/cursor/status/search.
+  - `GET /jobs/{run_id}` returns job detail and optional status snapshot.
+  - `DELETE /jobs/{run_id}` deletes metadata only.
+  - `POST /jobs/cleanup` runs bounded terminal-state cleanup.
+  - `POST /jobs/{run_id}/retry` requeues failed jobs as new runs.
+  - `POST /jobs/{run_id}/cancel` performs logical cancellation for queued/running jobs.
 
 ## Next Actions (Post-PR)
 
-1. Merge PR #17 after CI is green and re-check `main` CI.
+1. Merge PR #18 after CI is green and re-check `main` CI.
 2. Wire complete `JobStore` lifecycle in API:
    - retention policy is present at store/startup level;
-   - list endpoint is present (`GET /jobs`);
-   - next step is optional targeted admin actions if needed.
+   - admin endpoints are present (`list/detail/delete/cleanup/retry/cancel`);
+   - next step is optional queue backend upgrade (SQLite -> Redis) if concurrency grows.
 3. Continue normalization contracts:
    - move additional consumers away from raw SERP dicts to typed models;
    - keep raw payload persisted for debugging only.

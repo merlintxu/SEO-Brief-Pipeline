@@ -114,13 +114,13 @@ Acceptance:
 
 Replace background-only state with SQLite or Redis.
 
-Status: in progress (SQLite store implemented in `api/job_store.py` and partially wired into API create/status flow with `status.json` fallback compatibility).
+Status: in progress (SQLite store implemented and wired into API create/status/admin flow with `status.json` fallback compatibility).
 
 Acceptance:
 
 - API restart does not lose queued/running/completed metadata.
-- Job list endpoint exists (`GET /jobs`) for operational visibility without scanning directories.
-- Remaining step: wire complete status lifecycle. Basic retention helpers (`delete_job`, `cleanup_old_jobs`) are now implemented in the store layer.
+- Admin surface exists: list/detail/delete/cleanup/retry/cancel.
+- Remaining step: evaluate queue backend upgrade if workload exceeds in-process background task limits.
 
 ### Cache management commands
 
