@@ -59,6 +59,11 @@ QUALITY_GATES_STRICT=0
 SERP_ENABLE_SERPAPI=1
 SERP_ENABLE_DATAFORSEO=1
 SERP_PROVIDER_ORDER=serpapi,dataforseo
+QUORUM_ENFORCE=0
+QUORUM_MIN_RELATED_KEYWORDS=1
+QUORUM_MIN_TOP_URLS=3
+QUORUM_MIN_COMPETITOR_DOMAINS=2
+QUORUM_MIN_AUDIT_ENTRIES=1
 ```
 
 ## Client And Project Config
@@ -197,6 +202,11 @@ Common files:
   - `quality_gates.passed`
   - `quality_gates.results[]` (`gate`, `passed`, `message`, `severity`)
   - `quality_gates.failed_count`
+- quorum summary:
+  - `quorum.decision` (`continue` or `fail`)
+  - `quorum.enforce`
+  - `quorum.checks[]` with observed/required counts
+  - `quorum.failed_count`
 
 Generated files are ignored by Git.
 

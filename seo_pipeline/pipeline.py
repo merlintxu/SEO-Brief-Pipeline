@@ -51,6 +51,7 @@ from seo_pipeline.models import (
     PipelineInput as PipelineInputContract,
 )
 from seo_pipeline.quality_gates import evaluate_quality_gates
+from seo_pipeline.quorum import QuorumPolicy, evaluate_quorum
 
 
 def run_full_pipeline(
@@ -465,6 +466,50 @@ def run_full_pipeline(
         if not gate_eval.passed:
             failed_summary = "; ".join(f"{item.gate}: {item.message}" for item in gate_eval.failures)
             raise RuntimeError(f"Quality gates failed: {failed_summary}")
+
+        # ===================================================================
+        # B2. Quorum / partial-data policy
+        # ===================================================================
+        quorum_policy = QuorumPolicy(
+            min_related_keywords=max(0, int(os.getenv("QUORUM_MIN_RELATED_KEYWORDS", "1"))),
+            min_top_urls=max(0, int(os.getenv("QUORUM_MIN_TOP_URLS", "3"))),
+            min_competitor_domains=max(0, int(os.getenv("QUORUM_MIN_COMPETITOR_DOMAINS", "2"))),
+            min_audit_entries=max(0, int(os.getenv("QUORUM_MIN_AUDIT_ENTRIES", "1"))),
+            enforce=os.getenv("QUORUM_ENFORCE", "0").strip().lower() in {"1", "true", "yes"},
+        )
+        quorum_decision = evaluate_quorum(
+            keyword_set=keyword_set,
+            competitor_set=competitor_set,
+            audit_entries_count=len(enrichment.audit_report.entries),
+            policy=quorum_policy,
+        )
+        metrics["quorum"] = {
+            "decision": quorum_decision.decision,
+            "enforce": quorum_policy.enforce,
+            "checks": [
+                {
+                    "rule": check.rule,
+                    "passed": check.passed,
+                    "observed": check.observed,
+                    "required": check.required,
+                    "message": check.message,
+                }
+                for check in quorum_decision.checks
+            ],
+            "failed_count": len(quorum_decision.failed_checks),
+        }
+        results["quorum"] = metrics["quorum"]
+
+        if quorum_decision.failed_checks:
+            failure_summary = "; ".join(
+                f"{item.rule} ({item.observed}/{item.required})" for item in quorum_decision.failed_checks
+            )
+            if quorum_decision.decision == "fail":
+                raise RuntimeError(f"Quorum policy failed: {failure_summary}")
+            _log("warning", f"Quorum partial-data continue: {failure_summary}", stage="quorum")
+            results["partial_data"] = True
+        else:
+            results["partial_data"] = False
 
         # ===================================================================
         # 6. Briefing con OpenAI + Instructor (structured output)
