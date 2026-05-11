@@ -91,12 +91,41 @@ class JobStore:
                 return None
             return self._row_to_record(row)
 
-    def list_jobs(self, limit: int = 100) -> list[JobRecord]:
+    def list_jobs(
+        self,
+        limit: int = 100,
+        *,
+        offset: int = 0,
+        status: str | None = None,
+        search: str | None = None,
+    ) -> list[JobRecord]:
+        if limit < 1:
+            raise ValueError("limit must be >= 1")
+        if offset < 0:
+            raise ValueError("offset must be >= 0")
+
+        clauses: list[str] = []
+        params: list[Any] = []
+        if status:
+            clauses.append("status = ?")
+            params.append(status)
+        if search:
+            clauses.append("(run_id LIKE ? OR keyword LIKE ?)")
+            like = f"%{search}%"
+            params.extend([like, like])
+
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        query = f"""
+            SELECT *
+            FROM jobs
+            {where_sql}
+            ORDER BY created_at DESC, rowid DESC
+            LIMIT ?
+            OFFSET ?
+        """
+        params.extend([limit, offset])
         with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT * FROM jobs ORDER BY created_at DESC, rowid DESC LIMIT ?",
-                (limit,),
-            ).fetchall()
+            rows = conn.execute(query, params).fetchall()
             return [self._row_to_record(row) for row in rows]
 
     def delete_job(self, run_id: str) -> int:

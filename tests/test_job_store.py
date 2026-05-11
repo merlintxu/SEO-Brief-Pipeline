@@ -78,3 +78,25 @@ def test_job_store_cleanup_old_jobs(tmp_path: Path):
     assert store.get_job("run_old_done") is None
     assert store.get_job("run_new_done") is not None
     assert store.get_job("run_old_running") is not None
+
+
+def test_job_store_list_jobs_filter_search_and_offset(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run-1", "alpha keyword", "outputs/run-1")
+    store.create_job("run-2", "beta keyword", "outputs/run-2")
+    store.create_job("run-3", "alpha secondary", "outputs/run-3")
+    store.update_status("run-1", status="failed", step="error", message="boom")
+    store.update_status("run-2", status="done", step="done", message="ok")
+    store.update_status("run-3", status="failed", step="error", message="boom")
+
+    failed = store.list_jobs(limit=10, status="failed")
+    assert {job.run_id for job in failed} == {"run-1", "run-3"}
+
+    alpha = store.list_jobs(limit=10, search="alpha")
+    assert {job.run_id for job in alpha} == {"run-1", "run-3"}
+
+    page_1 = store.list_jobs(limit=1, offset=0)
+    page_2 = store.list_jobs(limit=1, offset=1)
+    assert len(page_1) == 1
+    assert len(page_2) == 1
+    assert page_1[0].run_id != page_2[0].run_id

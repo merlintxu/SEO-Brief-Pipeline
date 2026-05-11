@@ -105,7 +105,13 @@ http://localhost:8000/docs
 6. Pipeline updates status as it moves through SEMrush, SERP, audit, GSC, anchors, OpenAI, export and optional Sheets.
 7. Client polls `GET /briefing/{run_id}`.
 8. Client downloads whitelisted files via `GET /outputs/{run_id}/{filename}`.
-9. Operators can inspect recent metadata via `GET /jobs?limit=20` (authenticated; `limit` range is `1..200`).
+9. Operators can inspect and maintain job metadata:
+   - `GET /jobs?limit=20&cursor=0&status=failed&q=keyword`
+   - `GET /jobs/{run_id}`
+   - `DELETE /jobs/{run_id}` (metadata only)
+   - `POST /jobs/cleanup`
+   - `POST /jobs/{run_id}/retry`
+   - `POST /jobs/{run_id}/cancel`
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 
@@ -212,6 +218,8 @@ After deploy:
 curl http://localhost:8000/health
 curl -H "X-API-Key: replace_with_api_key" http://localhost:8000/docs
 curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs?limit=10"
+curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs/replace_with_run_id"
+curl -X POST -H "X-API-Key: replace_with_api_key" -H "Content-Type: application/json" -d "{\"max_age_days\":30,\"statuses\":[\"done\",\"failed\"]}" http://localhost:8000/jobs/cleanup
 ```
 
 For a real briefing, start with `upload_to_sheets=false` until provider credentials and output files are verified.
