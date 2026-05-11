@@ -105,6 +105,7 @@ http://localhost:8000/docs
 6. Pipeline updates status as it moves through SEMrush, SERP, audit, GSC, anchors, OpenAI, export and optional Sheets.
 7. Client polls `GET /briefing/{run_id}`.
 8. Client downloads whitelisted files via `GET /outputs/{run_id}/{filename}`.
+9. Operators can inspect recent metadata via `GET /jobs?limit=20` (authenticated).
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 
@@ -210,6 +211,7 @@ After deploy:
 ```bash
 curl http://localhost:8000/health
 curl -H "X-API-Key: replace_with_api_key" http://localhost:8000/docs
+curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs?limit=10"
 ```
 
 For a real briefing, start with `upload_to_sheets=false` until provider credentials and output files are verified.

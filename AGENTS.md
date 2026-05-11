@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Recent work is being shipped through PR #15 (`codex/api-job-retention-startup`).
+- Recent work is being shipped through PR #16 (`codex/api-jobs-endpoint`).
 
 ## Documented Changes (Recent)
 
@@ -38,13 +38,17 @@ This file is the entrypoint for coding agents working in this repository.
 - Added API startup retention cleanup path:
   - env config `JOB_STORE_RETENTION_DAYS` (default `30`)
   - retention cleanup executes on API startup and does not block service boot if cleanup fails.
+- Added protected operational jobs endpoint:
+  - `GET /jobs?limit=N` returns recent job metadata from SQLite `JobStore`.
+  - endpoint is API-key protected and intended for ops/debug workflows.
 
 ## Next Actions (Post-PR)
 
-1. Merge PR #15 after CI is green and re-check `main` CI.
+1. Merge PR #16 after CI is green and re-check `main` CI.
 2. Wire complete `JobStore` lifecycle in API:
-   - retention policy is now present at store/startup level;
-   - next step is admin/list endpoints only if required.
+   - retention policy is present at store/startup level;
+   - list endpoint is present (`GET /jobs`);
+   - next step is optional targeted admin actions if needed.
 3. Continue normalization contracts:
    - move additional consumers away from raw SERP dicts to typed models;
    - keep raw payload persisted for debugging only.

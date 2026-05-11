@@ -124,3 +124,23 @@ def test_briefing_status_falls_back_to_job_store(tmp_path):
     data = response.json()
     assert data["status"] == "failed"
     assert data["error_category"] == "network"
+
+
+def test_jobs_endpoint_requires_auth_and_lists_items(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app, job_store
+
+    run_id = f"run_jobs_endpoint_{int(time.time() * 1000)}"
+    job_store.create_job(run_id=run_id, keyword="kw-jobs", output_dir=str(tmp_path / "outputs" / run_id))
+    job_store.update_status(run_id, status="done", step="done", message="ok")
+
+    client = TestClient(app)
+    unauthorized = client.get("/jobs")
+    assert unauthorized.status_code == 403
+
+    response = client.get("/jobs?limit=5", headers={"X-API-Key": "secret-token-2025-test-key-long-enough"})
+    assert response.status_code == 200
+    body = response.json()
+    assert "items" in body
+    assert "count" in body
+    assert any(item["run_id"] == run_id for item in body["items"])
