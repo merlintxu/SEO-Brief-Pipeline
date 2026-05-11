@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Recent work is being shipped through PR #16 (`codex/api-jobs-endpoint`).
+- Recent work is being shipped through PR #17 (`codex/jobs-endpoint-validation`).
 
 ## Documented Changes (Recent)
 
@@ -41,10 +41,13 @@ This file is the entrypoint for coding agents working in this repository.
 - Added protected operational jobs endpoint:
   - `GET /jobs?limit=N` returns recent job metadata from SQLite `JobStore`.
   - endpoint is API-key protected and intended for ops/debug workflows.
+- Added `/jobs` limit validation coverage:
+  - `limit` supports `1..200`.
+  - invalid limits return `422` via FastAPI validation.
 
 ## Next Actions (Post-PR)
 
-1. Merge PR #16 after CI is green and re-check `main` CI.
+1. Merge PR #17 after CI is green and re-check `main` CI.
 2. Wire complete `JobStore` lifecycle in API:
    - retention policy is present at store/startup level;
    - list endpoint is present (`GET /jobs`);

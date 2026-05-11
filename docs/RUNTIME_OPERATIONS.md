@@ -105,7 +105,7 @@ http://localhost:8000/docs
 6. Pipeline updates status as it moves through SEMrush, SERP, audit, GSC, anchors, OpenAI, export and optional Sheets.
 7. Client polls `GET /briefing/{run_id}`.
 8. Client downloads whitelisted files via `GET /outputs/{run_id}/{filename}`.
-9. Operators can inspect recent metadata via `GET /jobs?limit=20` (authenticated).
+9. Operators can inspect recent metadata via `GET /jobs?limit=20` (authenticated; `limit` range is `1..200`).
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 

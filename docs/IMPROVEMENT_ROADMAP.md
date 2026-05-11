@@ -119,7 +119,7 @@ Status: in progress (SQLite store implemented in `api/job_store.py` and partiall
 Acceptance:
 
 - API restart does not lose queued/running/completed metadata.
-- Job list endpoint can be added later without scanning directories.
+- Job list endpoint exists (`GET /jobs`) for operational visibility without scanning directories.
 - Remaining step: wire complete status lifecycle. Basic retention helpers (`delete_job`, `cleanup_old_jobs`) are now implemented in the store layer.
 
 ### Cache management commands
