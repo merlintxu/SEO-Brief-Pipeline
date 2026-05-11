@@ -67,6 +67,10 @@ Acceptance:
 
 ## P1 - Reliability And Observability
 
+Execution checkpoint:
+
+- A2 quality gate engine added with metrics persistence and strict-mode toggle (`QUALITY_GATES_STRICT`).
+
 ### Structured run logging
 
 Add `run_id`, `keyword`, `step`, duration and provider to log records.

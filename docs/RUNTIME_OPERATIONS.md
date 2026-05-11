@@ -55,6 +55,7 @@ SENTRY_ENVIRONMENT=development
 SENTRY_RELEASE=2025.11.18
 PIPELINE_ROOT=
 JOB_STORE_RETENTION_DAYS=30
+QUALITY_GATES_STRICT=0
 ```
 
 ## Client And Project Config
@@ -189,6 +190,10 @@ Common files:
 - `items_processed`
 - `error_category` (when a stage fails)
 - audit-specific fields: `slowest_item_url`, `slowest_item_ms`, `failed_urls`
+- quality gates summary:
+  - `quality_gates.passed`
+  - `quality_gates.results[]` (`gate`, `passed`, `message`, `severity`)
+  - `quality_gates.failed_count`
 
 Generated files are ignored by Git.
 
