@@ -117,6 +117,7 @@ The API request/response schemas live in `api/schemas.py`:
 
 - `BriefingRequest`
 - `BriefingResponse`
+- `JobsCleanupRequest`
 
 ## Vendor Integrations
 

@@ -95,6 +95,18 @@ Docs:
 http://localhost:8000/docs
 ```
 
+OpenAPI contract export:
+
+```bash
+python tools/export_openapi.py
+```
+
+Contract file path:
+
+```text
+docs/contracts/openapi.json
+```
+
 ## Request Lifecycle
 
 1. Client sends `POST /briefing` with `X-API-Key`.

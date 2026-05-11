@@ -133,6 +133,8 @@ Acceptance:
 
 ### OpenAPI contract export
 
+Status: implemented.
+
 Acceptance:
 
 - Generated OpenAPI JSON is versioned or published as an artifact.

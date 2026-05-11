@@ -1,0 +1,738 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SEO Briefing Pipeline API",
+    "description": "\n    ## Automated SEO Content Briefing Generation\n    \n    Generate comprehensive SEO content briefs using:\n    - **SEMrush** - Keyword research and search volume data\n    - **SerpAPI** - Real-time SERP analysis\n    - **OpenAI GPT-4** - AI-powered content recommendations\n    - **Google Search Console** - Cannibalization detection\n    \n    ### Features\n    - Automated keyword research\n    - Competitor content analysis\n    - AI-generated briefings with structured headings\n    - Google Sheets integration\n    - Rate-limited API (10 requests/minute)\n    \n    ### Authentication\n    All endpoints (except `/health`) require an `X-API-Key` header.\n    \n    ### Rate Limiting\n    - **Limit**: 10 requests per minute per IP\n    - **Exempt**: `/health`, `/docs`, `/openapi.json`\n    ",
+    "contact": {
+      "name": "SEO Pipeline Support",
+      "url": "https://github.com/your-repo/seo-pipeline",
+      "email": "support@example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "2025.11.18"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "description": "Check API health status and active configuration",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "System health status",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/briefing": {
+      "post": {
+        "tags": [
+          "briefing"
+        ],
+        "summary": "Create SEO Briefing",
+        "description": "Generate a comprehensive SEO content brief for a given keyword.\n    \n    This endpoint:\n    1. Fetches keyword data from SEMrush\n    2. Analyzes SERP results via SerpAPI\n    3. Audits top competitor content\n    4. Checks for keyword cannibalization (if GSC configured)\n    5. Generates AI-powered content brief with OpenAI\n    6. Exports results in multiple formats (JSON, Markdown, XLSX)\n    7. Optionally uploads to Google Sheets\n    \n    **Note**: This is a long-running operation executed in the background.\n    Use the `/briefing/{run_id}` endpoint to check status.",
+        "operationId": "create_briefing_briefing_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Briefing creation initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefingResponse"
+                },
+                "example": {
+                  "run_id": "20251125_120530",
+                  "keyword": "content marketing",
+                  "output_dir": "outputs/20251125_120530",
+                  "files": {
+                    "status": "/outputs/20251125_120530/status.json"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No client/project configured"
+          },
+          "403": {
+            "description": "Invalid or missing API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/briefing/{run_id}": {
+      "get": {
+        "tags": [
+          "briefing"
+        ],
+        "summary": "Get Briefing Status",
+        "description": "Check the status of a running or completed briefing generation task.\n    \n    Poll this endpoint to track progress of the briefing generation.\n    \n    **Status values**:\n    - `queued` - Task is waiting to start\n    - `running` - Task is in progress\n    - `done` - Task completed successfully\n    - `failed` - Task encountered an error",
+        "operationId": "briefing_status_briefing__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "examples": {
+                  "running": {
+                    "value": {
+                      "status": "running",
+                      "step": "3/8 Auditando competidores...",
+                      "message": "Processing"
+                    }
+                  },
+                  "completed": {
+                    "value": {
+                      "status": "done",
+                      "step": "completed",
+                      "message": "Pipeline completado",
+                      "files": {
+                        "json": "/outputs/20251125_120530/briefing.json",
+                        "markdown": "/outputs/20251125_120530/briefing.md"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Run ID not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "List Jobs",
+        "description": "List recent job metadata from the SQLite job store (operational endpoint).",
+        "operationId": "list_jobs_jobs_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{run_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job Detail",
+        "description": "Get job metadata and current status snapshot for a single run.",
+        "operationId": "get_job_jobs__run_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Delete Job Metadata",
+        "description": "Delete job metadata from SQLite. Does not delete output artifacts.",
+        "operationId": "delete_job_jobs__run_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/cleanup": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Run Job Cleanup",
+        "description": "Run manual retention cleanup for terminal jobs.",
+        "operationId": "cleanup_jobs_jobs_cleanup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobsCleanupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/jobs/{run_id}/retry": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Retry Failed Job",
+        "description": "Requeue a failed job as a new run.",
+        "operationId": "retry_job_jobs__run_id__retry_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Cancel Job",
+        "description": "Logical cancellation for queued/running jobs (no process hard-kill).",
+        "operationId": "cancel_job_jobs__run_id__cancel_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/outputs/{run_id}/{filename}": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Download Briefing File",
+        "description": "Download a generated briefing file.\n    \n    **Allowed files**:\n    - `briefing.json` - Complete briefing data\n    - `briefing.md` - Markdown formatted brief\n    - `row24.csv` / `row24.xlsx` - Spreadsheet export\n    - `status.json` - Current status\n    - `audit_report.json` - Competitor audit data\n    - `serp_raw.json` - Raw SERP data\n    \n    **Security**: Path traversal protection is enabled.",
+        "operationId": "download_file_outputs__run_id___filename__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File downloaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "403": {
+            "description": "File not allowed or path traversal detected"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BriefingRequest": {
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Keyword",
+            "description": "SEO keyword to generate briefing for (2-100 chars)"
+          },
+          "target_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Url",
+            "description": "Optional target URL to analyze"
+          },
+          "upload_to_sheets": {
+            "type": "boolean",
+            "title": "Upload To Sheets",
+            "description": "Upload result to Google Sheets",
+            "default": true
+          },
+          "related_limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 5.0,
+            "title": "Related Limit",
+            "description": "Max related keywords to fetch (5-100)",
+            "default": 30
+          },
+          "serp_num": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Serp Num",
+            "description": "Number of SERP results to analyze (1-50)",
+            "default": 10
+          }
+        },
+        "type": "object",
+        "required": [
+          "keyword"
+        ],
+        "title": "BriefingRequest",
+        "description": "Request schema for briefing generation with strict validation."
+      },
+      "BriefingResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "keyword": {
+            "type": "string",
+            "title": "Keyword"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "completed"
+          },
+          "output_dir": {
+            "type": "string",
+            "title": "Output Dir"
+          },
+          "files": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "keyword",
+          "output_dir",
+          "files"
+        ],
+        "title": "BriefingResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobsCleanupRequest": {
+        "properties": {
+          "max_age_days": {
+            "type": "integer",
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Max Age Days",
+            "default": 30
+          },
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Statuses"
+          }
+        },
+        "type": "object",
+        "title": "JobsCleanupRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "briefing",
+      "description": "SEO briefing generation endpoints"
+    },
+    {
+      "name": "health",
+      "description": "System health and status checks"
+    },
+    {
+      "name": "files",
+      "description": "Download generated briefing files"
+    },
+    {
+      "name": "jobs",
+      "description": "Operational job metadata endpoints"
+    }
+  ]
+}
