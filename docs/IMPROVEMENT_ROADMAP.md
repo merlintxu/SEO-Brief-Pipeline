@@ -144,6 +144,8 @@ Acceptance:
 
 ### Pre-commit
 
+Status: implemented (baseline).
+
 Add local hooks for:
 
 - secret scanning
