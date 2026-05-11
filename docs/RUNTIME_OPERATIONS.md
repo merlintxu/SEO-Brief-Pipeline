@@ -134,6 +134,10 @@ docs/contracts/openapi.json
 10. Retry lineage is persisted in `JobStore`:
    - retried jobs store `source_run_id` (parent failed run).
    - this enables operational traceability for repeated retries/chains.
+11. Jobs admin endpoints expose explicit response contracts in OpenAPI:
+   - list: `items`, `count`, `next_cursor`
+   - detail: `job`, `status_file`
+   - retry/cancel/delete/cleanup: stable typed payloads
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 
