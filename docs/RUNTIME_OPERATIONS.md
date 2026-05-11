@@ -152,6 +152,13 @@ Typical states:
 - `done`
 - `failed`
 
+Allowed transitions:
+
+- `queued -> queued|running|failed`
+- `running -> running|done|failed`
+- `done -> done`
+- `failed -> failed`
+
 The status payload includes:
 
 - `status`

@@ -32,7 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from api.rate_limiter import RateLimitMiddleware
-from api.job_store import JobStore
+from api.job_store import InvalidJobTransitionError, JobStore
 
 from seo_pipeline.config import get_config
 from seo_pipeline.pipeline import run_full_pipeline
@@ -248,11 +248,17 @@ def _queue_pipeline_run(
         },
     )
     job_store.create_job(run_id=run_id, keyword=request.keyword, output_dir=str(run_dir), source_run_id=source_run_id)
-    job_store.update_status(run_id, status="queued", step="queued", message=initial_message)
+    try:
+        job_store.update_status(run_id, status="queued", step="queued", message=initial_message)
+    except InvalidJobTransitionError:
+        pass
 
     def _bg_task(req: BriefingRequest, current_run_id: str, current_status_path: Path, current_run_dir: Path):
         try:
-            job_store.update_status(current_run_id, status="running", step="start", message="Pipeline iniciado")
+            try:
+                job_store.update_status(current_run_id, status="running", step="start", message="Pipeline iniciado")
+            except InvalidJobTransitionError:
+                return
             run_full_pipeline(
                 keyword=req.keyword,
                 target_url=req.target_url,
@@ -264,13 +270,16 @@ def _queue_pipeline_run(
                 output_dir=current_run_dir,
             )
             final_status = load_json(current_status_path, default={})
-            job_store.update_status(
-                current_run_id,
-                status=final_status.get("status", "done"),
-                step=final_status.get("step", "done"),
-                message=final_status.get("message", "Pipeline completado"),
-                error_category=final_status.get("error_category"),
-            )
+            try:
+                job_store.update_status(
+                    current_run_id,
+                    status=final_status.get("status", "done"),
+                    step=final_status.get("step", "done"),
+                    message=final_status.get("message", "Pipeline completado"),
+                    error_category=final_status.get("error_category"),
+                )
+            except InvalidJobTransitionError:
+                pass
         except Exception as e:
             try:
                 error_category = classify_error(e)
@@ -283,13 +292,16 @@ def _queue_pipeline_run(
                         "error_category": error_category,
                     },
                 )
-                job_store.update_status(
-                    current_run_id,
-                    status="failed",
-                    step="error",
-                    message=str(e),
-                    error_category=error_category,
-                )
+                try:
+                    job_store.update_status(
+                        current_run_id,
+                        status="failed",
+                        step="error",
+                        message=str(e),
+                        error_category=error_category,
+                    )
+                except InvalidJobTransitionError:
+                    pass
             except Exception:
                 pass
 
@@ -591,13 +603,16 @@ async def cancel_job(run_id: str, api_key: str = Depends(get_api_key)):
     if job.status not in {"queued", "running"}:
         raise HTTPException(status_code=409, detail="Only queued/running jobs can be canceled")
 
-    job_store.update_status(
-        run_id,
-        status="failed",
-        step="canceled",
-        message="Canceled by operator",
-        error_category="unknown",
-    )
+    try:
+        job_store.update_status(
+            run_id,
+            status="failed",
+            step="canceled",
+            message="Canceled by operator",
+            error_category="unknown",
+        )
+    except InvalidJobTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     status_path = Path(job.output_dir) / "status.json"
     if status_path.exists():
         save_json(

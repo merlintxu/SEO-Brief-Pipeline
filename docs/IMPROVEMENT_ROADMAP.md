@@ -2,6 +2,10 @@
 
 This roadmap is ordered by risk reduction and operational value.
 
+Execution detail is now tracked in:
+
+- `docs/REARCHITECTURE_EXECUTION_PLAN.md` (epics, PR slicing, acceptance and tests).
+
 ## P0 - Stabilization
 
 ### Fix GSC model mismatch
@@ -119,6 +123,7 @@ Status: in progress (SQLite store implemented and wired into API create/status/a
 Progress update:
 
 - retry lineage persisted via `source_run_id` in `JobStore` and jobs API payloads.
+- lifecycle transitions are now guarded in `JobStore` with explicit state transition rules.
 
 Acceptance:
 
