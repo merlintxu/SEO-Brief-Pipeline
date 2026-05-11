@@ -24,6 +24,7 @@ from fastapi import (
     status,
     Depends,
     Request,
+    Query,
 )
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.security.api_key import APIKeyHeader
@@ -150,6 +151,10 @@ app = FastAPI(
         {
             "name": "files",
             "description": "Download generated briefing files"
+        },
+        {
+            "name": "jobs",
+            "description": "Operational job metadata endpoints"
         }
     ]
 )
@@ -403,6 +408,34 @@ async def briefing_status(run_id: str):
         "error_category": job.error_category,
     }
     return JSONResponse(content=data)
+
+
+@app.get(
+    "/jobs",
+    tags=["jobs"],
+    summary="List Jobs",
+    description="List recent job metadata from the SQLite job store (operational endpoint).",
+)
+async def list_jobs(
+    limit: int = Query(default=20, ge=1, le=200),
+    api_key: str = Depends(get_api_key),
+):
+    records = job_store.list_jobs(limit=limit)
+    payload = [
+        {
+            "run_id": job.run_id,
+            "keyword": job.keyword,
+            "status": job.status,
+            "step": job.step,
+            "message": job.message,
+            "error_category": job.error_category,
+            "output_dir": job.output_dir,
+            "created_at": job.created_at,
+            "updated_at": job.updated_at,
+        }
+        for job in records
+    ]
+    return JSONResponse(content={"items": payload, "count": len(payload)})
 
 
 @app.get(

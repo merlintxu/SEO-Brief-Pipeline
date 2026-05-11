@@ -40,6 +40,7 @@ Endpoints:
 - `GET /health`: no auth, returns API health and active client name.
 - `POST /briefing`: authenticated, creates a run, writes initial `status.json`, schedules `run_full_pipeline`.
 - `GET /briefing/{run_id}`: reads `outputs/{run_id}/status.json`.
+- `GET /jobs`: authenticated, lists recent job metadata from SQLite `JobStore` for operations/debugging.
 - `GET /outputs/{run_id}/{filename}`: authenticated by route policy, resolves paths under `outputs/` and only permits whitelisted filenames.
 
 Security behavior:
@@ -48,6 +49,7 @@ Security behavior:
 - CORS is restricted to configured localhost origins.
 - Rate limiting is in-memory per client IP.
 - There is no `/static` mount exposing all generated files.
+- Job metadata persistence uses `api/job_store.py` (SQLite), including startup retention cleanup via `JOB_STORE_RETENTION_DAYS`.
 
 ## Configuration
 
