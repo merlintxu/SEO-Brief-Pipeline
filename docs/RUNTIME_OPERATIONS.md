@@ -8,6 +8,13 @@ Install for development:
 python -m pip install -e ".[test]"
 ```
 
+Install developer tooling (pre-commit and lint/format hooks):
+
+```bash
+python -m pip install -e ".[dev]"
+pre-commit install
+```
+
 Install runtime dependencies only:
 
 ```bash

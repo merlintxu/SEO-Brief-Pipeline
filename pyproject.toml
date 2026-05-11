@@ -39,6 +39,10 @@ test = [
     "pytest>=7.0.0",
     "pytest-asyncio",
 ]
+dev = [
+    "pre-commit>=3.8.0",
+    "ruff>=0.6.9",
+]
 
 [tool.setuptools]
 py-modules = ["client_manager"]

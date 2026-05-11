@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Recent work is being shipped through PR #19 (`codex/openapi-contract-export`).
+- Recent work is being shipped through PR #20 (`codex/openapi-contract-export`).
 
 ## Documented Changes (Recent)
 
@@ -55,10 +55,13 @@ This file is the entrypoint for coding agents working in this repository.
   - source of truth file: `docs/contracts/openapi.json`
   - exporter command: `python tools/export_openapi.py`
   - test coverage validates contract JSON and required API paths.
+- Added pre-commit baseline:
+  - `.pre-commit-config.yaml` with formatting, YAML/JSON checks, private-key detection and local repo guards.
+  - local hooks: `tools/check_repo_guard.py` and `tools/check_markdown.py`.
 
 ## Next Actions (Post-PR)
 
-1. Merge PR #19 after CI is green and re-check `main` CI.
+1. Merge PR #20 after CI is green and re-check `main` CI.
 2. Wire complete `JobStore` lifecycle in API:
    - retention policy is present at store/startup level;
    - admin endpoints are present (`list/detail/delete/cleanup/retry/cancel`);
@@ -73,6 +76,8 @@ This file is the entrypoint for coding agents working in this repository.
    - regenerate `docs/contracts/openapi.json` on API surface changes.
 6. Controlled UTF-8 cleanup:
    - docs first, then user-facing strings; avoid mixing with behavior changes.
+7. Developer UX:
+   - expand pre-commit markdown checks beyond basic H1 validation when needed.
 
 ## Documentation Discipline (Mandatory)
 
