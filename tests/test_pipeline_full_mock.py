@@ -97,6 +97,11 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
     )
 
     assert result["output_dir"] == str(output_dir)
+    assert "pipeline_input" in result
+    assert "keyword_set" in result
+    assert "competitor_set" in result
+    assert "enrichment_set" in result
+    assert "briefing_plan" in result
     assert (output_dir / "serp_raw.json").exists()
     assert (output_dir / "audit_report.json").exists()
     assert result["json"].exists()
