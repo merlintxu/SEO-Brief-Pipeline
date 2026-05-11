@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 import time
 from typing import Optional
+import os
 
 from seo_pipeline.config import get_config
 from seo_pipeline.artifacts import AUDIT_REPORT_JSON, RUN_METRICS_JSON, SERP_RAW_JSON
@@ -48,6 +49,7 @@ from seo_pipeline.models import (
     KeywordSet,
     PipelineInput as PipelineInputContract,
 )
+from seo_pipeline.quality_gates import evaluate_quality_gates
 
 
 def run_full_pipeline(
@@ -425,6 +427,32 @@ def run_full_pipeline(
             secondary=len(anchors.secondary),
             internal=len(anchors.internal),
         )
+
+        # ===================================================================
+        # A2. Quality gates (pre-briefing)
+        # ===================================================================
+        gate_eval = evaluate_quality_gates(
+            keyword_set=keyword_set,
+            competitor_set=competitor_set,
+            audit_entries_count=len(enrichment.audit_report.entries),
+            strict=os.getenv("QUALITY_GATES_STRICT", "0").strip().lower() in {"1", "true", "yes"},
+        )
+        metrics["quality_gates"] = {
+            "passed": gate_eval.passed,
+            "results": [
+                {
+                    "gate": item.gate,
+                    "passed": item.passed,
+                    "message": item.message,
+                    "severity": item.severity,
+                }
+                for item in gate_eval.results
+            ],
+            "failed_count": len(gate_eval.failures),
+        }
+        if not gate_eval.passed:
+            failed_summary = "; ".join(f"{item.gate}: {item.message}" for item in gate_eval.failures)
+            raise RuntimeError(f"Quality gates failed: {failed_summary}")
 
         # ===================================================================
         # 6. Briefing con OpenAI + Instructor (structured output)

@@ -99,6 +99,7 @@ When the API launches a run, it passes its own `outputs/{run_id}` directory into
 Stage contract note:
 
 - The runtime now builds typed stage handoff snapshots (`PipelineInput`, `KeywordSet`, `CompetitorSet`, `EnrichmentSet`, `BriefingPlan`) for internal consistency and traceability.
+- A quality-gate evaluation runs before briefing generation and is persisted in run metrics (`quality_gates`). Coverage gates can be enforced as hard failures with `QUALITY_GATES_STRICT=1`.
 
 Transient vendor calls use `retry_call` with:
 

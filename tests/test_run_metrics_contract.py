@@ -103,6 +103,9 @@ def test_run_metrics_contract_keeps_core_fields_and_stage_observability(tmp_path
     for key in ("run_id", "keyword", "started_at", "finished_at", "status", "stages"):
         assert key in metrics
     assert metrics["status"] == "done"
+    assert "quality_gates" in metrics
+    assert "passed" in metrics["quality_gates"]
+    assert "results" in metrics["quality_gates"]
 
     for stage in ("semrush", "serp", "audit", "anchors", "briefing", "export"):
         payload = metrics["stages"][stage]
