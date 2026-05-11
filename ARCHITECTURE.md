@@ -55,6 +55,7 @@ Security behavior:
 - Rate limiting is in-memory per client IP.
 - There is no `/static` mount exposing all generated files.
 - Job metadata persistence uses `api/job_store.py` (SQLite), including startup retention cleanup via `JOB_STORE_RETENTION_DAYS`.
+- Job metadata updates enforce state transitions in `JobStore` to avoid invalid lifecycle jumps.
 
 ## Configuration
 
@@ -118,6 +119,7 @@ The API request/response schemas live in `api/schemas.py`:
 - `BriefingRequest`
 - `BriefingResponse`
 - `JobsCleanupRequest`
+- admin response contracts (`JobsListResponse`, `JobDetailResponse`, `JobDeleteResponse`, `JobsCleanupResponse`, `JobRetryResponse`, `JobCancelResponse`)
 
 ## Vendor Integrations
 

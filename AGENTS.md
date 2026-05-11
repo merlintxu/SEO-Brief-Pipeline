@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Recent work is being shipped through PR #23 (`codex/jobs-response-contracts`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #24 (`codex/job-state-machine-hardening`).
 
 ## Documented Changes (Recent)
 
@@ -68,26 +68,22 @@ This file is the entrypoint for coding agents working in this repository.
 - Added explicit response contracts for jobs admin endpoints in `api/schemas.py`:
   - `JobsListResponse`, `JobDetailResponse`, `JobDeleteResponse`, `JobsCleanupResponse`, `JobRetryResponse`, `JobCancelResponse`.
   - FastAPI endpoints now declare `response_model` for stable OpenAPI output.
+- Added job status transition hardening in `JobStore`:
+  - allowed statuses: `queued`, `running`, `done`, `failed`.
+  - allowed transitions:
+    - `queued -> queued|running|failed`
+    - `running -> running|done|failed`
+    - `done -> done`
+    - `failed -> failed`
+  - invalid transitions raise `InvalidJobTransitionError`.
 
 ## Next Actions (Post-PR)
 
-1. Merge PR #23 after CI is green and re-check `main` CI.
-2. Wire complete `JobStore` lifecycle in API:
-   - retention policy is present at store/startup level;
-   - admin endpoints are present (`list/detail/delete/cleanup/retry/cancel`);
-   - next step is optional queue backend upgrade (SQLite -> Redis) if concurrency grows.
-3. Continue normalization contracts:
-   - move additional consumers away from raw SERP dicts to typed models;
-   - keep raw payload persisted for debugging only.
-4. Improve observability operations:
-   - add alerting for retry spikes and repeated provider `error_category`.
-5. Contract hardening:
-   - extend snapshot/contract tests for exports and metrics evolution.
-   - regenerate `docs/contracts/openapi.json` on API surface changes.
-6. Controlled UTF-8 cleanup:
-   - docs first, then user-facing strings; avoid mixing with behavior changes.
-7. Developer UX:
-   - expand pre-commit markdown checks beyond basic H1 validation when needed.
+1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
+2. Immediate next PR focus after merge: stage contracts A1 (`PipelineInput`, `KeywordSet`, `CompetitorSet`, `EnrichmentSet`, `BriefingPlan`).
+3. Continue typed stage contracts and quality gates before adding new provider complexity.
+4. Introduce prompt registry + versioning before prompt tuning experiments.
+5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
 
 ## Documentation Discipline (Mandatory)
 
@@ -132,6 +128,7 @@ Key docs:
 - `docs/RUNTIME_OPERATIONS.md`: local setup, API lifecycle, deployment and debugging.
 - `docs/IMMEDIATE_ACTION_PLAN.md`: immediate operational plan and acceptance criteria.
 - `docs/IMPROVEMENT_ROADMAP.md`: prioritized improvement backlog.
+- `docs/REARCHITECTURE_EXECUTION_PLAN.md`: executable rearchitecture backlog with PR-level steps.
 
 ## Main Flow
 

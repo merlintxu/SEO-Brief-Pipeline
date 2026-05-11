@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 
+class InvalidJobTransitionError(ValueError):
+    """Raised when a requested job state transition is not allowed."""
+
+
 @dataclass(frozen=True)
 class JobRecord:
     run_id: str
@@ -23,6 +27,14 @@ class JobRecord:
 
 
 class JobStore:
+    ALLOWED_STATUSES = {"queued", "running", "done", "failed"}
+    ALLOWED_TRANSITIONS = {
+        "queued": {"queued", "running", "done", "failed"},
+        "running": {"running", "done", "failed"},
+        "done": {"done"},
+        "failed": {"failed"},
+    }
+
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -78,8 +90,18 @@ class JobStore:
         message: str,
         error_category: str | None = None,
     ) -> None:
+        if status not in self.ALLOWED_STATUSES:
+            raise InvalidJobTransitionError(f"Invalid status '{status}'")
+
         now = datetime.now().isoformat(timespec="seconds")
         with self._connect() as conn:
+            row = conn.execute("SELECT status FROM jobs WHERE run_id = ?", (run_id,)).fetchone()
+            if row is None:
+                raise KeyError(f"Run_id '{run_id}' not found")
+            current_status = row["status"]
+            allowed_next = self.ALLOWED_TRANSITIONS.get(current_status, set())
+            if status not in allowed_next:
+                raise InvalidJobTransitionError(f"Invalid transition: {current_status} -> {status}")
             conn.execute(
                 """
                 UPDATE jobs

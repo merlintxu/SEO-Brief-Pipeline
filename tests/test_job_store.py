@@ -1,7 +1,9 @@
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from api.job_store import JobStore
+import pytest
+
+from api.job_store import InvalidJobTransitionError, JobStore
 
 
 def test_job_store_create_and_get(tmp_path: Path):
@@ -44,6 +46,22 @@ def test_job_store_update_status(tmp_path: Path):
     assert job.step == "error"
     assert job.message == "rate limited"
     assert job.error_category == "rate_limit"
+
+
+def test_job_store_rejects_invalid_transition(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run_invalid", "keyword", "outputs/run_invalid")
+    store.update_status("run_invalid", status="running", step="start", message="started")
+    store.update_status("run_invalid", status="done", step="done", message="ok")
+
+    with pytest.raises(InvalidJobTransitionError, match="done -> running"):
+        store.update_status("run_invalid", status="running", step="restart", message="restart")
+
+
+def test_job_store_rejects_unknown_run_id(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    with pytest.raises(KeyError, match="not found"):
+        store.update_status("missing_run", status="running", step="start", message="start")
 
 
 def test_job_store_list_jobs_desc_order(tmp_path: Path):
