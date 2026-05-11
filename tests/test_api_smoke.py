@@ -144,3 +144,17 @@ def test_jobs_endpoint_requires_auth_and_lists_items(tmp_path):
     assert "items" in body
     assert "count" in body
     assert any(item["run_id"] == run_id for item in body["items"])
+
+
+def test_jobs_endpoint_limit_validation(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app
+
+    client = TestClient(app)
+    headers = {"X-API-Key": "secret-token-2025-test-key-long-enough"}
+
+    too_low = client.get("/jobs?limit=0", headers=headers)
+    assert too_low.status_code == 422
+
+    too_high = client.get("/jobs?limit=201", headers=headers)
+    assert too_high.status_code == 422
