@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Recent work is being shipped through PR #21 (`codex/job-retry-traceability`).
+- Recent work is being shipped through PR #22 (`codex/ci-node24-ready`).
 
 ## Documented Changes (Recent)
 
@@ -62,10 +62,13 @@ This file is the entrypoint for coding agents working in this repository.
   - `JobStore` now stores `source_run_id` for retried jobs.
   - `POST /jobs/{run_id}/retry` persists the parent run id in the new queued job.
   - `GET /jobs` and `GET /jobs/{run_id}` include `source_run_id` in the job payload.
+- Updated GitHub Actions workflow to Node24-ready action versions:
+  - `actions/checkout@v5`
+  - `actions/setup-python@v5`
 
 ## Next Actions (Post-PR)
 
-1. Merge PR #21 after CI is green and re-check `main` CI.
+1. Merge PR #22 after CI is green and re-check `main` CI.
 2. Wire complete `JobStore` lifecycle in API:
    - retention policy is present at store/startup level;
    - admin endpoints are present (`list/detail/delete/cleanup/retry/cancel`);
