@@ -160,6 +160,7 @@ Add local hooks for:
 Acceptance:
 
 - Hooks run locally and mirror CI where practical.
+- CI workflow action versions are kept current to avoid Node runtime deprecation on GitHub runners.
 
 ### Notebook cleanup
 
