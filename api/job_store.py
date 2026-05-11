@@ -17,6 +17,7 @@ class JobRecord:
     message: str
     error_category: str | None
     output_dir: str
+    source_run_id: str | None
     created_at: str
     updated_at: str
 
@@ -44,22 +45,27 @@ class JobStore:
                     message TEXT NOT NULL,
                     error_category TEXT,
                     output_dir TEXT NOT NULL,
+                    source_run_id TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
                 """
             )
+            # Forward-compatible migration for existing DBs created before source_run_id.
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+            if "source_run_id" not in columns:
+                conn.execute("ALTER TABLE jobs ADD COLUMN source_run_id TEXT")
             conn.commit()
 
-    def create_job(self, run_id: str, keyword: str, output_dir: str) -> None:
+    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None:
         now = datetime.now().isoformat(timespec="seconds")
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO jobs (run_id, keyword, status, step, message, error_category, output_dir, created_at, updated_at)
-                VALUES (?, ?, 'queued', 'queued', 'Tarea en cola', NULL, ?, ?, ?)
+                INSERT INTO jobs (run_id, keyword, status, step, message, error_category, output_dir, source_run_id, created_at, updated_at)
+                VALUES (?, ?, 'queued', 'queued', 'Tarea en cola', NULL, ?, ?, ?, ?)
                 """,
-                (run_id, keyword, output_dir, now, now),
+                (run_id, keyword, output_dir, source_run_id, now, now),
             )
             conn.commit()
 
@@ -162,6 +168,7 @@ class JobStore:
             message=row["message"],
             error_category=row["error_category"],
             output_dir=row["output_dir"],
+            source_run_id=row["source_run_id"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

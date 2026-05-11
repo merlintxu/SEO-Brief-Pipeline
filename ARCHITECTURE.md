@@ -44,7 +44,7 @@ Endpoints:
 - `GET /jobs/{run_id}`: authenticated, returns detailed metadata for one run and optional `status.json` snapshot.
 - `DELETE /jobs/{run_id}`: authenticated, deletes job metadata only (no artifact deletion).
 - `POST /jobs/cleanup`: authenticated, triggers bounded cleanup of terminal jobs.
-- `POST /jobs/{run_id}/retry`: authenticated, requeues failed jobs as new runs.
+- `POST /jobs/{run_id}/retry`: authenticated, requeues failed jobs as new runs and persists lineage via `source_run_id`.
 - `POST /jobs/{run_id}/cancel`: authenticated, marks queued/running jobs as logically canceled.
 - `GET /outputs/{run_id}/{filename}`: authenticated by route policy, resolves paths under `outputs/` and only permits whitelisted filenames.
 
