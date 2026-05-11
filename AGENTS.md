@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #27 (`codex/quality-gates-a2`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #28 (`codex/provider-capability-matrix-b1`).
 
 ## Documented Changes (Recent)
 
@@ -86,11 +86,15 @@ This file is the entrypoint for coding agents working in this repository.
   - module: `seo_pipeline/quality_gates.py`.
   - gate outcomes persisted in `run_metrics.json` under `quality_gates`.
   - strict mode toggle: `QUALITY_GATES_STRICT=1` (fails run when coverage gates fail).
+- Added B1 provider capability matrix baseline for SERP:
+  - module: `seo_pipeline/vendors/capabilities.py`
+  - env flags: `SERP_ENABLE_SERPAPI`, `SERP_ENABLE_DATAFORSEO`, `SERP_PROVIDER_ORDER`
+  - runtime stores selected provider plan in pipeline results.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: provider capability matrix + feature flags (B1).
+2. Immediate next PR focus after merge: B2 quorum/partial-data policy and clear failure semantics.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

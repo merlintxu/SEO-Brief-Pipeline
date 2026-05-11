@@ -26,6 +26,7 @@ from seo_pipeline.vendors.serp_io import (
     extract_competitor_domains,
     normalize_serp_snapshot,
 )
+from seo_pipeline.vendors.capabilities import resolve_serp_provider_plan
 from seo_pipeline.audit.content_audit import audit_urls
 from seo_pipeline.anchors import generate_anchors
 from seo_pipeline.blueprint import generate_briefing
@@ -93,6 +94,7 @@ def run_full_pipeline(
 
     cfg = get_config()
     runtime_requirements = validate_runtime_requirements(cfg)
+    serp_provider_plan = resolve_serp_provider_plan(cfg.active_client)
 
     run_id = run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path(output_dir) if output_dir else cfg.get_output_dir() / run_id
@@ -104,6 +106,13 @@ def run_full_pipeline(
 
     results = {"run_id": run_id, "keyword": keyword, "output_dir": str(output_dir)}
     results["pipeline_input"] = pipeline_input.model_dump()
+    results["provider_plan"] = {
+        "serp": {
+            "provider_order": list(serp_provider_plan.provider_order),
+            "use_serpapi": serp_provider_plan.use_serpapi,
+            "use_dataforseo": serp_provider_plan.use_dataforseo,
+        }
+    }
     metrics = {
         "run_id": run_id,
         "keyword": keyword,
@@ -256,6 +265,8 @@ def run_full_pipeline(
             gl=cfg.active_client.default_gl,
             hl=cfg.active_client.default_hl,
             num=serp_num,
+            use_dataforseo_fallback=serp_provider_plan.use_dataforseo,
+            force_disable_serpapi=not serp_provider_plan.use_serpapi,
             retries=retry_attempts,
             base_delay=retry_base_delay,
             jitter=0.2,
@@ -291,6 +302,7 @@ def run_full_pipeline(
             people_also_ask=serp_snapshot.people_also_ask_count,
             related_searches=serp_snapshot.related_searches_count,
             ai_overview_present=serp_snapshot.ai_overview_present,
+            provider_order=list(serp_provider_plan.provider_order),
         )
 
         # ===================================================================
