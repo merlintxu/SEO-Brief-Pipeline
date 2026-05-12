@@ -64,6 +64,7 @@ QUORUM_MIN_RELATED_KEYWORDS=1
 QUORUM_MIN_TOP_URLS=3
 QUORUM_MIN_COMPETITOR_DOMAINS=2
 QUORUM_MIN_AUDIT_ENTRIES=1
+BRIEFING_PROMPT_VERSION=v1
 ```
 
 ## Client And Project Config
@@ -207,6 +208,11 @@ Common files:
   - `quorum.enforce`
   - `quorum.checks[]` with observed/required counts
   - `quorum.failed_count`
+- prompt run summary:
+  - `prompt_run.key`
+  - `prompt_run.version`
+  - `prompt_run.model`
+  - `prompt_run.temperature`
 
 Generated files are ignored by Git.
 

@@ -109,6 +109,8 @@ def test_run_metrics_contract_keeps_core_fields_and_stage_observability(tmp_path
     assert "quorum" in metrics
     assert "decision" in metrics["quorum"]
     assert "checks" in metrics["quorum"]
+    assert "prompt_run" in metrics
+    assert "version" in metrics["prompt_run"]
 
     for stage in ("semrush", "serp", "audit", "anchors", "briefing", "export"):
         payload = metrics["stages"][stage]

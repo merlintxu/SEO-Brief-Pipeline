@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #29 (`codex/quorum-partial-data-b2`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #30 (`codex/prompt-registry-c1`).
 
 ## Documented Changes (Recent)
 
@@ -94,11 +94,15 @@ This file is the entrypoint for coding agents working in this repository.
   - module: `seo_pipeline/quorum.py`
   - metrics contract: `quorum.decision`, `quorum.checks`, `quorum.failed_count`
   - defaults to continue with partial data, optional hard enforcement with `QUORUM_ENFORCE=1`
+- Added C1 prompt registry baseline:
+  - module: `seo_pipeline/prompt_registry.py`
+  - prompt resolution by key/version (`brief_generator`, `v1`)
+  - pipeline persists `prompt_run` (`key`, `version`, `model`, `temperature`) in metrics/results
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: C1 prompt registry + prompt version persistence.
+2. Immediate next PR focus after merge: C2 planner/writer split (2-step generation).
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
