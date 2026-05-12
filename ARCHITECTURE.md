@@ -29,6 +29,7 @@ graph TD
 ## Runtime Entry Points
 
 - `api/main.py`: FastAPI app, API key validation, rate limit middleware, Sentry lifespan, background tasks and file downloads.
+- `public/dashboard.html`: static operational UI for authenticated briefing and jobs administration.
 - `client_manager.py`: interactive CLI for local client/project management and runs.
 - `seo_pipeline/pipeline.py`: core orchestration.
 - `notebooks/`: exploratory notebooks; not the source of truth.
