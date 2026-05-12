@@ -49,6 +49,7 @@
         </div>
       </form>
       <div id="briefResult" class="mt-3 text-sm"></div>
+      <div id="runStatus" class="mt-2 text-sm text-slate-700"></div>
     </section>
 
     <section class="bg-white border border-slate-200 rounded-lg p-4">
@@ -92,7 +93,7 @@
 
   <script>
     lucide.createIcons();
-    const state = { cursor: 0, nextCursor: null, selectedRunId: null };
+    const state = { cursor: 0, nextCursor: null, selectedRunId: null, lastRunId: null, pollingTimer: null };
     const byId = (id) => document.getElementById(id);
     const defaultApiUrl = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
       ? "http://localhost:8000"
@@ -108,6 +109,20 @@
 
     function getConfig() {
       return { apiUrl: byId("apiUrl").value.trim(), apiKey: byId("apiKey").value };
+    }
+
+    function mapErrorMessage(error) {
+      const msg = String(error?.message || "");
+      if (msg.includes("403")) return "Auth fallida: revisa X-API-Key";
+      if (msg.includes("422")) return "Validacion: revisa payload o filtros";
+      if (msg.includes("409")) return "Transicion de estado no permitida";
+      if (msg.includes("404")) return "Recurso no encontrado";
+      if (msg.includes("429")) return "Rate limit alcanzado";
+      return msg || "Error no controlado";
+    }
+
+    function showResultError(error) {
+      byId("briefResult").textContent = `Error: ${mapErrorMessage(error)}`;
     }
 
     async function apiFetch(path, options = {}) {
@@ -195,6 +210,21 @@
         </div>`).join("") || "<div class='text-slate-500'>Sin eventos</div>";
     }
 
+    async function pollRunStatus(runId) {
+      if (state.pollingTimer) {
+        clearTimeout(state.pollingTimer);
+        state.pollingTimer = null;
+      }
+      try {
+        const status = await apiFetch(`/briefing/${runId}`);
+        byId("runStatus").textContent = `run=${runId} | status=${status.status} | step=${status.step || "-"} | message=${status.message || "-"}`;
+        if (status.status === "done" || status.status === "failed") return;
+        state.pollingTimer = setTimeout(() => pollRunStatus(runId), 2500);
+      } catch (error) {
+        byId("runStatus").textContent = `run=${runId} | error polling: ${mapErrorMessage(error)}`;
+      }
+    }
+
     async function createBriefing(form) {
       const payload = {
         keyword: form.keyword.value,
@@ -205,6 +235,9 @@
       };
       const data = await apiFetch("/briefing", { method: "POST", body: JSON.stringify(payload) });
       byId("briefResult").innerHTML = `<span class="text-emerald-700">Run creado:</span> <span class="font-mono">${data.run_id}</span>`;
+      state.lastRunId = data.run_id;
+      byId("runStatus").textContent = `run=${data.run_id} | status=queued`;
+      pollRunStatus(data.run_id).catch(() => {});
       state.cursor = 0;
       await loadJobs();
     }
@@ -222,19 +255,20 @@
     byId("checkHealthBtn").addEventListener("click", checkHealth);
     byId("briefForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      try { await createBriefing(e.target); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+      try { await createBriefing(e.target); } catch (err) { showResultError(err); }
     });
     byId("refreshJobsBtn").addEventListener("click", async () => {
       state.cursor = 0;
-      try { await loadJobs(); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+      try { await loadJobs(); } catch (err) { showResultError(err); }
     });
     byId("nextPageBtn").addEventListener("click", async () => {
       if (state.nextCursor == null) return;
       state.cursor = state.nextCursor;
-      try { await loadJobs(); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+      try { await loadJobs(); } catch (err) { showResultError(err); }
     });
     byId("cleanupBtn").addEventListener("click", async () => {
-      try { await runCleanup(); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+      if (!window.confirm("Ejecutar cleanup de jobs terminales (>30 dias)?")) return;
+      try { await runCleanup(); } catch (err) { showResultError(err); }
     });
     byId("jobsTable").addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-action]");
@@ -244,8 +278,13 @@
       try {
         if (action === "detail") await loadJobDetail(runId);
         if (action === "retry") { await apiFetch(`/jobs/${runId}/retry`, { method: "POST" }); await loadJobs(); }
-        if (action === "cancel") { await apiFetch(`/jobs/${runId}/cancel`, { method: "POST" }); await loadJobs(); }
+        if (action === "cancel") {
+          if (!window.confirm(`Cancelar job ${runId}?`)) return;
+          await apiFetch(`/jobs/${runId}/cancel`, { method: "POST" });
+          await loadJobs();
+        }
         if (action === "delete") {
+          if (!window.confirm(`Eliminar metadata del job ${runId}?`)) return;
           await apiFetch(`/jobs/${runId}`, { method: "DELETE" });
           if (state.selectedRunId === runId) {
             byId("jobDetail").textContent = "Selecciona un job para ver detalle.";
@@ -254,7 +293,7 @@
           await loadJobs();
         }
       } catch (err) {
-        byId("briefResult").textContent = `Error: ${err.message}`;
+        showResultError(err);
       }
     });
 
