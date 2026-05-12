@@ -114,6 +114,14 @@ Docs:
 http://localhost:8000/docs
 ```
 
+Ops dashboard (static file):
+
+```text
+public/dashboard.html
+```
+
+Open it in a browser and configure `API Base URL` + `X-API-Key` for authenticated operations.
+
 OpenAPI contract export:
 
 ```bash

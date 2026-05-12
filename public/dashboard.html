@@ -1,177 +1,266 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SEO Briefing Pipeline 2025 – Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEO Brief Pipeline - Ops Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <style>
-    .lucide { width: 20px; height: 20px; }
-    .loading { opacity: 0.7; pointer-events: none; }
-  </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
-  <div class="min-h-screen flex flex-col">
-    <!-- Header -->
-    <header class="bg-indigo-700 text-white shadow-lg">
-      <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <i data-lucide="file-text"></i>
-          <h1 class="text-2xl font-bold">SEO Briefing Pipeline 2025</h1>
+<body class="bg-slate-100 text-slate-900">
+  <div class="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+    <header class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="activity" class="w-5 h-5"></i>
+          <h1 class="text-lg font-semibold">SEO Brief Pipeline - Operaciones</h1>
         </div>
-        <div id="status" class="text-sm opacity-90"></div>
+        <div id="healthBadge" class="text-sm text-slate-600">Comprobando API...</div>
+      </div>
+      <div class="grid md:grid-cols-3 gap-3 mt-3">
+        <label class="text-sm">
+          <span class="block mb-1">API Base URL</span>
+          <input id="apiUrl" class="w-full border border-slate-300 rounded px-3 py-2">
+        </label>
+        <label class="text-sm md:col-span-2">
+          <span class="block mb-1">X-API-Key</span>
+          <input id="apiKey" type="password" class="w-full border border-slate-300 rounded px-3 py-2">
+        </label>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button id="saveConfigBtn" class="px-3 py-2 bg-slate-800 text-white rounded text-sm">Guardar Config</button>
+        <button id="checkHealthBtn" class="px-3 py-2 border border-slate-300 rounded text-sm">Health</button>
       </div>
     </header>
 
-    <!-- Main -->
-    <main class="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
-      <div class="bg-white rounded-xl shadow-md p-8">
-        <h2 class="text-xl font-semibold mb-6 flex items-center">
-          <i data-lucide="zap" class="mr-2"></i>
-          Generar nuevo Briefing SEO
-        </h2>
-
-        <form id="briefingForm" class="space-y-6">
-          <div class="grid md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-medium mb-2">Keyword principal *</label>
-              <input type="text" name="keyword" required
-                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                     placeholder="mejor crema antiarrugas 2025"/>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">URL objetivo (opcional)</label>
-              <input type="url" name="target_url"
-                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                     placeholder="https://tudominio.com/crema-antiarrugas"/>
-            </div>
-          </div>
-
-          <div class="grid md:grid-cols-3 gap-6">
-            <div>
-              <label class="block text-sm font-medium mb-2">Keywords relacionadas (límite)</label>
-              <input type="number" name="related_limit" value="60" min="20" max="100"
-                     class="w-full px-4 py-2 border border-gray-300 rounded-lg"/>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Resultados SERP</label>
-              <input type="number" name="serp_num" value="12" min="10" max="30"
-                     class="w-full px-4 py-2 border border-gray-300 rounded-lg"/>
-            </div>
-            <div class="flex items-end">
-              <label class="flex items-center space-x-3">
-                <input type="checkbox" name="upload_to_sheets" checked class="w-5 h-5 text-indigo-600"/>
-                <span>Subir fila 24 a Google Sheets</span>
-              </label>
-            </div>
-          </div>
-
-          <button type="submit"
-                  class="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition flex items-center justify-center space-x-2">
-            <i data-lucide="play" class="lucide"></i>
-            <span>Generar Briefing</span>
-          </button>
-        </form>
-
-        <!-- Resultados -->
-        <div id="results" class="mt-10 hidden">
-          <h3 class="text-lg font-semibold mb-4 flex items-center">
-            <i data-lucide="check-circle" class="mr-2 text-green-600"></i>
-            Briefing generado correctamente
-          </h3>
-          <div id="links" class="grid md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+    <section class="bg-white border border-slate-200 rounded-lg p-4">
+      <h2 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="file-plus-2" class="w-4 h-4"></i>Nuevo Briefing</h2>
+      <form id="briefForm" class="grid md:grid-cols-4 gap-3">
+        <input name="keyword" placeholder="keyword" required class="border border-slate-300 rounded px-3 py-2 text-sm">
+        <input name="target_url" placeholder="target_url (opcional)" class="border border-slate-300 rounded px-3 py-2 text-sm">
+        <input name="related_limit" type="number" min="5" max="100" value="30" class="border border-slate-300 rounded px-3 py-2 text-sm">
+        <input name="serp_num" type="number" min="1" max="50" value="10" class="border border-slate-300 rounded px-3 py-2 text-sm">
+        <label class="text-sm flex items-center gap-2">
+          <input name="upload_to_sheets" type="checkbox" checked>
+          Subir a Sheets
+        </label>
+        <div class="md:col-span-3">
+          <button class="px-3 py-2 bg-indigo-600 text-white rounded text-sm">Lanzar /briefing</button>
         </div>
+      </form>
+      <div id="briefResult" class="mt-3 text-sm"></div>
+    </section>
 
-        <!-- Loading -->
-        <div id="loading" class="hidden mt-8 text-center">
-          <i data-lucide="loader-2" class="lucide animate-spin mx-auto text-indigo-600"></i>
-          <p class="mt-3 text-gray-600">Generando briefing completo (30–90 segundos)...</p>
-        </div>
-
-        <!-- Error -->
-        <div id="error" class="hidden mt-8 p-5 bg-red-50 border border-red-200 rounded-lg text-red-700"></div>
+    <section class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex flex-col md:flex-row md:items-end gap-3">
+        <h2 class="font-semibold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4"></i>Jobs</h2>
+        <input id="filterStatus" placeholder="status: queued/running/done/failed" class="border border-slate-300 rounded px-3 py-2 text-sm md:w-64">
+        <input id="filterQ" placeholder="buscar run_id/keyword" class="border border-slate-300 rounded px-3 py-2 text-sm md:w-64">
+        <input id="filterLimit" type="number" min="1" max="200" value="20" class="border border-slate-300 rounded px-3 py-2 text-sm w-24">
+        <button id="refreshJobsBtn" class="px-3 py-2 border border-slate-300 rounded text-sm">Refrescar</button>
+        <button id="cleanupBtn" class="px-3 py-2 bg-amber-600 text-white rounded text-sm">Cleanup (30d)</button>
       </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-gray-300 py-6 mt-auto">
-      <div class="max-w-6xl mx-auto px-6 text-center text-sm">
-        SEO Briefing Pipeline 2025 – Desarrollado con FastAPI + OpenAI + Instructor
+      <div class="overflow-auto mt-3">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="text-left p-2">Run ID</th>
+              <th class="text-left p-2">Keyword</th>
+              <th class="text-left p-2">Status</th>
+              <th class="text-left p-2">Step</th>
+              <th class="text-left p-2">Updated</th>
+              <th class="text-left p-2">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="jobsTable"></tbody>
+        </table>
       </div>
-    </footer>
+      <div class="mt-3 flex gap-2">
+        <button id="nextPageBtn" class="px-3 py-2 border border-slate-300 rounded text-sm">Siguiente página</button>
+        <span id="pageInfo" class="text-sm text-slate-600"></span>
+      </div>
+    </section>
+
+    <section class="bg-white border border-slate-200 rounded-lg p-4">
+      <h2 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i>Detalle de Job</h2>
+      <div id="jobDetail" class="text-sm text-slate-700">Selecciona un job para ver detalle.</div>
+      <h3 class="font-medium mt-4 mb-2">Eventos</h3>
+      <div id="jobEvents" class="text-sm space-y-2"></div>
+    </section>
   </div>
 
   <script>
     lucide.createIcons();
-
-    const API_URL = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-      ? 'http://localhost:8000'
+    const state = { cursor: 0, nextCursor: null, selectedRunId: null };
+    const byId = (id) => document.getElementById(id);
+    const defaultApiUrl = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+      ? "http://localhost:8000"
       : location.origin;
 
-    // Estado del servidor
-    fetch(`${API_URL}/health`)
-      .then(r => r.json())
-      .then(data => {
-        document.getElementById('status').textContent = `Cliente activo: ${data.active_client || 'Ninguno'}`;
-      })
-      .catch(() => {
-        document.getElementById('status').textContent = 'API no disponible';
-      });
+    byId("apiUrl").value = localStorage.getItem("ops_api_url") || defaultApiUrl;
+    byId("apiKey").value = localStorage.getItem("ops_api_key") || "";
 
-    document.getElementById('briefingForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const data = Object.fromEntries(new FormData(form));
-      data.upload_to_sheets = form.upload_to_sheets.checked;
+    function saveConfig() {
+      localStorage.setItem("ops_api_url", byId("apiUrl").value.trim());
+      localStorage.setItem("ops_api_key", byId("apiKey").value);
+    }
 
-      // UI feedback
-      document.getElementById('results').classList.add('hidden');
-      document.getElementById('error').classList.add('hidden');
-      document.getElementById('loading').classList.remove('hidden');
-      form.classList.add('loading');
+    function getConfig() {
+      return { apiUrl: byId("apiUrl").value.trim(), apiKey: byId("apiKey").value };
+    }
 
+    async function apiFetch(path, options = {}) {
+      const { apiUrl, apiKey } = getConfig();
+      const headers = { ...(options.headers || {}) };
+      if (apiKey) headers["X-API-Key"] = apiKey;
+      if (!headers["Content-Type"] && options.body) headers["Content-Type"] = "application/json";
+      const response = await fetch(`${apiUrl}${path}`, { ...options, headers });
+      if (!response.ok) {
+        let detail = `${response.status}`;
+        try {
+          const body = await response.json();
+          detail = body.detail || detail;
+        } catch (_) {}
+        throw new Error(detail);
+      }
+      return response.json();
+    }
+
+    async function checkHealth() {
       try {
-        const response = await fetch(`${API_URL}/briefing`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
+        const { apiUrl } = getConfig();
+        const data = await (await fetch(`${apiUrl}/health`)).json();
+        byId("healthBadge").textContent = `API OK | cliente: ${data.active_client || "none"}`;
+      } catch (_) {
+        byId("healthBadge").textContent = "API no disponible";
+      }
+    }
 
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.detail || 'Error del servidor');
+    function renderJobs(items) {
+      const tbody = byId("jobsTable");
+      tbody.innerHTML = "";
+      for (const job of items) {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-slate-100";
+        tr.innerHTML = `
+          <td class="p-2 font-mono text-xs">${job.run_id}</td>
+          <td class="p-2">${job.keyword}</td>
+          <td class="p-2">${job.status}</td>
+          <td class="p-2">${job.step}</td>
+          <td class="p-2 text-xs">${job.updated_at}</td>
+          <td class="p-2">
+            <div class="flex gap-1 flex-wrap">
+              <button data-action="detail" data-run="${job.run_id}" class="px-2 py-1 border rounded text-xs">detalle</button>
+              <button data-action="retry" data-run="${job.run_id}" class="px-2 py-1 border rounded text-xs">retry</button>
+              <button data-action="cancel" data-run="${job.run_id}" class="px-2 py-1 border rounded text-xs">cancel</button>
+              <button data-action="delete" data-run="${job.run_id}" class="px-2 py-1 border rounded text-xs text-red-700">delete</button>
+            </div>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function loadJobs() {
+      const status = byId("filterStatus").value.trim();
+      const q = byId("filterQ").value.trim();
+      const limit = Number(byId("filterLimit").value || "20");
+      const params = new URLSearchParams({ limit: String(limit), cursor: String(state.cursor) });
+      if (status) params.set("status", status);
+      if (q) params.set("q", q);
+      const data = await apiFetch(`/jobs?${params.toString()}`);
+      renderJobs(data.items);
+      state.nextCursor = data.next_cursor;
+      byId("pageInfo").textContent = `cursor=${state.cursor} count=${data.count} next=${data.next_cursor ?? "none"}`;
+    }
+
+    async function loadJobDetail(runId) {
+      state.selectedRunId = runId;
+      const [detail, events] = await Promise.all([
+        apiFetch(`/jobs/${runId}`),
+        apiFetch(`/jobs/${runId}/events?limit=50&cursor=0`)
+      ]);
+      byId("jobDetail").innerHTML = `
+        <div><b>run_id:</b> ${detail.job.run_id}</div>
+        <div><b>status:</b> ${detail.job.status}</div>
+        <div><b>step:</b> ${detail.job.step}</div>
+        <div><b>message:</b> ${detail.job.message}</div>
+        <div><b>error_category:</b> ${detail.job.error_category || "-"}</div>
+        <div><b>source_run_id:</b> ${detail.job.source_run_id || "-"}</div>`;
+      byId("jobEvents").innerHTML = events.items.map((e) => `
+        <div class="border border-slate-200 rounded p-2">
+          <div class="font-mono text-xs">${e.created_at} | ${e.status} | ${e.step}</div>
+          <div>${e.message}</div>
+          <div class="text-xs text-slate-500">error_category=${e.error_category || "-"}</div>
+        </div>`).join("") || "<div class='text-slate-500'>Sin eventos</div>";
+    }
+
+    async function createBriefing(form) {
+      const payload = {
+        keyword: form.keyword.value,
+        target_url: form.target_url.value || null,
+        related_limit: Number(form.related_limit.value),
+        serp_num: Number(form.serp_num.value),
+        upload_to_sheets: form.upload_to_sheets.checked,
+      };
+      const data = await apiFetch("/briefing", { method: "POST", body: JSON.stringify(payload) });
+      byId("briefResult").innerHTML = `<span class="text-emerald-700">Run creado:</span> <span class="font-mono">${data.run_id}</span>`;
+      state.cursor = 0;
+      await loadJobs();
+    }
+
+    async function runCleanup() {
+      const result = await apiFetch("/jobs/cleanup", {
+        method: "POST",
+        body: JSON.stringify({ max_age_days: 30, statuses: ["done", "failed"] }),
+      });
+      byId("briefResult").innerHTML = `Cleanup ejecutado: deleted_count=${result.deleted_count}`;
+      await loadJobs();
+    }
+
+    byId("saveConfigBtn").addEventListener("click", () => { saveConfig(); checkHealth(); });
+    byId("checkHealthBtn").addEventListener("click", checkHealth);
+    byId("briefForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try { await createBriefing(e.target); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+    });
+    byId("refreshJobsBtn").addEventListener("click", async () => {
+      state.cursor = 0;
+      try { await loadJobs(); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+    });
+    byId("nextPageBtn").addEventListener("click", async () => {
+      if (state.nextCursor == null) return;
+      state.cursor = state.nextCursor;
+      try { await loadJobs(); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+    });
+    byId("cleanupBtn").addEventListener("click", async () => {
+      try { await runCleanup(); } catch (err) { byId("briefResult").textContent = `Error: ${err.message}`; }
+    });
+    byId("jobsTable").addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const runId = btn.dataset.run;
+      try {
+        if (action === "detail") await loadJobDetail(runId);
+        if (action === "retry") { await apiFetch(`/jobs/${runId}/retry`, { method: "POST" }); await loadJobs(); }
+        if (action === "cancel") { await apiFetch(`/jobs/${runId}/cancel`, { method: "POST" }); await loadJobs(); }
+        if (action === "delete") {
+          await apiFetch(`/jobs/${runId}`, { method: "DELETE" });
+          if (state.selectedRunId === runId) {
+            byId("jobDetail").textContent = "Selecciona un job para ver detalle.";
+            byId("jobEvents").innerHTML = "";
+          }
+          await loadJobs();
         }
-
-        const result = await response.json();
-
-        // Mostrar enlaces de descarga
-        const linksDiv = document.getElementById('links');
-        linksDiv.innerHTML = '';
-        const icons = { json: 'file-code', markdown: 'file-text', csv: 'file-spreadsheet', xlsx: 'file-spreadsheet' };
-
-        Object.entries(result.files).forEach(([format, url]) => {
-          const a = document.createElement('a');
-          a.href = url;
-          a.target = '_blank';
-          a.className = 'block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition text-center';
-          a.innerHTML = `
-            <i data-lucide="${icons[format] || 'download'}" class="lucide mx-auto mb-2 text-indigo-600"></i>
-            <div class="font-medium uppercase text-xs text-gray-600">${format}</div>
-          `;
-          linksDiv.appendChild(a);
-        });
-
-        document.getElementById('results').classList.remove('hidden');
-        lucide.createIcons();
       } catch (err) {
-        document.getElementById('error').textContent = err.message;
-        document.getElementById('error').classList.remove('hidden');
-      } finally {
-        document.getElementById('loading').classList.add('hidden');
-        form.classList.remove('loading');
+        byId("briefResult").textContent = `Error: ${err.message}`;
       }
     });
+
+    saveConfig();
+    checkHealth();
+    loadJobs().catch(() => {});
   </script>
 </body>
 </html>
