@@ -27,11 +27,23 @@ class JobRecord:
     updated_at: str
 
 
+@dataclass(frozen=True)
+class JobEventRecord:
+    id: int
+    run_id: str
+    status: str
+    step: str
+    message: str
+    error_category: str | None
+    created_at: str
+
+
 class JobStoreBackend(Protocol):
     def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None: ...
     def update_status(self, run_id: str, *, status: str, step: str, message: str, error_category: str | None = None) -> None: ...
     def get_job(self, run_id: str) -> JobRecord | None: ...
     def list_jobs(self, limit: int = 100, *, offset: int = 0, status: str | None = None, search: str | None = None) -> list[JobRecord]: ...
+    def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]: ...
     def delete_job(self, run_id: str) -> int: ...
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int: ...
 
@@ -73,6 +85,19 @@ class SQLiteJobStoreBackend:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS job_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    step TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    error_category TEXT,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
             if "source_run_id" not in columns:
                 conn.execute("ALTER TABLE jobs ADD COLUMN source_run_id TEXT")
@@ -87,6 +112,15 @@ class SQLiteJobStoreBackend:
                 VALUES (?, ?, 'queued', 'queued', 'Tarea en cola', NULL, ?, ?, ?, ?)
                 """,
                 (run_id, keyword, output_dir, source_run_id, now, now),
+            )
+            self._insert_event(
+                conn,
+                run_id=run_id,
+                status="queued",
+                step="queued",
+                message="Tarea en cola",
+                error_category=None,
+                created_at=now,
             )
             conn.commit()
 
@@ -118,6 +152,15 @@ class SQLiteJobStoreBackend:
                 WHERE run_id = ?
                 """,
                 (status, step, message, error_category, now, run_id),
+            )
+            self._insert_event(
+                conn,
+                run_id=run_id,
+                status=status,
+                step=step,
+                message=message,
+                error_category=error_category,
+                created_at=now,
             )
             conn.commit()
 
@@ -165,8 +208,27 @@ class SQLiteJobStoreBackend:
             rows = conn.execute(query, params).fetchall()
             return [self._row_to_record(row) for row in rows]
 
+    def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]:
+        if limit < 1:
+            raise ValueError("limit must be >= 1")
+        if offset < 0:
+            raise ValueError("offset must be >= 0")
+
+        query = """
+            SELECT *
+            FROM job_events
+            WHERE run_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+            OFFSET ?
+        """
+        with self._connect() as conn:
+            rows = conn.execute(query, (run_id, limit, offset)).fetchall()
+            return [self._row_to_event_record(row) for row in rows]
+
     def delete_job(self, run_id: str) -> int:
         with self._connect() as conn:
+            conn.execute("DELETE FROM job_events WHERE run_id = ?", (run_id,))
             cursor = conn.execute("DELETE FROM jobs WHERE run_id = ?", (run_id,))
             conn.commit()
             return cursor.rowcount
@@ -202,6 +264,37 @@ class SQLiteJobStoreBackend:
             source_run_id=row["source_run_id"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
+        )
+
+    @staticmethod
+    def _row_to_event_record(row: sqlite3.Row) -> JobEventRecord:
+        return JobEventRecord(
+            id=row["id"],
+            run_id=row["run_id"],
+            status=row["status"],
+            step=row["step"],
+            message=row["message"],
+            error_category=row["error_category"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _insert_event(
+        conn: sqlite3.Connection,
+        *,
+        run_id: str,
+        status: str,
+        step: str,
+        message: str,
+        error_category: str | None,
+        created_at: str,
+    ) -> None:
+        conn.execute(
+            """
+            INSERT INTO job_events (run_id, status, step, message, error_category, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (run_id, status, step, message, error_category, created_at),
         )
 
 
@@ -243,6 +336,9 @@ class PostgresJobStoreBackend:
         raise NotImplementedError
 
     def delete_job(self, run_id: str) -> int:
+        raise NotImplementedError
+
+    def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]:
         raise NotImplementedError
 
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
@@ -297,6 +393,9 @@ class JobStore:
 
     def delete_job(self, run_id: str) -> int:
         return self._backend.delete_job(run_id)
+
+    def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]:
+        return self._backend.list_job_events(run_id, limit=limit, offset=offset)
 
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
         return self._backend.cleanup_old_jobs(max_age_days=max_age_days, statuses=statuses)

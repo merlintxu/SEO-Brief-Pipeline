@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #32 (`codex/jobstore-backend-abstraction-d1`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #33 (`codex/job-events-d2`).
 
 ## Documented Changes (Recent)
 
@@ -106,11 +106,16 @@ This file is the entrypoint for coding agents working in this repository.
   - `JobStore` now acts as a facade with backend selection via `JOB_STORE_BACKEND`.
   - operational backend: `SQLiteJobStoreBackend`.
   - scaffold backend: `PostgresJobStoreBackend` (explicitly not enabled yet).
+- Added D2 SQLite job lifecycle events:
+  - `job_events` table stores transition timeline per `run_id`.
+  - events are appended on `create_job` and `update_status`.
+  - `GET /jobs/{run_id}` now returns `events` in descending order.
+  - `DELETE /jobs/{run_id}` also deletes related event metadata.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: D2 events/stage-metrics tables (starting on SQLite backend first).
+2. Immediate next PR focus after merge: D3 API pagination hardening for jobs/events + operational frontend bootstrap.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

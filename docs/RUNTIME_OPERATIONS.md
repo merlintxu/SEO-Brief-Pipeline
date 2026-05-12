@@ -148,8 +148,12 @@ docs/contracts/openapi.json
    - this enables operational traceability for repeated retries/chains.
 11. Jobs admin endpoints expose explicit response contracts in OpenAPI:
    - list: `items`, `count`, `next_cursor`
-   - detail: `job`, `status_file`
+   - detail: `job`, `status_file`, `events`
    - retry/cancel/delete/cleanup: stable typed payloads
+12. Job lifecycle events are persisted in SQLite:
+   - table: `job_events`
+   - automatic writes on `create_job` and `update_status`
+   - `GET /jobs/{run_id}` returns latest events first for operator traceability.
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 

@@ -75,6 +75,7 @@ Execution checkpoint:
 - C1 prompt registry baseline added with prompt version persistence in run metrics.
 - C2 planner/writer split baseline added with planner artifact traceability.
 - D1 backend abstraction scaffold added for job store (SQLite operational, PostgreSQL scaffold).
+- D2 lifecycle event persistence added in SQLite (`job_events`) and exposed in job detail payloads.
 
 ### Structured run logging
 
@@ -138,6 +139,7 @@ Progress update:
 
 - retry lineage persisted via `source_run_id` in `JobStore` and jobs API payloads.
 - lifecycle transitions are now guarded in `JobStore` with explicit state transition rules.
+- lifecycle timeline is now persisted per run in `job_events` and returned by `GET /jobs/{run_id}`.
 
 Acceptance:
 

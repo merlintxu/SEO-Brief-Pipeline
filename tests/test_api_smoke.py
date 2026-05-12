@@ -200,6 +200,9 @@ def test_get_and_delete_job_endpoints(tmp_path):
     detail = client.get(f"/jobs/{run_id}", headers=headers)
     assert detail.status_code == 200
     assert detail.json()["job"]["run_id"] == run_id
+    assert isinstance(detail.json().get("events"), list)
+    assert len(detail.json()["events"]) >= 2
+    assert detail.json()["events"][0]["run_id"] == run_id
 
     deleted = client.delete(f"/jobs/{run_id}", headers=headers)
     assert deleted.status_code == 200
