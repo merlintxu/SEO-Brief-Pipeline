@@ -42,6 +42,7 @@ Endpoints:
 - `GET /briefing/{run_id}`: reads `outputs/{run_id}/status.json`.
 - `GET /jobs`: authenticated, lists recent job metadata from SQLite `JobStore` with limit/cursor/status/search filters.
 - `GET /jobs/{run_id}`: authenticated, returns detailed metadata for one run, optional `status.json` snapshot and lifecycle `events`.
+- `GET /jobs/{run_id}/events`: authenticated, paginated lifecycle event stream for one run.
 - `DELETE /jobs/{run_id}`: authenticated, deletes job metadata only (no artifact deletion).
 - `POST /jobs/cleanup`: authenticated, triggers bounded cleanup of terminal jobs.
 - `POST /jobs/{run_id}/retry`: authenticated, requeues failed jobs as new runs and persists lineage via `source_run_id`.

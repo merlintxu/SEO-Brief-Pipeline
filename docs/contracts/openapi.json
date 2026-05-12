@@ -356,6 +356,77 @@
         }
       }
     },
+    "/jobs/{run_id}/events": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "List Job Events",
+        "description": "List lifecycle events for a job, ordered by newest event first.",
+        "operationId": "list_job_events_jobs__run_id__events_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobEventsListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/jobs/cleanup": {
       "post": {
         "tags": [
@@ -715,6 +786,13 @@
               }
             ],
             "title": "Status File"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/JobEventResponse"
+            },
+            "type": "array",
+            "title": "Events"
           }
         },
         "type": "object",
@@ -722,6 +800,87 @@
           "job"
         ],
         "title": "JobDetailResponse"
+      },
+      "JobEventResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "step": {
+            "type": "string",
+            "title": "Step"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Category"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "run_id",
+          "status",
+          "step",
+          "message",
+          "created_at"
+        ],
+        "title": "JobEventResponse"
+      },
+      "JobEventsListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/JobEventResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "JobEventsListResponse"
       },
       "JobResponse": {
         "properties": {

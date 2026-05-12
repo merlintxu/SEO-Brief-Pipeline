@@ -44,6 +44,7 @@ from api.schemas import (
     JobCancelResponse,
     JobDeleteResponse,
     JobDetailResponse,
+    JobEventsListResponse,
     JobRetryResponse,
     JobsCleanupRequest,
     JobsCleanupResponse,
@@ -526,6 +527,38 @@ async def get_job(run_id: str, api_key: str = Depends(get_api_key)):
         for event in job_store.list_job_events(run_id, limit=200, offset=0)
     ]
     return JSONResponse(content={"job": _job_to_dict(job), "status_file": status_payload, "events": events})
+
+
+@app.get(
+    "/jobs/{run_id}/events",
+    tags=["jobs"],
+    response_model=JobEventsListResponse,
+    summary="List Job Events",
+    description="List lifecycle events for a job, ordered by newest event first.",
+)
+async def list_job_events(
+    run_id: str,
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: int = Query(default=0, ge=0),
+    api_key: str = Depends(get_api_key),
+):
+    job = job_store.get_job(run_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Run_id no encontrado")
+    events = [
+        {
+            "id": event.id,
+            "run_id": event.run_id,
+            "status": event.status,
+            "step": event.step,
+            "message": event.message,
+            "error_category": event.error_category,
+            "created_at": event.created_at,
+        }
+        for event in job_store.list_job_events(run_id, limit=limit, offset=cursor)
+    ]
+    next_cursor = cursor + limit if len(events) == limit else None
+    return JSONResponse(content={"items": events, "count": len(events), "next_cursor": next_cursor})
 
 
 @app.delete(

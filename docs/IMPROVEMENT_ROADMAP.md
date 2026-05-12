@@ -76,6 +76,7 @@ Execution checkpoint:
 - C2 planner/writer split baseline added with planner artifact traceability.
 - D1 backend abstraction scaffold added for job store (SQLite operational, PostgreSQL scaffold).
 - D2 lifecycle event persistence added in SQLite (`job_events`) and exposed in job detail payloads.
+- D3 events pagination endpoint added (`GET /jobs/{run_id}/events`) with bounded limit/cursor.
 
 ### Structured run logging
 
