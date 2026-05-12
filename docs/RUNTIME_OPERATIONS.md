@@ -121,6 +121,10 @@ public/dashboard.html
 ```
 
 Open it in a browser and configure `API Base URL` + `X-API-Key` for authenticated operations.
+Current UX behaviors:
+- after creating a briefing run, dashboard polls `/briefing/{run_id}` until terminal status.
+- destructive actions (`cancel`, `delete`, `cleanup`) request operator confirmation.
+- HTTP errors are normalized into operator-friendly messages.
 
 OpenAPI contract export:
 

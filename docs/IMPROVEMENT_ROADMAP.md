@@ -78,6 +78,7 @@ Execution checkpoint:
 - D2 lifecycle event persistence added in SQLite (`job_events`) and exposed in job detail payloads.
 - D3 events pagination endpoint added (`GET /jobs/{run_id}/events`) with bounded limit/cursor.
 - E1 baseline ops dashboard added at `public/dashboard.html` for authenticated jobs/admin workflows.
+- E2 dashboard hardening added: run-status polling, destructive action confirmations, and error normalization.
 
 ### Structured run logging
 

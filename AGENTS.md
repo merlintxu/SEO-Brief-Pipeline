@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #35 (`codex/jobs-ops-frontend-e1`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #35 (`codex/dashboard-hardening-e2`).
 
 ## Documented Changes (Recent)
 
@@ -119,11 +119,15 @@ This file is the entrypoint for coding agents working in this repository.
   - `public/dashboard.html` now supports API URL + `X-API-Key` configuration.
   - includes `/briefing` launch, `/jobs` listing/filtering/pagination, job detail + events timeline.
   - includes admin actions: `retry`, `cancel`, `delete`, `cleanup`.
+- Added E2 dashboard UX hardening:
+  - polling de estado de runs tras `POST /briefing`.
+  - confirmaciones explícitas para `cancel`, `delete` y `cleanup`.
+  - mapeo de errores HTTP a mensajes operativos legibles.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: E2 frontend hardening (polling UX, confirm dialogs, better API error mapping).
+2. Immediate next PR focus after merge: E3 frontend packaging (served route, static asset policy, and basic auth/session strategy).
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
