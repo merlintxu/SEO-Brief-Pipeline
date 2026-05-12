@@ -35,6 +35,26 @@
         }
       }
     },
+    "/ops": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Ops Dashboard",
+        "description": "Serve operational dashboard UI from tracked public file.",
+        "operationId": "ops_dashboard_ops_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/briefing": {
       "post": {
         "tags": [

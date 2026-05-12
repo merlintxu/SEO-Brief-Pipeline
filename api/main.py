@@ -26,7 +26,7 @@ from fastapi import (
     Request,
     Query,
 )
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -322,6 +322,24 @@ async def health_check():
         "status": "ok",
         "active_client": cfg.active_client.name if cfg.active_client else None
     }
+
+
+@app.get(
+    "/ops",
+    tags=["health"],
+    summary="Ops Dashboard",
+    description="Serve operational dashboard UI from tracked public file.",
+)
+async def ops_dashboard():
+    dashboard_path = Path("public") / "dashboard.html"
+    if not dashboard_path.exists():
+        raise HTTPException(status_code=404, detail="Ops dashboard not found")
+    return FileResponse(dashboard_path)
+
+
+@app.get("/ops/", include_in_schema=False)
+async def ops_dashboard_slash():
+    return RedirectResponse(url="/ops")
 
 
 @app.post(

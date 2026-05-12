@@ -79,6 +79,7 @@ Execution checkpoint:
 - D3 events pagination endpoint added (`GET /jobs/{run_id}/events`) with bounded limit/cursor.
 - E1 baseline ops dashboard added at `public/dashboard.html` for authenticated jobs/admin workflows.
 - E2 dashboard hardening added: run-status polling, destructive action confirmations, and error normalization.
+- E3 dashboard serving/session baseline added: API route `/ops` plus session-default API-key persistence with optional remember mode.
 
 ### Structured run logging
 

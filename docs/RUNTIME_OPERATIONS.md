@@ -125,6 +125,12 @@ Current UX behaviors:
 - after creating a briefing run, dashboard polls `/briefing/{run_id}` until terminal status.
 - destructive actions (`cancel`, `delete`, `cleanup`) request operator confirmation.
 - HTTP errors are normalized into operator-friendly messages.
+- API also serves the same dashboard at:
+  - `GET /ops`
+- API key persistence policy in UI:
+  - default: session storage (clears when browser session ends)
+  - optional "remember" mode persists key in local storage
+  - explicit "Borrar Key" action wipes both stores.
 
 OpenAPI contract export:
 
