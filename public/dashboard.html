@@ -94,11 +94,19 @@
       <h3 class="font-medium mt-4 mb-2">Eventos</h3>
       <div id="jobEvents" class="text-sm space-y-2"></div>
     </section>
+
+    <section class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4"></i>Trail Operativo</h2>
+        <button id="clearTrailBtn" class="px-3 py-1 border border-slate-300 rounded text-xs">Limpiar</button>
+      </div>
+      <div id="opsTrail" class="space-y-2 text-xs"></div>
+    </section>
   </div>
 
   <script>
     lucide.createIcons();
-    const state = { cursor: 0, nextCursor: null, selectedRunId: null, lastRunId: null, pollingTimer: null };
+    const state = { cursor: 0, nextCursor: null, selectedRunId: null, lastRunId: null, pollingTimer: null, auditTrail: [] };
     const byId = (id) => document.getElementById(id);
     const defaultApiUrl = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
       ? "http://localhost:8000"
@@ -141,6 +149,27 @@
 
     function showResultError(error) {
       byId("briefResult").textContent = `Error: ${mapErrorMessage(error)}`;
+    }
+
+    function renderAuditTrail() {
+      const el = byId("opsTrail");
+      el.innerHTML = state.auditTrail.map((item) => `
+        <div class="border border-slate-200 rounded p-2">
+          <div class="font-mono">${item.ts} | ${item.action} | ${item.result}</div>
+          <div>${item.meta}</div>
+        </div>
+      `).join("") || "<div class='text-slate-500'>Sin eventos operativos.</div>";
+    }
+
+    function pushAuditTrail(action, result, meta) {
+      state.auditTrail.unshift({
+        ts: new Date().toISOString(),
+        action,
+        result,
+        meta: meta || "-"
+      });
+      if (state.auditTrail.length > 50) state.auditTrail = state.auditTrail.slice(0, 50);
+      renderAuditTrail();
     }
 
     async function apiFetch(path, options = {}) {
@@ -275,10 +304,21 @@
       byId("apiKey").value = "";
       localStorage.removeItem("ops_api_key");
       sessionStorage.removeItem("ops_api_key");
+      pushAuditTrail("clear_key", "ok", "api key cleared from local and session storage");
+    });
+    byId("clearTrailBtn").addEventListener("click", () => {
+      state.auditTrail = [];
+      renderAuditTrail();
     });
     byId("briefForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      try { await createBriefing(e.target); } catch (err) { showResultError(err); }
+      try {
+        await createBriefing(e.target);
+        pushAuditTrail("create_briefing", "ok", `run_id=${state.lastRunId || "-"}`);
+      } catch (err) {
+        pushAuditTrail("create_briefing", "error", mapErrorMessage(err));
+        showResultError(err);
+      }
     });
     byId("refreshJobsBtn").addEventListener("click", async () => {
       state.cursor = 0;
@@ -290,8 +330,16 @@
       try { await loadJobs(); } catch (err) { showResultError(err); }
     });
     byId("cleanupBtn").addEventListener("click", async () => {
-      if (!window.confirm("Ejecutar cleanup de jobs terminales (>30 dias)?")) return;
-      try { await runCleanup(); } catch (err) { showResultError(err); }
+      const confirmed = window.confirm("Ejecutar cleanup de jobs terminales (>30 dias)?");
+      pushAuditTrail("cleanup_confirm", confirmed ? "confirmed" : "cancelled", "max_age_days=30 statuses=done,failed");
+      if (!confirmed) return;
+      try {
+        await runCleanup();
+        pushAuditTrail("cleanup", "ok", "manual cleanup executed");
+      } catch (err) {
+        pushAuditTrail("cleanup", "error", mapErrorMessage(err));
+        showResultError(err);
+      }
     });
     byId("jobsTable").addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-action]");
@@ -299,23 +347,37 @@
       const action = btn.dataset.action;
       const runId = btn.dataset.run;
       try {
-        if (action === "detail") await loadJobDetail(runId);
-        if (action === "retry") { await apiFetch(`/jobs/${runId}/retry`, { method: "POST" }); await loadJobs(); }
+        if (action === "detail") {
+          await loadJobDetail(runId);
+          pushAuditTrail("detail", "ok", `run_id=${runId}`);
+        }
+        if (action === "retry") {
+          await apiFetch(`/jobs/${runId}/retry`, { method: "POST" });
+          await loadJobs();
+          pushAuditTrail("retry", "ok", `run_id=${runId}`);
+        }
         if (action === "cancel") {
-          if (!window.confirm(`Cancelar job ${runId}?`)) return;
+          const confirmed = window.confirm(`Cancelar job ${runId}?`);
+          pushAuditTrail("cancel_confirm", confirmed ? "confirmed" : "cancelled", `run_id=${runId}`);
+          if (!confirmed) return;
           await apiFetch(`/jobs/${runId}/cancel`, { method: "POST" });
           await loadJobs();
+          pushAuditTrail("cancel", "ok", `run_id=${runId}`);
         }
         if (action === "delete") {
-          if (!window.confirm(`Eliminar metadata del job ${runId}?`)) return;
+          const confirmed = window.confirm(`Eliminar metadata del job ${runId}?`);
+          pushAuditTrail("delete_confirm", confirmed ? "confirmed" : "cancelled", `run_id=${runId}`);
+          if (!confirmed) return;
           await apiFetch(`/jobs/${runId}`, { method: "DELETE" });
           if (state.selectedRunId === runId) {
             byId("jobDetail").textContent = "Selecciona un job para ver detalle.";
             byId("jobEvents").innerHTML = "";
           }
           await loadJobs();
+          pushAuditTrail("delete", "ok", `run_id=${runId}`);
         }
       } catch (err) {
+        pushAuditTrail(action, "error", `run_id=${runId} error=${mapErrorMessage(err)}`);
         showResultError(err);
       }
     });
@@ -323,6 +385,7 @@
     saveConfig();
     checkHealth();
     loadJobs().catch(() => {});
+    renderAuditTrail();
   </script>
 </body>
 </html>
