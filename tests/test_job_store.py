@@ -128,3 +128,13 @@ def test_job_store_list_jobs_filter_search_and_offset(tmp_path: Path):
     assert len(page_1) == 1
     assert len(page_2) == 1
     assert page_1[0].run_id != page_2[0].run_id
+
+
+def test_job_store_rejects_unknown_backend(tmp_path: Path):
+    with pytest.raises(RuntimeError, match="Unsupported JOB_STORE_BACKEND"):
+        JobStore(tmp_path / "jobs.db", backend="unknown")
+
+
+def test_job_store_postgres_scaffold_not_enabled(tmp_path: Path):
+    with pytest.raises(RuntimeError, match="PostgreSQL backend scaffold"):
+        JobStore(tmp_path / "jobs.db", backend="postgres")

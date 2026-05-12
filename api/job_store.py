@@ -1,11 +1,12 @@
-"""SQLite-backed job metadata store for durable API run state."""
+"""Job store facade with pluggable backends (SQLite operational, PostgreSQL scaffold)."""
 from __future__ import annotations
 
+import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 
 class InvalidJobTransitionError(ValueError):
@@ -26,7 +27,16 @@ class JobRecord:
     updated_at: str
 
 
-class JobStore:
+class JobStoreBackend(Protocol):
+    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None: ...
+    def update_status(self, run_id: str, *, status: str, step: str, message: str, error_category: str | None = None) -> None: ...
+    def get_job(self, run_id: str) -> JobRecord | None: ...
+    def list_jobs(self, limit: int = 100, *, offset: int = 0, status: str | None = None, search: str | None = None) -> list[JobRecord]: ...
+    def delete_job(self, run_id: str) -> int: ...
+    def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int: ...
+
+
+class SQLiteJobStoreBackend:
     ALLOWED_STATUSES = {"queued", "running", "done", "failed"}
     ALLOWED_TRANSITIONS = {
         "queued": {"queued", "running", "done", "failed"},
@@ -63,7 +73,6 @@ class JobStore:
                 )
                 """
             )
-            # Forward-compatible migration for existing DBs created before source_run_id.
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
             if "source_run_id" not in columns:
                 conn.execute("ALTER TABLE jobs ADD COLUMN source_run_id TEXT")
@@ -194,3 +203,100 @@ class JobStore:
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
+
+
+class PostgresJobStoreBackend:
+    """Scaffold backend for future production migration."""
+
+    def __init__(self, dsn: str):
+        self.dsn = dsn
+        raise RuntimeError(
+            "PostgreSQL backend scaffold is present but not enabled yet. "
+            "Use JOB_STORE_BACKEND=sqlite for now."
+        )
+
+    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None:
+        raise NotImplementedError
+
+    def update_status(
+        self,
+        run_id: str,
+        *,
+        status: str,
+        step: str,
+        message: str,
+        error_category: str | None = None,
+    ) -> None:
+        raise NotImplementedError
+
+    def get_job(self, run_id: str) -> JobRecord | None:
+        raise NotImplementedError
+
+    def list_jobs(
+        self,
+        limit: int = 100,
+        *,
+        offset: int = 0,
+        status: str | None = None,
+        search: str | None = None,
+    ) -> list[JobRecord]:
+        raise NotImplementedError
+
+    def delete_job(self, run_id: str) -> int:
+        raise NotImplementedError
+
+    def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
+        raise NotImplementedError
+
+
+class JobStore:
+    """Facade to preserve API surface while allowing backend swapping."""
+
+    def __init__(self, db_path: Path, *, backend: str | None = None):
+        backend_name = (backend or os.getenv("JOB_STORE_BACKEND", "sqlite")).strip().lower()
+        if backend_name == "sqlite":
+            self._backend: JobStoreBackend = SQLiteJobStoreBackend(db_path)
+        elif backend_name in {"postgres", "postgresql"}:
+            dsn = os.getenv("JOB_STORE_POSTGRES_DSN", "").strip()
+            self._backend = PostgresJobStoreBackend(dsn)
+        else:
+            raise RuntimeError(f"Unsupported JOB_STORE_BACKEND: {backend_name}")
+
+    # Kept for test compatibility with existing sqlite-based timestamp manipulation.
+    def _connect(self) -> sqlite3.Connection:
+        if isinstance(self._backend, SQLiteJobStoreBackend):
+            return self._backend._connect()
+        raise RuntimeError("_connect is only available for sqlite backend")
+
+    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None:
+        self._backend.create_job(run_id, keyword, output_dir, source_run_id=source_run_id)
+
+    def update_status(
+        self,
+        run_id: str,
+        *,
+        status: str,
+        step: str,
+        message: str,
+        error_category: str | None = None,
+    ) -> None:
+        self._backend.update_status(run_id, status=status, step=step, message=message, error_category=error_category)
+
+    def get_job(self, run_id: str) -> JobRecord | None:
+        return self._backend.get_job(run_id)
+
+    def list_jobs(
+        self,
+        limit: int = 100,
+        *,
+        offset: int = 0,
+        status: str | None = None,
+        search: str | None = None,
+    ) -> list[JobRecord]:
+        return self._backend.list_jobs(limit=limit, offset=offset, status=status, search=search)
+
+    def delete_job(self, run_id: str) -> int:
+        return self._backend.delete_job(run_id)
+
+    def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
+        return self._backend.cleanup_old_jobs(max_age_days=max_age_days, statuses=statuses)

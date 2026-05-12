@@ -74,6 +74,7 @@ Execution checkpoint:
 - B2 quorum policy added with explicit continue/fail semantics and metrics persistence.
 - C1 prompt registry baseline added with prompt version persistence in run metrics.
 - C2 planner/writer split baseline added with planner artifact traceability.
+- D1 backend abstraction scaffold added for job store (SQLite operational, PostgreSQL scaffold).
 
 ### Structured run logging
 
