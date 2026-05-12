@@ -138,6 +138,7 @@ class BriefingPlan(BaseModel):
     evidence_points: List[str] = Field(default_factory=list, max_length=50)
     constraints: List[str] = Field(default_factory=list, max_length=30)
     prompt_version: str = Field(default="v1")
+    planner_version: str = Field(default="v1")
 
 
 # ==================== Auditoría ====================
