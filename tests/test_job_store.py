@@ -18,6 +18,10 @@ def test_job_store_create_and_get(tmp_path: Path):
     assert job.step == "queued"
     assert job.error_category is None
     assert job.source_run_id is None
+    events = store.list_job_events("run1")
+    assert len(events) == 1
+    assert events[0].status == "queued"
+    assert events[0].step == "queued"
 
 
 def test_job_store_create_with_source_run_id(tmp_path: Path):
@@ -46,6 +50,10 @@ def test_job_store_update_status(tmp_path: Path):
     assert job.step == "error"
     assert job.message == "rate limited"
     assert job.error_category == "rate_limit"
+    events = store.list_job_events("run2")
+    assert len(events) == 2
+    assert events[0].status == "failed"
+    assert events[1].status == "queued"
 
 
 def test_job_store_rejects_invalid_transition(tmp_path: Path):
@@ -81,6 +89,7 @@ def test_job_store_delete_job(tmp_path: Path):
     deleted = store.delete_job("run_del")
     assert deleted == 1
     assert store.get_job("run_del") is None
+    assert store.list_job_events("run_del") == []
 
 
 def test_job_store_cleanup_old_jobs(tmp_path: Path):

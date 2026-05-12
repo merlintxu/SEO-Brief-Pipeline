@@ -513,7 +513,19 @@ async def get_job(run_id: str, api_key: str = Depends(get_api_key)):
         raise HTTPException(status_code=404, detail="Run_id no encontrado")
     status_path = Path(job.output_dir) / "status.json"
     status_payload = load_json(status_path, default={}) if status_path.exists() else None
-    return JSONResponse(content={"job": _job_to_dict(job), "status_file": status_payload})
+    events = [
+        {
+            "id": event.id,
+            "run_id": event.run_id,
+            "status": event.status,
+            "step": event.step,
+            "message": event.message,
+            "error_category": event.error_category,
+            "created_at": event.created_at,
+        }
+        for event in job_store.list_job_events(run_id, limit=200, offset=0)
+    ]
+    return JSONResponse(content={"job": _job_to_dict(job), "status_file": status_payload, "events": events})
 
 
 @app.delete(

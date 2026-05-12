@@ -80,6 +80,16 @@ class JobResponse(BaseModel):
     updated_at: str
 
 
+class JobEventResponse(BaseModel):
+    id: int
+    run_id: str
+    status: str
+    step: str
+    message: str
+    error_category: str | None = None
+    created_at: str
+
+
 class JobsListResponse(BaseModel):
     items: list[JobResponse]
     count: int
@@ -89,6 +99,7 @@ class JobsListResponse(BaseModel):
 class JobDetailResponse(BaseModel):
     job: JobResponse
     status_file: dict | None = None
+    events: list[JobEventResponse] = Field(default_factory=list)
 
 
 class JobDeleteResponse(BaseModel):
