@@ -96,6 +96,12 @@ class JobsListResponse(BaseModel):
     next_cursor: int | None = None
 
 
+class JobEventsListResponse(BaseModel):
+    items: list[JobEventResponse]
+    count: int
+    next_cursor: int | None = None
+
+
 class JobDetailResponse(BaseModel):
     job: JobResponse
     status_file: dict | None = None

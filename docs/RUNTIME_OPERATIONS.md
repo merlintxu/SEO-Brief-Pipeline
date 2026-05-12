@@ -139,6 +139,7 @@ docs/contracts/openapi.json
 9. Operators can inspect and maintain job metadata:
    - `GET /jobs?limit=20&cursor=0&status=failed&q=keyword`
    - `GET /jobs/{run_id}`
+   - `GET /jobs/{run_id}/events?limit=50&cursor=0`
    - `DELETE /jobs/{run_id}` (metadata only)
    - `POST /jobs/cleanup`
    - `POST /jobs/{run_id}/retry`
@@ -285,6 +286,7 @@ curl http://localhost:8000/health
 curl -H "X-API-Key: replace_with_api_key" http://localhost:8000/docs
 curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs?limit=10"
 curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs/replace_with_run_id"
+curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs/replace_with_run_id/events?limit=20&cursor=0"
 curl -X POST -H "X-API-Key: replace_with_api_key" -H "Content-Type: application/json" -d "{\"max_age_days\":30,\"statuses\":[\"done\",\"failed\"]}" http://localhost:8000/jobs/cleanup
 ```
 

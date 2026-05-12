@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #33 (`codex/job-events-d2`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #34 (`codex/job-events-endpoint-d3`).
 
 ## Documented Changes (Recent)
 
@@ -111,11 +111,15 @@ This file is the entrypoint for coding agents working in this repository.
   - events are appended on `create_job` and `update_status`.
   - `GET /jobs/{run_id}` now returns `events` in descending order.
   - `DELETE /jobs/{run_id}` also deletes related event metadata.
+- Added D3 events pagination endpoint:
+  - new endpoint `GET /jobs/{run_id}/events?limit=&cursor=` (API-key protected).
+  - response contract: `items`, `count`, `next_cursor`.
+  - bounded pagination (`limit` in `1..200`), newest-first ordering.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: D3 API pagination hardening for jobs/events + operational frontend bootstrap.
+2. Immediate next PR focus after merge: E1 operational frontend bootstrap for jobs list/detail/actions.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

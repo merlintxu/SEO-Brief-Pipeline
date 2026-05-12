@@ -203,6 +203,12 @@ def test_get_and_delete_job_endpoints(tmp_path):
     assert isinstance(detail.json().get("events"), list)
     assert len(detail.json()["events"]) >= 2
     assert detail.json()["events"][0]["run_id"] == run_id
+    events_resp = client.get(f"/jobs/{run_id}/events?limit=1&cursor=0", headers=headers)
+    assert events_resp.status_code == 200
+    events_body = events_resp.json()
+    assert events_body["count"] == 1
+    assert isinstance(events_body["items"], list)
+    assert events_body["items"][0]["run_id"] == run_id
 
     deleted = client.delete(f"/jobs/{run_id}", headers=headers)
     assert deleted.status_code == 200

@@ -21,6 +21,7 @@ def test_openapi_contract_contains_required_paths():
         "/briefing/{run_id}",
         "/jobs",
         "/jobs/{run_id}",
+        "/jobs/{run_id}/events",
         "/jobs/cleanup",
         "/jobs/{run_id}/retry",
         "/jobs/{run_id}/cancel",
