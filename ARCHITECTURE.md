@@ -39,6 +39,7 @@ graph TD
 Endpoints:
 
 - `GET /health`: no auth, returns API health and active client name.
+- `GET /ops`: serves operational dashboard HTML from `public/dashboard.html`.
 - `POST /briefing`: authenticated, creates a run, writes initial `status.json`, schedules `run_full_pipeline`.
 - `GET /briefing/{run_id}`: reads `outputs/{run_id}/status.json`.
 - `GET /jobs`: authenticated, lists recent job metadata from SQLite `JobStore` with limit/cursor/status/search filters.

@@ -110,6 +110,16 @@ def test_api_smoke_post_poll_and_download(tmp_path, monkeypatch):
     assert briefing_file.json()["h1"] == "Smoke H1"
 
 
+def test_ops_dashboard_route_serves_html(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app
+
+    client = TestClient(app)
+    response = client.get("/ops")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+
+
 def test_briefing_status_falls_back_to_job_store(tmp_path):
     setup_cfg(tmp_path)
     from api.main import app, job_store

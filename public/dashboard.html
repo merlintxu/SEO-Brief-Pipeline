@@ -27,9 +27,14 @@
           <input id="apiKey" type="password" class="w-full border border-slate-300 rounded px-3 py-2">
         </label>
       </div>
+      <label class="mt-3 text-sm flex items-center gap-2">
+        <input id="rememberApiKey" type="checkbox">
+        Recordar API key en este navegador
+      </label>
       <div class="mt-3 flex gap-2">
         <button id="saveConfigBtn" class="px-3 py-2 bg-slate-800 text-white rounded text-sm">Guardar Config</button>
         <button id="checkHealthBtn" class="px-3 py-2 border border-slate-300 rounded text-sm">Health</button>
+        <button id="clearKeyBtn" class="px-3 py-2 border border-slate-300 rounded text-sm">Borrar Key</button>
       </div>
     </header>
 
@@ -99,12 +104,25 @@
       ? "http://localhost:8000"
       : location.origin;
 
+    const remembered = localStorage.getItem("ops_api_key_remembered") === "1";
     byId("apiUrl").value = localStorage.getItem("ops_api_url") || defaultApiUrl;
-    byId("apiKey").value = localStorage.getItem("ops_api_key") || "";
+    byId("rememberApiKey").checked = remembered;
+    byId("apiKey").value = remembered
+      ? (localStorage.getItem("ops_api_key") || "")
+      : (sessionStorage.getItem("ops_api_key") || "");
 
     function saveConfig() {
       localStorage.setItem("ops_api_url", byId("apiUrl").value.trim());
-      localStorage.setItem("ops_api_key", byId("apiKey").value);
+      const key = byId("apiKey").value;
+      const remember = byId("rememberApiKey").checked;
+      localStorage.setItem("ops_api_key_remembered", remember ? "1" : "0");
+      if (remember) {
+        localStorage.setItem("ops_api_key", key);
+        sessionStorage.removeItem("ops_api_key");
+      } else {
+        sessionStorage.setItem("ops_api_key", key);
+        localStorage.removeItem("ops_api_key");
+      }
     }
 
     function getConfig() {
@@ -253,6 +271,11 @@
 
     byId("saveConfigBtn").addEventListener("click", () => { saveConfig(); checkHealth(); });
     byId("checkHealthBtn").addEventListener("click", checkHealth);
+    byId("clearKeyBtn").addEventListener("click", () => {
+      byId("apiKey").value = "";
+      localStorage.removeItem("ops_api_key");
+      sessionStorage.removeItem("ops_api_key");
+    });
     byId("briefForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       try { await createBriefing(e.target); } catch (err) { showResultError(err); }
