@@ -72,6 +72,7 @@ Execution checkpoint:
 - A2 quality gate engine added with metrics persistence and strict-mode toggle (`QUALITY_GATES_STRICT`).
 - B1 baseline added for SERP capability matrix + feature flags (provider order and enable/disable toggles).
 - B2 quorum policy added with explicit continue/fail semantics and metrics persistence.
+- C1 prompt registry baseline added with prompt version persistence in run metrics.
 
 ### Structured run logging
 

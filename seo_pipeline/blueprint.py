@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from seo_pipeline.models import AnchorSet, SEOBriefing, SerpSnapshot
 from seo_pipeline.utils.text import normalize_ws
-from seo_pipeline.constants import BRIEFING_SYSTEM_PROMPT
+from seo_pipeline.prompt_registry import resolve_prompt_bundle
 from seo_pipeline.utils.logging import logger
 
 
@@ -29,8 +29,9 @@ def generate_briefing(
     anchors: AnchorSet,
     openai_api_key: str,
     cannibalization_notes: str = "",
-    model: str = "gpt-4o-2024-11-20",  # modelo más reciente y barato con structured outputs
-    temperature: float = 0.7
+    model: str | None = None,
+    temperature: float | None = None,
+    prompt_version: str = "v1",
 ) -> SEOBriefing:
     """
     Genera el briefing completo utilizando OpenAI structured outputs nativos.
@@ -38,6 +39,9 @@ def generate_briefing(
     Ahora usa SerpSnapshot normalizado en lugar de raw SERP JSON.
     """
     client = OpenAI(api_key=openai_api_key)
+    prompt_bundle = resolve_prompt_bundle("brief_generator", prompt_version)
+    resolved_model = model or prompt_bundle.model
+    resolved_temperature = temperature if temperature is not None else prompt_bundle.temperature
 
     # Construcción del prompt de usuario (contextual y extremadamente rico)
     user_prompt = f"""
@@ -76,14 +80,14 @@ Instrucciones estrictas:
 """
 
     try:
-        logger.info(f"Generando briefing con {model} para: {keyword}")
+        logger.info(f"Generando briefing con {resolved_model} ({prompt_bundle.version}) para: {keyword}")
         
         # Usar structured outputs nativo de OpenAI (beta)
         completion = client.beta.chat.completions.parse(
-            model=model,
-            temperature=temperature,
+            model=resolved_model,
+            temperature=resolved_temperature,
             messages=[
-                {"role": "system", "content": BRIEFING_SYSTEM_PROMPT},
+                {"role": "system", "content": prompt_bundle.system_prompt},
                 {"role": "user", "content": user_prompt.strip()}
             ],
             response_format=SEOBriefing

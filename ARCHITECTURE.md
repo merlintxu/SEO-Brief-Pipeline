@@ -102,6 +102,7 @@ Stage contract note:
 - A quality-gate evaluation runs before briefing generation and is persisted in run metrics (`quality_gates`). Coverage gates can be enforced as hard failures with `QUALITY_GATES_STRICT=1`.
 - Provider selection now uses a capability matrix for SERP (SerpAPI/DataForSEO), controlled by feature flags and provider order.
 - A quorum policy evaluates partial-data coverage before briefing generation and records a decision (`continue`/`fail`) in metrics; enforcement is configurable.
+- Prompt selection is now resolved through a versioned registry and the selected prompt metadata is persisted for traceability (`prompt_run`).
 
 Transient vendor calls use `retry_call` with:
 
