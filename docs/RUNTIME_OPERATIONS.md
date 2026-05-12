@@ -131,6 +131,10 @@ Current UX behaviors:
   - default: session storage (clears when browser session ends)
   - optional "remember" mode persists key in local storage
   - explicit "Borrar Key" action wipes both stores.
+- Operator audit trail in UI:
+  - panel "Trail Operativo" logs operator actions and outcomes.
+  - logs include confirmation decisions for destructive actions.
+  - retention in UI memory only (latest 50 entries), with manual clear button.
 
 OpenAPI contract export:
 

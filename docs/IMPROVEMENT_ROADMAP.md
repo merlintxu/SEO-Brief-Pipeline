@@ -80,6 +80,7 @@ Execution checkpoint:
 - E1 baseline ops dashboard added at `public/dashboard.html` for authenticated jobs/admin workflows.
 - E2 dashboard hardening added: run-status polling, destructive action confirmations, and error normalization.
 - E3 dashboard serving/session baseline added: API route `/ops` plus session-default API-key persistence with optional remember mode.
+- F1 lightweight operator audit trail added in dashboard UI (actions, confirmations, outcomes).
 
 ### Structured run logging
 

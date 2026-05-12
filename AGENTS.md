@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #36 (`codex/dashboard-serving-e3`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #37 (`codex/ops-audit-trail-f1`).
 
 ## Documented Changes (Recent)
 
@@ -129,11 +129,16 @@ This file is the entrypoint for coding agents working in this repository.
     - session-only by default
     - optional remember mode in local storage
     - explicit key clear action.
+- Added F1 lightweight operator audit trail in dashboard:
+  - in-memory trail panel logs operator actions and outcomes.
+  - captures confirmation decisions (`cancel`, `delete`, `cleanup`).
+  - includes timestamp, action, result and metadata (`run_id` or error summary).
+  - capped to latest 50 entries with manual clear action.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: F1 lightweight operator audit trail in jobs UI (action logs + confirmations metadata).
+2. Immediate next PR focus after merge: F2 audit trail persistence strategy (optional backend append-only log).
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
