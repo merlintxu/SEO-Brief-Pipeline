@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #31 (`codex/planner-writer-c2`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #32 (`codex/jobstore-backend-abstraction-d1`).
 
 ## Documented Changes (Recent)
 
@@ -102,11 +102,15 @@ This file is the entrypoint for coding agents working in this repository.
   - planner artifact builder: `build_briefing_plan_artifact()` in `seo_pipeline/blueprint.py`
   - writer step consumes planner artifact in `generate_briefing()`
   - `prompt_run` now tracks `planner_version` and `mode=planner_writer`
+- Added D1 job-store backend abstraction scaffold:
+  - `JobStore` now acts as a facade with backend selection via `JOB_STORE_BACKEND`.
+  - operational backend: `SQLiteJobStoreBackend`.
+  - scaffold backend: `PostgresJobStoreBackend` (explicitly not enabled yet).
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: D1 DB abstraction scaffolding (SQLite/PostgreSQL backend interface).
+2. Immediate next PR focus after merge: D2 events/stage-metrics tables (starting on SQLite backend first).
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

@@ -56,6 +56,7 @@ Security behavior:
 - There is no `/static` mount exposing all generated files.
 - Job metadata persistence uses `api/job_store.py` (SQLite), including startup retention cleanup via `JOB_STORE_RETENTION_DAYS`.
 - Job metadata updates enforce state transitions in `JobStore` to avoid invalid lifecycle jumps.
+- JobStore now uses a backend facade: SQLite is operational; PostgreSQL backend is scaffolded for migration but not yet enabled.
 
 ## Configuration
 

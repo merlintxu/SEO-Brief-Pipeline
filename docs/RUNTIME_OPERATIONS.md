@@ -65,6 +65,8 @@ QUORUM_MIN_TOP_URLS=3
 QUORUM_MIN_COMPETITOR_DOMAINS=2
 QUORUM_MIN_AUDIT_ENTRIES=1
 BRIEFING_PROMPT_VERSION=v1
+JOB_STORE_BACKEND=sqlite
+# JOB_STORE_POSTGRES_DSN=postgresql://user:pass@host:5432/dbname  # scaffold only, not enabled yet
 ```
 
 ## Client And Project Config
