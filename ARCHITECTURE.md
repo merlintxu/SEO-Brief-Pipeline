@@ -103,6 +103,7 @@ Stage contract note:
 - Provider selection now uses a capability matrix for SERP (SerpAPI/DataForSEO), controlled by feature flags and provider order.
 - A quorum policy evaluates partial-data coverage before briefing generation and records a decision (`continue`/`fail`) in metrics; enforcement is configurable.
 - Prompt selection is now resolved through a versioned registry and the selected prompt metadata is persisted for traceability (`prompt_run`).
+- Brief generation is now split into planner/writer steps: a deterministic planner artifact is built first, then consumed by the writer LLM call.
 
 Transient vendor calls use `retry_call` with:
 

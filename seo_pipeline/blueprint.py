@@ -12,12 +12,38 @@ import json
 from openai import OpenAI, RateLimitError, OpenAIError
 from pydantic import BaseModel, Field
 
-from seo_pipeline.models import AnchorSet, SEOBriefing, SerpSnapshot
+from seo_pipeline.models import AnchorSet, BriefingPlan, SEOBriefing, SerpSnapshot
 from seo_pipeline.utils.text import normalize_ws
 from seo_pipeline.prompt_registry import resolve_prompt_bundle
 from seo_pipeline.utils.logging import logger
 
 
+
+
+def build_briefing_plan_artifact(
+    *,
+    keyword: str,
+    serp_snapshot: SerpSnapshot,
+    audit_report: Dict,
+    prompt_version: str,
+) -> BriefingPlan:
+    required_sections = [entry.get("h1", "").strip() for entry in audit_report.get("entries", []) if entry.get("h1")]
+    evidence_points = [entry.get("url", "") for entry in audit_report.get("entries", [])[:10] if entry.get("url")]
+    constraints = [
+        "Return strictly valid JSON for SEOBriefing schema",
+        "Cover SERP intent and competitor gaps",
+    ]
+    if serp_snapshot.people_also_ask_count > 0:
+        constraints.append("Address People Also Ask questions explicitly")
+    return BriefingPlan(
+        keyword=keyword,
+        intent_summary=f"SERP organic={serp_snapshot.organic_results_count}, PAA={serp_snapshot.people_also_ask_count}, related={serp_snapshot.related_searches_count}",
+        required_sections=required_sections[:12],
+        evidence_points=evidence_points,
+        constraints=constraints,
+        prompt_version=prompt_version,
+        planner_version="v1",
+    )
 
 
 def generate_briefing(
@@ -32,6 +58,7 @@ def generate_briefing(
     model: str | None = None,
     temperature: float | None = None,
     prompt_version: str = "v1",
+    planner_artifact: Dict[str, Any] | None = None,
 ) -> SEOBriefing:
     """
     Genera el briefing completo utilizando OpenAI structured outputs nativos.
@@ -70,6 +97,9 @@ Primarios: {", ".join(anchors.primary)}
 Secundarios: {", ".join(anchors.secondary)}
 
 {"## Notas de canibalización" + cannibalization_notes if cannibalization_notes else ""}
+
+## Planificador (paso 1)
+{json.dumps(planner_artifact, ensure_ascii=False, indent=2) if planner_artifact else "No planner artifact provided."}
 
 Instrucciones estrictas:
 1. El artículo debe superar claramente a todos los resultados actuales en profundidad, actualización, estructura y valor para el usuario.

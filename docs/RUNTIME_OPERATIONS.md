@@ -213,6 +213,8 @@ Common files:
   - `prompt_run.version`
   - `prompt_run.model`
   - `prompt_run.temperature`
+  - `prompt_run.planner_version`
+  - `prompt_run.mode` (`planner_writer`)
 
 Generated files are ignored by Git.
 

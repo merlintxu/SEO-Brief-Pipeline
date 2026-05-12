@@ -73,6 +73,7 @@ Execution checkpoint:
 - B1 baseline added for SERP capability matrix + feature flags (provider order and enable/disable toggles).
 - B2 quorum policy added with explicit continue/fail semantics and metrics persistence.
 - C1 prompt registry baseline added with prompt version persistence in run metrics.
+- C2 planner/writer split baseline added with planner artifact traceability.
 
 ### Structured run logging
 

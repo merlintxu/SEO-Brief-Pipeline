@@ -29,7 +29,7 @@ from seo_pipeline.vendors.serp_io import (
 from seo_pipeline.vendors.capabilities import resolve_serp_provider_plan
 from seo_pipeline.audit.content_audit import audit_urls
 from seo_pipeline.anchors import generate_anchors
-from seo_pipeline.blueprint import generate_briefing
+from seo_pipeline.blueprint import build_briefing_plan_artifact, generate_briefing
 from seo_pipeline.row24 import build_row24
 from seo_pipeline.exporter import export_all_formats
 from seo_pipeline.vendors.gsc_io import fetch_cannibalization
@@ -520,11 +520,10 @@ def run_full_pipeline(
         stage_started = _stage_start("briefing", provider="openai")
         prompt_version = os.getenv("BRIEFING_PROMPT_VERSION", "v1").strip() or "v1"
         prompt_bundle = resolve_prompt_bundle("brief_generator", prompt_version)
-        briefing_plan = BriefingPlan(
+        briefing_plan = build_briefing_plan_artifact(
             keyword=keyword,
-            required_sections=[entry.h1 for entry in audit_report.entries if entry.h1][:12],
-            evidence_points=[url for url in top_urls[:10]],
-            constraints=["Return structured JSON response"],
+            serp_snapshot=serp_snapshot,
+            audit_report=enrichment.audit_report.model_dump(),
             prompt_version=prompt_bundle.version,
         )
         results["briefing_plan"] = briefing_plan.model_dump()
@@ -541,12 +540,15 @@ def run_full_pipeline(
             model=prompt_bundle.model,
             temperature=prompt_bundle.temperature,
             prompt_version=prompt_bundle.version,
+            planner_artifact=briefing_plan.model_dump(),
         )
         results["prompt_run"] = {
             "key": prompt_bundle.key,
             "version": prompt_bundle.version,
             "model": prompt_bundle.model,
             "temperature": prompt_bundle.temperature,
+            "planner_version": briefing_plan.planner_version,
+            "mode": "planner_writer",
         }
         metrics["prompt_run"] = results["prompt_run"]
         results["briefing"] = briefing

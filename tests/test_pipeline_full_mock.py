@@ -102,6 +102,7 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
     assert "quorum" in result
     assert "partial_data" in result
     assert "prompt_run" in result
+    assert result["prompt_run"]["mode"] == "planner_writer"
     assert "keyword_set" in result
     assert "competitor_set" in result
     assert "enrichment_set" in result
