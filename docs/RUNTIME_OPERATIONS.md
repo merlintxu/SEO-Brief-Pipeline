@@ -277,6 +277,22 @@ First-response runbook:
 4. If retry rate spikes, inspect provider-specific stages before changing prompt/model settings.
 5. If p95 duration spikes, compare `duration_seconds` by stage and prioritize SEMrush, SERP, audit or OpenAI based on the slowest stage.
 
+## Cache Management
+
+Provider cache files live under the configured `cfg.cache_dir` (`data/cache` by default). Inspect cache state:
+
+```bash
+python tools/cache_admin.py inspect
+```
+
+Clear cache files:
+
+```bash
+python tools/cache_admin.py clear --yes
+```
+
+The clear command resolves the cache root before deleting and refuses to operate on filesystem root. It removes cache files and empty subdirectories only inside the configured cache directory.
+
 Generated files are ignored by Git.
 
 ## Docker

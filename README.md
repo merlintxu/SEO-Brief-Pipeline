@@ -92,6 +92,13 @@ Tests:
 pytest -q
 ```
 
+Cache:
+
+```bash
+python tools/cache_admin.py inspect
+python tools/cache_admin.py clear --yes
+```
+
 ## API
 
 Todos los endpoints salvo `/health`, `/docs`, `/openapi.json` y `/redoc` requieren header:

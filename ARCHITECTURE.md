@@ -31,6 +31,7 @@ graph TD
 - `api/main.py`: FastAPI app, API key validation, rate limit middleware, Sentry lifespan, background tasks and file downloads.
 - `public/dashboard.html`: static operational UI for authenticated briefing and jobs administration.
 - `client_manager.py`: interactive CLI for local client/project management and runs.
+- `tools/cache_admin.py`: safe cache inspection and cleanup CLI.
 - `seo_pipeline/pipeline.py`: core orchestration.
 - `notebooks/`: exploratory notebooks; not the source of truth.
 
@@ -66,6 +67,7 @@ Security behavior:
 - Operator audit events are persisted in SQLite table `operator_audit_events`; the API intentionally exposes append/list only.
 - Run metrics include a cost summary with provider call estimates and OpenAI token/cost estimates; job detail exposes this summary when metrics exist.
 - SLO evaluation is a pure metrics layer in `seo_pipeline/slo.py`; it consumes `run_metrics.json` payloads and does not require external monitoring infrastructure.
+- Cache operations are constrained to the resolved configured cache root via `seo_pipeline/cache_admin.py`.
 
 ## Configuration
 
