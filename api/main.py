@@ -32,12 +32,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from api.rate_limiter import RateLimitMiddleware
+from api.job_lifecycle import JobLifecycleService
 from api.job_store import InvalidJobTransitionError, JobStore
 
 from seo_pipeline.config import get_config
 from seo_pipeline.pipeline import run_full_pipeline
 from seo_pipeline.artifacts import DOWNLOADABLE_ARTIFACTS, RUN_METRICS_JSON
-from seo_pipeline.utils.errors import classify_error
 from api.schemas import (
     BriefingRequest,
     BriefingResponse,
@@ -56,7 +56,7 @@ from api.schemas import (
     OpsSloResponse,
 )
 from seo_pipeline.slo import evaluate_slo_window
-from seo_pipeline.utils.io import save_json, ensure_dir, load_json
+from seo_pipeline.utils.io import ensure_dir, load_json
 
 # ============================================================================
 # SECURITY & CONFIGURATION
@@ -222,6 +222,7 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
 
 cfg = get_config()
 job_store = JobStore(Path("outputs") / "jobs.db")
+job_lifecycle = JobLifecycleService(job_store)
 JOB_STATUS_VALUES = {"queued", "running", "done", "failed"}
 
 
@@ -360,25 +361,18 @@ def _queue_pipeline_run(
     initial_message: str = "Tarea en cola",
     source_run_id: str | None = None,
 ) -> None:
-    save_json(
-        status_path,
-        {
-            "status": "queued",
-            "step": "queued",
-            "message": initial_message,
-        },
+    job_lifecycle.enqueue(
+        run_id=run_id,
+        keyword=request.keyword,
+        output_dir=run_dir,
+        status_path=status_path,
+        message=initial_message,
+        source_run_id=source_run_id,
     )
-    job_store.create_job(run_id=run_id, keyword=request.keyword, output_dir=str(run_dir), source_run_id=source_run_id)
-    try:
-        job_store.update_status(run_id, status="queued", step="queued", message=initial_message)
-    except InvalidJobTransitionError:
-        pass
 
     def _bg_task(req: BriefingRequest, current_run_id: str, current_status_path: Path, current_run_dir: Path):
         try:
-            try:
-                job_store.update_status(current_run_id, status="running", step="start", message="Pipeline iniciado")
-            except InvalidJobTransitionError:
+            if not job_lifecycle.start(current_run_id):
                 return
             run_full_pipeline(
                 keyword=req.keyword,
@@ -394,41 +388,18 @@ def _queue_pipeline_run(
             metrics_payload = load_json(metrics_path, default={}) if metrics_path.exists() else {}
             if isinstance(metrics_payload, dict) and metrics_payload:
                 job_store.persist_run_metrics(current_run_id, metrics_payload)
-            final_status = load_json(current_status_path, default={})
             try:
-                job_store.update_status(
-                    current_run_id,
-                    status=final_status.get("status", "done"),
-                    step=final_status.get("step", "done"),
-                    message=final_status.get("message", "Pipeline completado"),
-                    error_category=final_status.get("error_category"),
-                )
+                job_lifecycle.complete_from_status(current_run_id, current_status_path)
             except InvalidJobTransitionError:
                 pass
         except Exception as e:
             try:
-                error_category = classify_error(e)
-                save_json(
-                    current_status_path,
-                    {
-                        "status": "failed",
-                        "step": "error",
-                        "message": str(e),
-                        "error_category": error_category,
-                    },
-                )
                 try:
                     metrics_path = current_run_dir / RUN_METRICS_JSON
                     metrics_payload = load_json(metrics_path, default={}) if metrics_path.exists() else {}
                     if isinstance(metrics_payload, dict) and metrics_payload:
                         job_store.persist_run_metrics(current_run_id, metrics_payload)
-                    job_store.update_status(
-                        current_run_id,
-                        status="failed",
-                        step="error",
-                        message=str(e),
-                        error_category=error_category,
-                    )
+                    job_lifecycle.fail_from_exception(current_run_id, current_status_path, e)
                 except InvalidJobTransitionError:
                     pass
             except Exception:
@@ -918,30 +889,11 @@ async def cancel_job(run_id: str, api_key: str = Depends(get_api_key)):
     job = job_store.get_job(run_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Run_id no encontrado")
-    if job.status not in {"queued", "running"}:
-        raise HTTPException(status_code=409, detail="Only queued/running jobs can be canceled")
 
     try:
-        job_store.update_status(
-            run_id,
-            status="failed",
-            step="canceled",
-            message="Canceled by operator",
-            error_category="unknown",
-        )
+        job_lifecycle.cancel(job)
     except InvalidJobTransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    status_path = Path(job.output_dir) / "status.json"
-    if status_path.exists():
-        save_json(
-            status_path,
-            {
-                "status": "failed",
-                "step": "canceled",
-                "message": "Canceled by operator",
-                "error_category": "unknown",
-            },
-        )
     return JSONResponse(content={"run_id": run_id, "status": "failed", "step": "canceled"})
 
 

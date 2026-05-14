@@ -156,6 +156,9 @@ This file is the entrypoint for coding agents working in this repository.
 - Added resumable batch keyword runs:
   - `tools/batch_runner.py --resume` skips items already marked `done` in `batch_manifest.json`.
   - batch summaries now include `skipped`, per-item timestamps and `error_summary`.
+- Added API job lifecycle service:
+  - `api.job_lifecycle.JobLifecycleService` centralizes enqueue, start, fail, cancel and stale-running detection.
+  - FastAPI still uses in-process `BackgroundTasks`; this is queue-backend preparation only.
 - Added SLO dashboard/API integration:
   - protected `GET /ops/slo` evaluates recent job metrics with `seo_pipeline/slo.py`.
   - dashboard shows SLO status, run counts, p95 duration, retry rate and failed checks.
@@ -173,7 +176,7 @@ This file is the entrypoint for coding agents working in this repository.
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: centralize API job lifecycle service as queue-backend preparation.
+2. Immediate next PR focus after merge: add provider-aware retry policy classification.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

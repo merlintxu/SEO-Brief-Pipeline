@@ -148,8 +148,9 @@ Support operator workflows with stronger lifecycle control.
 ### PR E1 - State machine enforcement
 
 - Add explicit state transitions in JobStore/service layer:
-  - `queued -> running -> done|failed`,
-  - cancellation and retry constraints.
+  - `queued -> running -> done|failed` (implemented),
+  - cancellation and retry constraints (implemented),
+  - lifecycle service wrapper for queue-backend readiness (implemented).
 
 Acceptance:
 
