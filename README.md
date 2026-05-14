@@ -160,6 +160,13 @@ curl -H "X-API-Key: replace_with_api_key" \
   "http://localhost:8000/ops/slo?limit=50"
 ```
 
+La lista de jobs admite filtros operativos adicionales:
+
+```bash
+curl -H "X-API-Key: replace_with_api_key" \
+  "http://localhost:8000/jobs?status=failed&error_category=network&provider=serpapi"
+```
+
 ## Seguridad
 
 - `.env`, `credentials/`, `outputs/`, `runs/`, caches y bytecode no deben versionarse.

@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from datetime import datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -175,6 +176,49 @@ def test_jobs_endpoint_supports_status_and_search_filters(tmp_path):
     assert body["count"] >= 1
     assert any(item["run_id"] == run_failed for item in body["items"])
     assert all(item["status"] == "failed" for item in body["items"])
+
+
+def test_jobs_endpoint_supports_extended_filters(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app, job_store
+
+    run_network = f"run_jobs_network_{int(time.time() * 1000)}"
+    run_validation = f"run_jobs_validation_{int(time.time() * 1000)}"
+    output_network = tmp_path / "outputs" / run_network
+    output_validation = tmp_path / "outputs" / run_validation
+    output_network.mkdir(parents=True, exist_ok=True)
+    output_validation.mkdir(parents=True, exist_ok=True)
+    (output_network / "run_metrics.json").write_text(
+        json.dumps({"stages": {"serp": {"provider": "serpapi"}}}),
+        encoding="utf-8",
+    )
+    (output_validation / "run_metrics.json").write_text(
+        json.dumps({"stages": {"briefing": {"provider": "openai"}}}),
+        encoding="utf-8",
+    )
+    job_store.create_job(run_id=run_network, keyword="alpha network", output_dir=str(output_network))
+    job_store.create_job(run_id=run_validation, keyword="beta validation", output_dir=str(output_validation))
+    job_store.update_status(run_network, status="failed", step="error", message="network", error_category="network")
+    job_store.update_status(
+        run_validation,
+        status="failed",
+        step="error",
+        message="validation",
+        error_category="validation",
+    )
+
+    client = TestClient(app)
+    headers = {"X-API-Key": "secret-token-2025-test-key-long-enough"}
+    created_from = datetime.now().strftime("%Y-%m-%d")
+    response = client.get(
+        f"/jobs?limit=20&error_category=validation&provider=openai&created_from={created_from}",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert any(item["run_id"] == run_validation for item in body["items"])
+    assert all(item["error_category"] == "validation" for item in body["items"])
 
 
 def test_jobs_endpoint_limit_validation(tmp_path):

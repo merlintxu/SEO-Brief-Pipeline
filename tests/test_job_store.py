@@ -161,6 +161,33 @@ def test_job_store_list_jobs_filter_search_and_offset(tmp_path: Path):
     assert page_1[0].run_id != page_2[0].run_id
 
 
+def test_job_store_list_jobs_filters_error_and_created_range(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run-old-network", "alpha keyword", "outputs/run-old-network")
+    store.create_job("run-new-validation", "beta keyword", "outputs/run-new-validation")
+    store.update_status("run-old-network", status="failed", step="error", message="boom", error_category="network")
+    store.update_status(
+        "run-new-validation",
+        status="failed",
+        step="error",
+        message="invalid",
+        error_category="validation",
+    )
+
+    old_ts = (datetime.now() - timedelta(days=10)).isoformat(timespec="seconds")
+    new_ts = datetime.now().isoformat(timespec="seconds")
+    with store._connect() as conn:
+        conn.execute("UPDATE jobs SET created_at = ? WHERE run_id = ?", (old_ts, "run-old-network"))
+        conn.execute("UPDATE jobs SET created_at = ? WHERE run_id = ?", (new_ts, "run-new-validation"))
+        conn.commit()
+
+    validation = store.list_jobs(limit=10, error_category="validation")
+    assert [job.run_id for job in validation] == ["run-new-validation"]
+
+    recent = store.list_jobs(limit=10, created_from=(datetime.now() - timedelta(days=1)).isoformat(timespec="seconds"))
+    assert [job.run_id for job in recent] == ["run-new-validation"]
+
+
 def test_job_store_rejects_unknown_backend(tmp_path: Path):
     with pytest.raises(RuntimeError, match="Unsupported JOB_STORE_BACKEND"):
         JobStore(tmp_path / "jobs.db", backend="unknown")
