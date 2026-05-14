@@ -39,11 +39,14 @@ def run_batch(
     batch_id: str | None = None,
     output_dir: Path | None = None,
     stop_on_error: bool = False,
+    resume: bool = False,
     pipeline_func: Callable[..., dict] = run_full_pipeline,
 ) -> dict[str, Any]:
     batch_id = batch_id or datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     batch_output_dir = Path(output_dir or Path("runs") / f"batch_{batch_id}")
     batch_output_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = batch_output_dir / "batch_manifest.json"
+    previous_items = _manifest_items_by_run_id(manifest_path) if resume else {}
 
     results: list[dict[str, Any]] = []
     for index, item in enumerate(items, start=1):
@@ -51,6 +54,25 @@ def run_batch(
         run_dir = batch_output_dir / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         status_path = run_dir / "status.json"
+        previous = previous_items.get(run_id)
+        if resume and previous and previous.get("status") == "done":
+            results.append(
+                {
+                    "run_id": run_id,
+                    "keyword": previous.get("keyword", item.keyword),
+                    "status": "skipped",
+                    "output_dir": str(run_dir),
+                    "result_output_dir": previous.get("result_output_dir", str(run_dir)),
+                    "started_at": None,
+                    "finished_at": previous.get("finished_at"),
+                    "error_summary": None,
+                    "resume_reason": "previously_done",
+                }
+            )
+            _write_batch_manifest(manifest_path, batch_id, batch_output_dir, results)
+            continue
+
+        started_at = datetime.now().isoformat(timespec="seconds")
         try:
             validated = PipelineInput(
                 keyword=item.keyword,
@@ -79,6 +101,9 @@ def run_batch(
                     "status": "done",
                     "output_dir": str(run_dir),
                     "result_output_dir": str(result.get("output_dir", run_dir)),
+                    "started_at": started_at,
+                    "finished_at": datetime.now().isoformat(timespec="seconds"),
+                    "error_summary": None,
                 }
             )
         except Exception as exc:
@@ -88,11 +113,17 @@ def run_batch(
                 "status": "failed",
                 "output_dir": str(run_dir),
                 "error": str(exc),
+                "started_at": started_at,
+                "finished_at": datetime.now().isoformat(timespec="seconds"),
+                "error_summary": str(exc),
             }
             results.append(failure)
             save_json(status_path, {"status": "failed", "step": "batch", "message": str(exc)})
+            _write_batch_manifest(manifest_path, batch_id, batch_output_dir, results)
             if stop_on_error:
                 break
+        else:
+            _write_batch_manifest(manifest_path, batch_id, batch_output_dir, results)
 
     summary = {
         "batch_id": batch_id,
@@ -100,10 +131,14 @@ def run_batch(
         "total": len(results),
         "done": sum(1 for item in results if item["status"] == "done"),
         "failed": sum(1 for item in results if item["status"] == "failed"),
+        "skipped": sum(1 for item in results if item["status"] == "skipped"),
+        "resume": resume,
+        "manifest_path": str(manifest_path),
         "stopped_on_error": stop_on_error and any(item["status"] == "failed" for item in results),
         "items": results,
     }
     save_json(batch_output_dir / "batch_summary.json", summary)
+    save_json(manifest_path, summary)
     return summary
 
 
@@ -145,6 +180,33 @@ def _as_int(value: Any, default: int) -> int:
     if value in (None, ""):
         return default
     return int(value)
+
+
+def _manifest_items_by_run_id(path: Path) -> dict[str, dict[str, Any]]:
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    items = payload.get("items", []) if isinstance(payload, dict) else []
+    if not isinstance(items, list):
+        return {}
+    return {
+        str(item["run_id"]): item
+        for item in items
+        if isinstance(item, dict) and item.get("run_id")
+    }
+
+
+def _write_batch_manifest(path: Path, batch_id: str, output_dir: Path, items: list[dict[str, Any]]) -> None:
+    payload = {
+        "batch_id": batch_id,
+        "output_dir": str(output_dir),
+        "total": len(items),
+        "done": sum(1 for item in items if item["status"] == "done"),
+        "failed": sum(1 for item in items if item["status"] == "failed"),
+        "skipped": sum(1 for item in items if item["status"] == "skipped"),
+        "items": items,
+    }
+    save_json(path, payload)
 
 
 def _as_bool(value: Any) -> bool:

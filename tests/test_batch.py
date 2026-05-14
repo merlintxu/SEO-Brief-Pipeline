@@ -50,9 +50,14 @@ def test_run_batch_isolates_runs_and_continues_after_failure(tmp_path: Path):
     assert summary["total"] == 3
     assert summary["done"] == 2
     assert summary["failed"] == 1
+    assert summary["skipped"] == 0
     assert [item["run_id"] for item in summary["items"]] == ["batch_test_001", "batch_test_002", "batch_test_003"]
     assert (tmp_path / "batch" / "batch_summary.json").exists()
+    assert (tmp_path / "batch" / "batch_manifest.json").exists()
     assert (tmp_path / "batch" / "batch_test_002" / "status.json").exists()
+    assert summary["items"][0]["started_at"]
+    assert summary["items"][0]["finished_at"]
+    assert summary["items"][1]["error_summary"] == "boom"
     assert len(calls) == 3
 
 
@@ -72,3 +77,50 @@ def test_run_batch_can_stop_on_first_error(tmp_path: Path):
     assert summary["done"] == 0
     assert summary["failed"] == 1
     assert summary["stopped_on_error"] is True
+
+
+def test_run_batch_resume_skips_previously_done_items(tmp_path: Path):
+    calls = []
+
+    def first_pipeline(**kwargs):
+        calls.append(("first", kwargs["keyword"]))
+        if kwargs["keyword"] == "retry kw":
+            raise RuntimeError("temporary")
+        return {"output_dir": str(kwargs["output_dir"])}
+
+    output_dir = tmp_path / "batch"
+    first = run_batch(
+        [BatchItem(keyword="done kw"), BatchItem(keyword="retry kw")],
+        batch_id="batch_resume",
+        output_dir=output_dir,
+        pipeline_func=first_pipeline,
+    )
+    assert first["done"] == 1
+    assert first["failed"] == 1
+
+    def second_pipeline(**kwargs):
+        calls.append(("second", kwargs["keyword"]))
+        return {"output_dir": str(kwargs["output_dir"])}
+
+    resumed = run_batch(
+        [BatchItem(keyword="done kw"), BatchItem(keyword="retry kw")],
+        batch_id="batch_resume",
+        output_dir=output_dir,
+        resume=True,
+        pipeline_func=second_pipeline,
+    )
+
+    assert resumed["resume"] is True
+    assert resumed["done"] == 1
+    assert resumed["failed"] == 0
+    assert resumed["skipped"] == 1
+    assert [item["status"] for item in resumed["items"]] == ["skipped", "done"]
+    assert calls == [
+        ("first", "done kw"),
+        ("first", "retry kw"),
+        ("second", "retry kw"),
+    ]
+
+    manifest = json.loads((output_dir / "batch_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["skipped"] == 1
+    assert manifest["items"][0]["resume_reason"] == "previously_done"

@@ -330,6 +330,7 @@ JSON input can be either a list of objects or an object with an `items` list:
 ```
 
 Each keyword receives an isolated run id under the batch output directory. Failures do not stop the batch by default; use `--stop-on-error` when the first failed keyword should halt execution. The runner writes `batch_summary.json` next to the per-keyword run directories.
+Use `--resume` with the same `--batch-id` and output directory to skip items already marked `done` in `batch_manifest.json` and retry only incomplete items. The summary includes `done`, `failed`, `skipped`, per-item timestamps and `error_summary`.
 
 Generated files are ignored by Git.
 

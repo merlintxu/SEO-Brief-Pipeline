@@ -130,7 +130,7 @@ Execution checkpoint:
 
 ### Batch keyword processing
 
-Status: implemented.
+Status: implemented; resumable mode added.
 
 Add a batch runner for multiple keywords with isolated statuses.
 
@@ -139,6 +139,7 @@ Acceptance:
 - Input can be CSV or JSON.
 - Each keyword receives a separate run id.
 - Failures do not stop the whole batch unless configured.
+- `--resume` skips prior `done` items from `batch_manifest.json` and retries incomplete items.
 
 ### Persistent job store
 
