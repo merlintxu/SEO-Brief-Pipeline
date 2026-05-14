@@ -157,6 +157,8 @@ Acceptance:
 
 ### Cache management commands
 
+Status: implemented.
+
 Add safe commands to inspect and clear provider caches.
 
 Acceptance:

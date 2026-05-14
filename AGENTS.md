@@ -146,11 +146,14 @@ This file is the entrypoint for coding agents working in this repository.
   - `seo_pipeline/slo.py` evaluates rolling windows of `run_metrics.json` payloads.
   - SLO checks cover success rate, p95 duration, retry rate and categorized failure rate.
   - operations docs include default thresholds and first-response runbook.
+- Added cache management commands:
+  - `tools/cache_admin.py inspect` reports configured cache size, file count and oldest/newest entries.
+  - `tools/cache_admin.py clear --yes` removes files only after resolving the cache root safely.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: wire SLO evaluation into dashboard/API or external alerting.
+2. Immediate next PR focus after merge: wire SLO evaluation into dashboard/API or continue P2 batch keyword processing.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
