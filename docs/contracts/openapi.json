@@ -447,6 +447,113 @@
         }
       }
     },
+    "/ops/audit-trail": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "List Operator Audit Trail",
+        "description": "List persisted operator audit trail events, ordered newest first.",
+        "operationId": "list_operator_audit_trail_ops_audit_trail_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorAuditEventsListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Append Operator Audit Trail Event",
+        "description": "Append one operator audit event. This endpoint is append-only and API-key protected.",
+        "operationId": "append_operator_audit_trail_ops_audit_trail_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorAuditEventRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorAuditEventResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/jobs/cleanup": {
       "post": {
         "tags": [
@@ -1075,6 +1182,134 @@
         ],
         "title": "JobsListResponse"
       },
+      "OperatorAuditEventRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Action"
+          },
+          "result": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Result"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "result"
+        ],
+        "title": "OperatorAuditEventRequest"
+      },
+      "OperatorAuditEventResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "result": {
+            "type": "string",
+            "title": "Result"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "result",
+          "created_at"
+        ],
+        "title": "OperatorAuditEventResponse"
+      },
+      "OperatorAuditEventsListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorAuditEventResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "OperatorAuditEventsListResponse"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -1140,6 +1375,10 @@
     {
       "name": "jobs",
       "description": "Operational job metadata endpoints"
+    },
+    {
+      "name": "ops",
+      "description": "Protected operator console and audit trail endpoints"
     }
   ]
 }

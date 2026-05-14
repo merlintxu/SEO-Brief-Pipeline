@@ -38,12 +38,24 @@ class JobEventRecord:
     created_at: str
 
 
+@dataclass(frozen=True)
+class OperatorAuditRecord:
+    id: int
+    action: str
+    result: str
+    run_id: str | None
+    metadata: str | None
+    created_at: str
+
+
 class JobStoreBackend(Protocol):
     def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None: ...
     def update_status(self, run_id: str, *, status: str, step: str, message: str, error_category: str | None = None) -> None: ...
     def get_job(self, run_id: str) -> JobRecord | None: ...
     def list_jobs(self, limit: int = 100, *, offset: int = 0, status: str | None = None, search: str | None = None) -> list[JobRecord]: ...
     def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]: ...
+    def append_operator_audit_event(self, *, action: str, result: str, run_id: str | None = None, metadata: str | None = None) -> OperatorAuditRecord: ...
+    def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]: ...
     def delete_job(self, run_id: str) -> int: ...
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int: ...
 
@@ -94,6 +106,18 @@ class SQLiteJobStoreBackend:
                     step TEXT NOT NULL,
                     message TEXT NOT NULL,
                     error_category TEXT,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS operator_audit_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    action TEXT NOT NULL,
+                    result TEXT NOT NULL,
+                    run_id TEXT,
+                    metadata TEXT,
                     created_at TEXT NOT NULL
                 )
                 """
@@ -226,6 +250,50 @@ class SQLiteJobStoreBackend:
             rows = conn.execute(query, (run_id, limit, offset)).fetchall()
             return [self._row_to_event_record(row) for row in rows]
 
+    def append_operator_audit_event(
+        self,
+        *,
+        action: str,
+        result: str,
+        run_id: str | None = None,
+        metadata: str | None = None,
+    ) -> OperatorAuditRecord:
+        now = datetime.now().isoformat(timespec="seconds")
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO operator_audit_events (action, result, run_id, metadata, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (action, result, run_id, metadata, now),
+            )
+            conn.commit()
+            return OperatorAuditRecord(
+                id=cursor.lastrowid,
+                action=action,
+                result=result,
+                run_id=run_id,
+                metadata=metadata,
+                created_at=now,
+            )
+
+    def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]:
+        if limit < 1:
+            raise ValueError("limit must be >= 1")
+        if offset < 0:
+            raise ValueError("offset must be >= 0")
+
+        query = """
+            SELECT *
+            FROM operator_audit_events
+            ORDER BY id DESC
+            LIMIT ?
+            OFFSET ?
+        """
+        with self._connect() as conn:
+            rows = conn.execute(query, (limit, offset)).fetchall()
+            return [self._row_to_operator_audit_record(row) for row in rows]
+
     def delete_job(self, run_id: str) -> int:
         with self._connect() as conn:
             conn.execute("DELETE FROM job_events WHERE run_id = ?", (run_id,))
@@ -275,6 +343,17 @@ class SQLiteJobStoreBackend:
             step=row["step"],
             message=row["message"],
             error_category=row["error_category"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _row_to_operator_audit_record(row: sqlite3.Row) -> OperatorAuditRecord:
+        return OperatorAuditRecord(
+            id=row["id"],
+            action=row["action"],
+            result=row["result"],
+            run_id=row["run_id"],
+            metadata=row["metadata"],
             created_at=row["created_at"],
         )
 
@@ -341,6 +420,19 @@ class PostgresJobStoreBackend:
     def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]:
         raise NotImplementedError
 
+    def append_operator_audit_event(
+        self,
+        *,
+        action: str,
+        result: str,
+        run_id: str | None = None,
+        metadata: str | None = None,
+    ) -> OperatorAuditRecord:
+        raise NotImplementedError
+
+    def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]:
+        raise NotImplementedError
+
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
         raise NotImplementedError
 
@@ -396,6 +488,24 @@ class JobStore:
 
     def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]:
         return self._backend.list_job_events(run_id, limit=limit, offset=offset)
+
+    def append_operator_audit_event(
+        self,
+        *,
+        action: str,
+        result: str,
+        run_id: str | None = None,
+        metadata: str | None = None,
+    ) -> OperatorAuditRecord:
+        return self._backend.append_operator_audit_event(
+            action=action,
+            result=result,
+            run_id=run_id,
+            metadata=metadata,
+        )
+
+    def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]:
+        return self._backend.list_operator_audit_events(limit=limit, offset=offset)
 
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
         return self._backend.cleanup_old_jobs(max_age_days=max_age_days, statuses=statuses)

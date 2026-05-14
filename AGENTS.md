@@ -134,11 +134,15 @@ This file is the entrypoint for coding agents working in this repository.
   - captures confirmation decisions (`cancel`, `delete`, `cleanup`).
   - includes timestamp, action, result and metadata (`run_id` or error summary).
   - capped to latest 50 entries with manual clear action.
+- Added F2 operator audit trail persistence:
+  - SQLite append-only `operator_audit_events` table in `JobStore`.
+  - protected `GET/POST /ops/audit-trail` endpoints with stable response contracts.
+  - dashboard loads the latest persisted trail and writes operator actions best-effort.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: F2 audit trail persistence strategy (optional backend append-only log).
+2. Immediate next PR focus after merge: G1 cost tracking or SLO groundwork from `docs/REARCHITECTURE_EXECUTION_PLAN.md`.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

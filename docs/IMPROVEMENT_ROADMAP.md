@@ -81,6 +81,7 @@ Execution checkpoint:
 - E2 dashboard hardening added: run-status polling, destructive action confirmations, and error normalization.
 - E3 dashboard serving/session baseline added: API route `/ops` plus session-default API-key persistence with optional remember mode.
 - F1 lightweight operator audit trail added in dashboard UI (actions, confirmations, outcomes).
+- F2 operator audit persistence added with append-only SQLite events and protected `GET/POST /ops/audit-trail`.
 
 ### Structured run logging
 

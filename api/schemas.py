@@ -102,6 +102,44 @@ class JobEventsListResponse(BaseModel):
     next_cursor: int | None = None
 
 
+class OperatorAuditEventRequest(BaseModel):
+    action: str = Field(..., min_length=1, max_length=64)
+    result: str = Field(..., min_length=1, max_length=32)
+    run_id: str | None = Field(default=None, max_length=100)
+    metadata: str | None = Field(default=None, max_length=500)
+
+    @field_validator("action", "result")
+    @classmethod
+    def normalize_required_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("value cannot be empty or whitespace-only")
+        return stripped
+
+    @field_validator("run_id", "metadata")
+    @classmethod
+    def normalize_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class OperatorAuditEventResponse(BaseModel):
+    id: int
+    action: str
+    result: str
+    run_id: str | None = None
+    metadata: str | None = None
+    created_at: str
+
+
+class OperatorAuditEventsListResponse(BaseModel):
+    items: list[OperatorAuditEventResponse]
+    count: int
+    next_cursor: int | None = None
+
+
 class JobDetailResponse(BaseModel):
     job: JobResponse
     status_file: dict | None = None

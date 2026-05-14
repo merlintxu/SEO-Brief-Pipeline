@@ -49,6 +49,9 @@ from api.schemas import (
     JobsCleanupRequest,
     JobsCleanupResponse,
     JobsListResponse,
+    OperatorAuditEventRequest,
+    OperatorAuditEventResponse,
+    OperatorAuditEventsListResponse,
 )
 from seo_pipeline.utils.io import save_json, ensure_dir, load_json
 
@@ -166,6 +169,10 @@ app = FastAPI(
         {
             "name": "jobs",
             "description": "Operational job metadata endpoints"
+        },
+        {
+            "name": "ops",
+            "description": "Protected operator console and audit trail endpoints"
         }
     ]
 )
@@ -227,6 +234,17 @@ def _job_to_dict(job) -> dict:
         "source_run_id": job.source_run_id,
         "created_at": job.created_at,
         "updated_at": job.updated_at,
+    }
+
+
+def _operator_audit_to_dict(event) -> dict:
+    return {
+        "id": event.id,
+        "action": event.action,
+        "result": event.result,
+        "run_id": event.run_id,
+        "metadata": event.metadata,
+        "created_at": event.created_at,
     }
 
 
@@ -577,6 +595,46 @@ async def list_job_events(
     ]
     next_cursor = cursor + limit if len(events) == limit else None
     return JSONResponse(content={"items": events, "count": len(events), "next_cursor": next_cursor})
+
+
+@app.get(
+    "/ops/audit-trail",
+    tags=["ops"],
+    response_model=OperatorAuditEventsListResponse,
+    summary="List Operator Audit Trail",
+    description="List persisted operator audit trail events, ordered newest first.",
+)
+async def list_operator_audit_trail(
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: int = Query(default=0, ge=0),
+    api_key: str = Depends(get_api_key),
+):
+    events = [
+        _operator_audit_to_dict(event)
+        for event in job_store.list_operator_audit_events(limit=limit, offset=cursor)
+    ]
+    next_cursor = cursor + limit if len(events) == limit else None
+    return JSONResponse(content={"items": events, "count": len(events), "next_cursor": next_cursor})
+
+
+@app.post(
+    "/ops/audit-trail",
+    tags=["ops"],
+    response_model=OperatorAuditEventResponse,
+    summary="Append Operator Audit Trail Event",
+    description="Append one operator audit event. This endpoint is append-only and API-key protected.",
+)
+async def append_operator_audit_trail(
+    payload: OperatorAuditEventRequest,
+    api_key: str = Depends(get_api_key),
+):
+    event = job_store.append_operator_audit_event(
+        action=payload.action,
+        result=payload.result,
+        run_id=payload.run_id,
+        metadata=payload.metadata,
+    )
+    return JSONResponse(content=_operator_audit_to_dict(event))
 
 
 @app.delete(
