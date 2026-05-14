@@ -162,6 +162,7 @@ docs/contracts/openapi.json
 8. Client downloads whitelisted files via `GET /outputs/{run_id}/{filename}`.
 9. Operators can inspect and maintain job metadata:
    - `GET /jobs?limit=20&cursor=0&status=failed&q=keyword`
+   - optional filters: `created_from`, `created_to`, `error_category`, `provider`
    - `GET /jobs/{run_id}`
    - `GET /jobs/{run_id}/events?limit=50&cursor=0`
    - `DELETE /jobs/{run_id}` (metadata only)

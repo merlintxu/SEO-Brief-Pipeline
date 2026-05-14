@@ -44,7 +44,7 @@ Endpoints:
 - `GET /ops`: serves operational dashboard HTML from `public/dashboard.html`.
 - `POST /briefing`: authenticated, creates a run, writes initial `status.json`, schedules `run_full_pipeline`.
 - `GET /briefing/{run_id}`: reads `outputs/{run_id}/status.json`.
-- `GET /jobs`: authenticated, lists recent job metadata from SQLite `JobStore` with limit/cursor/status/search filters.
+- `GET /jobs`: authenticated, lists recent job metadata from SQLite `JobStore` with limit/cursor/status/search/date/provider/error filters.
 - `GET /jobs/{run_id}`: authenticated, returns detailed metadata for one run, optional `status.json` snapshot and lifecycle `events`.
 - `GET /jobs/{run_id}/events`: authenticated, paginated lifecycle event stream for one run.
 - `GET /ops/audit-trail`: authenticated, paginated append-only operator audit trail.

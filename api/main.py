@@ -250,6 +250,24 @@ def _operator_audit_to_dict(event) -> dict:
     }
 
 
+def _job_metrics_has_provider(job, provider: str) -> bool:
+    metrics_path = Path(job.output_dir) / "run_metrics.json"
+    if not metrics_path.exists():
+        return False
+    payload = load_json(metrics_path, default={})
+    if not isinstance(payload, dict):
+        return False
+    expected = provider.strip().lower()
+    stages = payload.get("stages", {})
+    if isinstance(stages, dict):
+        for stage in stages.values():
+            if isinstance(stage, dict) and str(stage.get("provider", "")).lower() == expected:
+                return True
+    costs = payload.get("costs", {})
+    estimates = costs.get("estimates", []) if isinstance(costs, dict) else []
+    return any(isinstance(item, dict) and str(item.get("provider", "")).lower() == expected for item in estimates)
+
+
 def _queue_pipeline_run(
     *,
     background: BackgroundTasks,
@@ -526,6 +544,10 @@ async def list_jobs(
     cursor: int = Query(default=0, ge=0),
     status_filter: str | None = Query(default=None, alias="status"),
     q: str | None = Query(default=None, min_length=1, max_length=100),
+    error_category: str | None = Query(default=None, min_length=1, max_length=64),
+    created_from: str | None = Query(default=None, min_length=10, max_length=32),
+    created_to: str | None = Query(default=None, min_length=10, max_length=32),
+    provider: str | None = Query(default=None, min_length=1, max_length=64),
     api_key: str = Depends(get_api_key),
 ):
     if status_filter and status_filter not in JOB_STATUS_VALUES:
@@ -533,7 +555,17 @@ async def list_jobs(
             status_code=422,
             detail=f"Invalid status filter '{status_filter}'. Allowed: {', '.join(sorted(JOB_STATUS_VALUES))}",
         )
-    records = job_store.list_jobs(limit=limit, offset=cursor, status=status_filter, search=q)
+    records = job_store.list_jobs(
+        limit=limit,
+        offset=cursor,
+        status=status_filter,
+        search=q,
+        error_category=error_category,
+        created_from=created_from,
+        created_to=created_to,
+    )
+    if provider:
+        records = [job for job in records if _job_metrics_has_provider(job, provider)]
     payload = [_job_to_dict(job) for job in records]
     next_cursor = cursor + limit if len(payload) == limit else None
     return JSONResponse(content={"items": payload, "count": len(payload), "next_cursor": next_cursor})

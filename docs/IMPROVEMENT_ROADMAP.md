@@ -169,6 +169,12 @@ Acceptance:
 - Cache clear never deletes outside configured cache directories.
 - CLI reports cache size and oldest/newest entries.
 
+### Enhanced jobs filters
+
+Status: implemented.
+
+`GET /jobs` supports optional date, provider and error-category filters while preserving the existing list response shape.
+
 ### OpenAPI contract export
 
 Status: implemented.

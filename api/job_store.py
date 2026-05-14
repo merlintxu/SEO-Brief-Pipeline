@@ -52,7 +52,17 @@ class JobStoreBackend(Protocol):
     def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None: ...
     def update_status(self, run_id: str, *, status: str, step: str, message: str, error_category: str | None = None) -> None: ...
     def get_job(self, run_id: str) -> JobRecord | None: ...
-    def list_jobs(self, limit: int = 100, *, offset: int = 0, status: str | None = None, search: str | None = None) -> list[JobRecord]: ...
+    def list_jobs(
+        self,
+        limit: int = 100,
+        *,
+        offset: int = 0,
+        status: str | None = None,
+        search: str | None = None,
+        error_category: str | None = None,
+        created_from: str | None = None,
+        created_to: str | None = None,
+    ) -> list[JobRecord]: ...
     def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]: ...
     def append_operator_audit_event(self, *, action: str, result: str, run_id: str | None = None, metadata: str | None = None) -> OperatorAuditRecord: ...
     def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]: ...
@@ -202,6 +212,9 @@ class SQLiteJobStoreBackend:
         offset: int = 0,
         status: str | None = None,
         search: str | None = None,
+        error_category: str | None = None,
+        created_from: str | None = None,
+        created_to: str | None = None,
     ) -> list[JobRecord]:
         if limit < 1:
             raise ValueError("limit must be >= 1")
@@ -217,6 +230,15 @@ class SQLiteJobStoreBackend:
             clauses.append("(run_id LIKE ? OR keyword LIKE ?)")
             like = f"%{search}%"
             params.extend([like, like])
+        if error_category:
+            clauses.append("error_category = ?")
+            params.append(error_category)
+        if created_from:
+            clauses.append("created_at >= ?")
+            params.append(created_from)
+        if created_to:
+            clauses.append("created_at <= ?")
+            params.append(created_to)
 
         where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         query = f"""
@@ -411,6 +433,9 @@ class PostgresJobStoreBackend:
         offset: int = 0,
         status: str | None = None,
         search: str | None = None,
+        error_category: str | None = None,
+        created_from: str | None = None,
+        created_to: str | None = None,
     ) -> list[JobRecord]:
         raise NotImplementedError
 
@@ -480,8 +505,19 @@ class JobStore:
         offset: int = 0,
         status: str | None = None,
         search: str | None = None,
+        error_category: str | None = None,
+        created_from: str | None = None,
+        created_to: str | None = None,
     ) -> list[JobRecord]:
-        return self._backend.list_jobs(limit=limit, offset=offset, status=status, search=search)
+        return self._backend.list_jobs(
+            limit=limit,
+            offset=offset,
+            status=status,
+            search=search,
+            error_category=error_category,
+            created_from=created_from,
+            created_to=created_to,
+        )
 
     def delete_job(self, run_id: str) -> int:
         return self._backend.delete_job(run_id)
