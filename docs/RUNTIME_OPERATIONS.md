@@ -293,6 +293,28 @@ python tools/cache_admin.py clear --yes
 
 The clear command resolves the cache root before deleting and refuses to operate on filesystem root. It removes cache files and empty subdirectories only inside the configured cache directory.
 
+## Batch Keyword Runs
+
+Run multiple keywords from CSV or JSON:
+
+```bash
+python tools/batch_runner.py data/batch_keywords.csv --batch-id manual_20260514
+```
+
+CSV input requires a `keyword` column and may include `target_url`, `upload_to_sheets`, `related_limit`, `serp_num`, `top_competitors_count` and `gsc_months_back`.
+
+JSON input can be either a list of objects or an object with an `items` list:
+
+```json
+{
+  "items": [
+    {"keyword": "content marketing", "upload_to_sheets": false}
+  ]
+}
+```
+
+Each keyword receives an isolated run id under the batch output directory. Failures do not stop the batch by default; use `--stop-on-error` when the first failed keyword should halt execution. The runner writes `batch_summary.json` next to the per-keyword run directories.
+
 Generated files are ignored by Git.
 
 ## Docker

@@ -149,11 +149,15 @@ This file is the entrypoint for coding agents working in this repository.
 - Added cache management commands:
   - `tools/cache_admin.py inspect` reports configured cache size, file count and oldest/newest entries.
   - `tools/cache_admin.py clear --yes` removes files only after resolving the cache root safely.
+- Added batch keyword runner:
+  - `tools/batch_runner.py` accepts CSV or JSON keyword input.
+  - each keyword gets an isolated run id and output directory.
+  - failures continue by default unless `--stop-on-error` is set.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: wire SLO evaluation into dashboard/API or continue P2 batch keyword processing.
+2. Immediate next PR focus after merge: wire SLO evaluation into dashboard/API or evaluate queue backend upgrade.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

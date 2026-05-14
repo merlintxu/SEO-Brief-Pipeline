@@ -99,6 +99,12 @@ python tools/cache_admin.py inspect
 python tools/cache_admin.py clear --yes
 ```
 
+Batch:
+
+```bash
+python tools/batch_runner.py data/batch_keywords.csv --batch-id manual_20260514
+```
+
 ## API
 
 Todos los endpoints salvo `/health`, `/docs`, `/openapi.json` y `/redoc` requieren header:

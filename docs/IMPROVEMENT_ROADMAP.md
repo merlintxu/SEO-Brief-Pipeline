@@ -129,6 +129,8 @@ Execution checkpoint:
 
 ### Batch keyword processing
 
+Status: implemented.
+
 Add a batch runner for multiple keywords with isolated statuses.
 
 Acceptance:
