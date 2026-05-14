@@ -32,6 +32,7 @@ graph TD
 - `public/dashboard.html`: static operational UI for authenticated briefing and jobs administration.
 - `client_manager.py`: interactive CLI for local client/project management and runs.
 - `tools/cache_admin.py`: safe cache inspection and cleanup CLI.
+- `tools/batch_runner.py`: CSV/JSON batch keyword runner with isolated per-keyword runs.
 - `seo_pipeline/pipeline.py`: core orchestration.
 - `notebooks/`: exploratory notebooks; not the source of truth.
 
@@ -68,6 +69,7 @@ Security behavior:
 - Run metrics include a cost summary with provider call estimates and OpenAI token/cost estimates; job detail exposes this summary when metrics exist.
 - SLO evaluation is a pure metrics layer in `seo_pipeline/slo.py`; it consumes `run_metrics.json` payloads and does not require external monitoring infrastructure.
 - Cache operations are constrained to the resolved configured cache root via `seo_pipeline/cache_admin.py`.
+- Batch execution is a CLI layer over `run_full_pipeline()` in `seo_pipeline/batch.py`; each item receives its own `run_id`, `status.json` and output directory.
 
 ## Configuration
 
