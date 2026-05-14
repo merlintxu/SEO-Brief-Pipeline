@@ -52,7 +52,9 @@ from api.schemas import (
     OperatorAuditEventRequest,
     OperatorAuditEventResponse,
     OperatorAuditEventsListResponse,
+    OpsSloResponse,
 )
+from seo_pipeline.slo import evaluate_slo_window
 from seo_pipeline.utils.io import save_json, ensure_dir, load_json
 
 # ============================================================================
@@ -645,6 +647,41 @@ async def append_operator_audit_trail(
         metadata=payload.metadata,
     )
     return JSONResponse(content=_operator_audit_to_dict(event))
+
+
+@app.get(
+    "/ops/slo",
+    tags=["ops"],
+    response_model=OpsSloResponse,
+    summary="Evaluate Operational SLO",
+    description="Evaluate recent run_metrics.json payloads from the job store against default SLO thresholds.",
+)
+async def evaluate_operational_slo(
+    limit: int = Query(default=50, ge=1, le=200),
+    api_key: str = Depends(get_api_key),
+):
+    jobs = job_store.list_jobs(limit=limit, offset=0)
+    metrics_payloads = []
+    missing_metrics_count = 0
+    for job in jobs:
+        metrics_path = Path(job.output_dir) / "run_metrics.json"
+        if not metrics_path.exists():
+            missing_metrics_count += 1
+            continue
+        payload = load_json(metrics_path, default={})
+        if isinstance(payload, dict):
+            metrics_payloads.append(payload)
+        else:
+            missing_metrics_count += 1
+
+    evaluation = evaluate_slo_window(metrics_payloads)
+    return JSONResponse(
+        content={
+            "evaluated_run_count": len(metrics_payloads),
+            "missing_metrics_count": missing_metrics_count,
+            **evaluation,
+        }
+    )
 
 
 @app.delete(

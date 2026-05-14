@@ -84,6 +84,7 @@ Execution checkpoint:
 - F2 operator audit persistence added with append-only SQLite events and protected `GET/POST /ops/audit-trail`.
 - G1 cost tracking baseline added in run metrics and job detail payloads.
 - G2 SLO groundwork added with testable rolling-window evaluation for success rate, p95 duration, retry rate and categorized failure rate.
+- SLO dashboard/API integration added with protected `GET /ops/slo` and dashboard summary.
 
 ### Structured run logging
 

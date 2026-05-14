@@ -26,6 +26,7 @@ def test_openapi_contract_contains_required_paths():
         "/jobs/{run_id}/retry",
         "/jobs/{run_id}/cancel",
         "/ops/audit-trail",
+        "/ops/slo",
         "/outputs/{run_id}/{filename}",
     }
     assert required.issubset(set(paths.keys()))

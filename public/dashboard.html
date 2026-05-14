@@ -89,6 +89,15 @@
     </section>
 
     <section class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold flex items-center gap-2"><i data-lucide="gauge" class="w-4 h-4"></i>SLO</h2>
+        <button id="refreshSloBtn" class="px-3 py-1 border border-slate-300 rounded text-xs">Refrescar</button>
+      </div>
+      <div id="sloSummary" class="mt-3 text-sm text-slate-700">Sin evaluar.</div>
+      <div id="sloChecks" class="mt-3 grid md:grid-cols-4 gap-2 text-xs"></div>
+    </section>
+
+    <section class="bg-white border border-slate-200 rounded-lg p-4">
       <h2 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i>Detalle de Job</h2>
       <div id="jobDetail" class="text-sm text-slate-700">Selecciona un job para ver detalle.</div>
       <h3 class="font-medium mt-4 mb-2">Eventos</h3>
@@ -273,6 +282,24 @@
       byId("pageInfo").textContent = `cursor=${state.cursor} count=${data.count} next=${data.next_cursor ?? "none"}`;
     }
 
+    async function loadSlo() {
+      const limit = Number(byId("filterLimit").value || "20");
+      const data = await apiFetch(`/ops/slo?limit=${encodeURIComponent(String(limit))}`);
+      const statusClass = data.passed ? "text-emerald-700" : "text-red-700";
+      byId("sloSummary").innerHTML = `
+        <span class="${statusClass} font-semibold">${data.passed ? "OK" : "ALERTA"}</span>
+        <span class="ml-2">runs=${data.evaluated_run_count} missing_metrics=${data.missing_metrics_count}</span>
+        <span class="ml-2">success=${data.summary.success_rate}</span>
+        <span class="ml-2">p95=${data.summary.p95_duration_seconds ?? "-"}s</span>
+        <span class="ml-2">retry=${data.summary.retry_rate}</span>`;
+      byId("sloChecks").innerHTML = data.checks.map((check) => `
+        <div class="border ${check.passed ? "border-emerald-200" : "border-red-200"} rounded p-2">
+          <div class="font-semibold">${check.name}</div>
+          <div>observed=${check.observed ?? "-"}</div>
+          <div>${check.comparator} ${check.threshold}</div>
+        </div>`).join("");
+    }
+
     async function loadJobDetail(runId) {
       state.selectedRunId = runId;
       const [detail, events] = await Promise.all([
@@ -362,6 +389,9 @@
       state.cursor = 0;
       try { await loadJobs(); } catch (err) { showResultError(err); }
     });
+    byId("refreshSloBtn").addEventListener("click", async () => {
+      try { await loadSlo(); } catch (err) { showResultError(err); }
+    });
     byId("nextPageBtn").addEventListener("click", async () => {
       if (state.nextCursor == null) return;
       state.cursor = state.nextCursor;
@@ -423,6 +453,7 @@
     saveConfig();
     checkHealth();
     loadJobs().catch(() => {});
+    loadSlo().catch(() => {});
     loadAuditTrail().finally(renderAuditTrail);
   </script>
 </body>
