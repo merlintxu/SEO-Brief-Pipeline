@@ -127,15 +127,16 @@ Acceptance:
 ### PR D2 - Events and stage metrics tables
 
 - Add tables for:
-  - `job_events`,
-  - `job_stage_metrics`,
-  - `provider_calls`,
-  - `prompt_runs`.
+  - `job_events` (implemented),
+  - `job_stage_metrics` (implemented),
+  - `provider_calls` (implemented),
+  - `prompt_runs` (implemented).
 - Store retries, latency, cost, and error categories.
 
 Acceptance:
 
-- `run_id` timeline query is available.
+- `run_id` lifecycle timeline query is available through `/jobs/{run_id}/events`.
+- Stage metrics, provider call estimates and prompt runs are indexed from `run_metrics.json` in SQLite.
 - Tests validate writes and reads for each table.
 
 ## Epic E - Admin API V2 (Non-breaking Extension)

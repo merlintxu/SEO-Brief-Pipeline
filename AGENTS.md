@@ -159,11 +159,15 @@ This file is the entrypoint for coding agents working in this repository.
 - Added extended jobs filters:
   - `GET /jobs` supports `created_from`, `created_to`, `error_category` and `provider`.
   - dashboard job list includes provider and error-category filters.
+- Added persisted operational metrics indexes:
+  - SQLite tables: `job_stage_metrics`, `provider_calls`, `prompt_runs`.
+  - populated from `run_metrics.json` after API background runs finish and when existing job metrics are inspected.
+  - `run_metrics.json` remains the artifact contract and source of truth.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: evaluate queue backend upgrade or add persisted stage metrics tables.
+2. Immediate next PR focus after merge: expose persisted job metrics through API and dashboard timeline.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

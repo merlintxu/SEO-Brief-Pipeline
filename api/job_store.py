@@ -48,6 +48,46 @@ class OperatorAuditRecord:
     created_at: str
 
 
+@dataclass(frozen=True)
+class JobStageMetricRecord:
+    run_id: str
+    stage: str
+    status: str | None
+    provider: str | None
+    retries: int | None
+    items_processed: int | None
+    duration_seconds: float | None
+    error_category: str | None
+    estimated_cost_usd: float | None
+    total_tokens_estimated: int | None
+    created_at: str
+
+
+@dataclass(frozen=True)
+class ProviderCallRecord:
+    id: int
+    run_id: str
+    provider: str
+    service: str
+    calls: int | None
+    estimated_cost_usd: float | None
+    total_tokens_estimated: int | None
+    notes: str | None
+    created_at: str
+
+
+@dataclass(frozen=True)
+class PromptRunRecord:
+    run_id: str
+    key: str | None
+    version: str | None
+    planner_version: str | None
+    mode: str | None
+    model: str | None
+    temperature: float | None
+    created_at: str
+
+
 class JobStoreBackend(Protocol):
     def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None: ...
     def update_status(self, run_id: str, *, status: str, step: str, message: str, error_category: str | None = None) -> None: ...
@@ -66,6 +106,10 @@ class JobStoreBackend(Protocol):
     def list_job_events(self, run_id: str, *, limit: int = 100, offset: int = 0) -> list[JobEventRecord]: ...
     def append_operator_audit_event(self, *, action: str, result: str, run_id: str | None = None, metadata: str | None = None) -> OperatorAuditRecord: ...
     def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]: ...
+    def persist_run_metrics(self, run_id: str, metrics: dict[str, Any]) -> None: ...
+    def list_stage_metrics(self, run_id: str) -> list[JobStageMetricRecord]: ...
+    def list_provider_calls(self, run_id: str) -> list[ProviderCallRecord]: ...
+    def get_prompt_run(self, run_id: str) -> PromptRunRecord | None: ...
     def delete_job(self, run_id: str) -> int: ...
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int: ...
 
@@ -128,6 +172,53 @@ class SQLiteJobStoreBackend:
                     result TEXT NOT NULL,
                     run_id TEXT,
                     metadata TEXT,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS job_stage_metrics (
+                    run_id TEXT NOT NULL,
+                    stage TEXT NOT NULL,
+                    status TEXT,
+                    provider TEXT,
+                    retries INTEGER,
+                    items_processed INTEGER,
+                    duration_seconds REAL,
+                    error_category TEXT,
+                    estimated_cost_usd REAL,
+                    total_tokens_estimated INTEGER,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (run_id, stage)
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS provider_calls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    service TEXT NOT NULL,
+                    calls INTEGER,
+                    estimated_cost_usd REAL,
+                    total_tokens_estimated INTEGER,
+                    notes TEXT,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS prompt_runs (
+                    run_id TEXT PRIMARY KEY,
+                    key TEXT,
+                    version TEXT,
+                    planner_version TEXT,
+                    mode TEXT,
+                    model TEXT,
+                    temperature REAL,
                     created_at TEXT NOT NULL
                 )
                 """
@@ -316,9 +407,132 @@ class SQLiteJobStoreBackend:
             rows = conn.execute(query, (limit, offset)).fetchall()
             return [self._row_to_operator_audit_record(row) for row in rows]
 
+    def persist_run_metrics(self, run_id: str, metrics: dict[str, Any]) -> None:
+        if not isinstance(metrics, dict):
+            raise ValueError("metrics must be a dict")
+        now = datetime.now().isoformat(timespec="seconds")
+        stages = metrics.get("stages", {})
+        costs = metrics.get("costs", {})
+        estimates = costs.get("estimates", []) if isinstance(costs, dict) else []
+        prompt_run = metrics.get("prompt_run", {})
+
+        with self._connect() as conn:
+            conn.execute("DELETE FROM job_stage_metrics WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM provider_calls WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM prompt_runs WHERE run_id = ?", (run_id,))
+
+            if isinstance(stages, dict):
+                for stage_name, payload in stages.items():
+                    if not isinstance(payload, dict):
+                        continue
+                    conn.execute(
+                        """
+                        INSERT INTO job_stage_metrics (
+                            run_id, stage, status, provider, retries, items_processed,
+                            duration_seconds, error_category, estimated_cost_usd,
+                            total_tokens_estimated, created_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            run_id,
+                            str(stage_name),
+                            _optional_str(payload.get("status")),
+                            _optional_str(payload.get("provider")),
+                            _optional_int(payload.get("retries")),
+                            _optional_int(payload.get("items_processed")),
+                            _optional_float(payload.get("duration_seconds")),
+                            _optional_str(payload.get("error_category")),
+                            _optional_float(payload.get("estimated_cost_usd")),
+                            _optional_int(payload.get("total_tokens_estimated")),
+                            now,
+                        ),
+                    )
+
+            if isinstance(estimates, list):
+                for estimate in estimates:
+                    if not isinstance(estimate, dict):
+                        continue
+                    provider = _optional_str(estimate.get("provider"))
+                    service = _optional_str(estimate.get("service"))
+                    if not provider or not service:
+                        continue
+                    conn.execute(
+                        """
+                        INSERT INTO provider_calls (
+                            run_id, provider, service, calls, estimated_cost_usd,
+                            total_tokens_estimated, notes, created_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            run_id,
+                            provider,
+                            service,
+                            _optional_int(estimate.get("calls")),
+                            _optional_float(estimate.get("estimated_cost_usd")),
+                            _optional_int(estimate.get("total_tokens_estimated")),
+                            _optional_str(estimate.get("notes")),
+                            now,
+                        ),
+                    )
+
+            if isinstance(prompt_run, dict) and prompt_run:
+                conn.execute(
+                    """
+                    INSERT INTO prompt_runs (
+                        run_id, key, version, planner_version, mode, model, temperature, created_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        run_id,
+                        _optional_str(prompt_run.get("key")),
+                        _optional_str(prompt_run.get("version")),
+                        _optional_str(prompt_run.get("planner_version")),
+                        _optional_str(prompt_run.get("mode")),
+                        _optional_str(prompt_run.get("model")),
+                        _optional_float(prompt_run.get("temperature")),
+                        now,
+                    ),
+                )
+            conn.commit()
+
+    def list_stage_metrics(self, run_id: str) -> list[JobStageMetricRecord]:
+        query = """
+            SELECT *
+            FROM job_stage_metrics
+            WHERE run_id = ?
+            ORDER BY rowid ASC
+        """
+        with self._connect() as conn:
+            rows = conn.execute(query, (run_id,)).fetchall()
+            return [self._row_to_stage_metric_record(row) for row in rows]
+
+    def list_provider_calls(self, run_id: str) -> list[ProviderCallRecord]:
+        query = """
+            SELECT *
+            FROM provider_calls
+            WHERE run_id = ?
+            ORDER BY id ASC
+        """
+        with self._connect() as conn:
+            rows = conn.execute(query, (run_id,)).fetchall()
+            return [self._row_to_provider_call_record(row) for row in rows]
+
+    def get_prompt_run(self, run_id: str) -> PromptRunRecord | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM prompt_runs WHERE run_id = ?", (run_id,)).fetchone()
+            if row is None:
+                return None
+            return self._row_to_prompt_run_record(row)
+
     def delete_job(self, run_id: str) -> int:
         with self._connect() as conn:
             conn.execute("DELETE FROM job_events WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM job_stage_metrics WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM provider_calls WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM prompt_runs WHERE run_id = ?", (run_id,))
             cursor = conn.execute("DELETE FROM jobs WHERE run_id = ?", (run_id,))
             conn.commit()
             return cursor.rowcount
@@ -337,6 +551,21 @@ class SQLiteJobStoreBackend:
               AND status IN ({placeholders})
         """
         with self._connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT run_id
+                FROM jobs
+                WHERE updated_at < ?
+                  AND status IN ({placeholders})
+                """,
+                (cutoff, *statuses),
+            ).fetchall()
+            run_ids = [row["run_id"] for row in rows]
+            for run_id in run_ids:
+                conn.execute("DELETE FROM job_events WHERE run_id = ?", (run_id,))
+                conn.execute("DELETE FROM job_stage_metrics WHERE run_id = ?", (run_id,))
+                conn.execute("DELETE FROM provider_calls WHERE run_id = ?", (run_id,))
+                conn.execute("DELETE FROM prompt_runs WHERE run_id = ?", (run_id,))
             cursor = conn.execute(query, (cutoff, *statuses))
             conn.commit()
             return cursor.rowcount
@@ -376,6 +605,49 @@ class SQLiteJobStoreBackend:
             result=row["result"],
             run_id=row["run_id"],
             metadata=row["metadata"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _row_to_stage_metric_record(row: sqlite3.Row) -> JobStageMetricRecord:
+        return JobStageMetricRecord(
+            run_id=row["run_id"],
+            stage=row["stage"],
+            status=row["status"],
+            provider=row["provider"],
+            retries=row["retries"],
+            items_processed=row["items_processed"],
+            duration_seconds=row["duration_seconds"],
+            error_category=row["error_category"],
+            estimated_cost_usd=row["estimated_cost_usd"],
+            total_tokens_estimated=row["total_tokens_estimated"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _row_to_provider_call_record(row: sqlite3.Row) -> ProviderCallRecord:
+        return ProviderCallRecord(
+            id=row["id"],
+            run_id=row["run_id"],
+            provider=row["provider"],
+            service=row["service"],
+            calls=row["calls"],
+            estimated_cost_usd=row["estimated_cost_usd"],
+            total_tokens_estimated=row["total_tokens_estimated"],
+            notes=row["notes"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _row_to_prompt_run_record(row: sqlite3.Row) -> PromptRunRecord:
+        return PromptRunRecord(
+            run_id=row["run_id"],
+            key=row["key"],
+            version=row["version"],
+            planner_version=row["planner_version"],
+            mode=row["mode"],
+            model=row["model"],
+            temperature=row["temperature"],
             created_at=row["created_at"],
         )
 
@@ -456,6 +728,18 @@ class PostgresJobStoreBackend:
         raise NotImplementedError
 
     def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]:
+        raise NotImplementedError
+
+    def persist_run_metrics(self, run_id: str, metrics: dict[str, Any]) -> None:
+        raise NotImplementedError
+
+    def list_stage_metrics(self, run_id: str) -> list[JobStageMetricRecord]:
+        raise NotImplementedError
+
+    def list_provider_calls(self, run_id: str) -> list[ProviderCallRecord]:
+        raise NotImplementedError
+
+    def get_prompt_run(self, run_id: str) -> PromptRunRecord | None:
         raise NotImplementedError
 
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
@@ -543,5 +827,42 @@ class JobStore:
     def list_operator_audit_events(self, *, limit: int = 100, offset: int = 0) -> list[OperatorAuditRecord]:
         return self._backend.list_operator_audit_events(limit=limit, offset=offset)
 
+    def persist_run_metrics(self, run_id: str, metrics: dict[str, Any]) -> None:
+        self._backend.persist_run_metrics(run_id, metrics)
+
+    def list_stage_metrics(self, run_id: str) -> list[JobStageMetricRecord]:
+        return self._backend.list_stage_metrics(run_id)
+
+    def list_provider_calls(self, run_id: str) -> list[ProviderCallRecord]:
+        return self._backend.list_provider_calls(run_id)
+
+    def get_prompt_run(self, run_id: str) -> PromptRunRecord | None:
+        return self._backend.get_prompt_run(run_id)
+
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
         return self._backend.cleanup_old_jobs(max_age_days=max_age_days, statuses=statuses)
+
+
+def _optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
