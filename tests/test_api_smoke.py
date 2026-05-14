@@ -223,6 +223,42 @@ def test_operator_audit_trail_endpoints_require_auth_and_persist_events(tmp_path
     assert any(item["id"] == created_body["id"] for item in body["items"])
 
 
+def test_ops_slo_endpoint_evaluates_recent_job_metrics(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app, job_store
+
+    run_id = f"run_slo_{int(time.time() * 1000)}"
+    output_dir = tmp_path / "outputs" / run_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "run_metrics.json").write_text(
+        json.dumps(
+            {
+                "status": "done",
+                "stages": {
+                    "semrush": {"duration_seconds": 10, "retries": 0},
+                    "briefing": {"duration_seconds": 20, "retries": 0},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    job_store.create_job(run_id=run_id, keyword="kw-slo", output_dir=str(output_dir))
+    job_store.update_status(run_id, status="done", step="done", message="ok")
+
+    client = TestClient(app)
+    headers = {"X-API-Key": "secret-token-2025-test-key-long-enough"}
+    unauthorized = client.get("/ops/slo")
+    assert unauthorized.status_code == 403
+
+    response = client.get("/ops/slo?limit=10", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["evaluated_run_count"] >= 1
+    assert body["summary"]["success_rate"] >= 0
+    assert isinstance(body["checks"], list)
+    assert {"window", "thresholds", "summary", "checks", "passed"}.issubset(body)
+
+
 def test_get_and_delete_job_endpoints(tmp_path):
     setup_cfg(tmp_path)
     from api.main import app, job_store

@@ -554,6 +554,57 @@
         }
       }
     },
+    "/ops/slo": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Evaluate Operational SLO",
+        "description": "Evaluate recent run_metrics.json payloads from the job store against default SLO thresholds.",
+        "operationId": "evaluate_operational_slo_ops_slo_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsSloResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/jobs/cleanup": {
       "post": {
         "tags": [
@@ -1321,6 +1372,56 @@
           "count"
         ],
         "title": "OperatorAuditEventsListResponse"
+      },
+      "OpsSloResponse": {
+        "properties": {
+          "evaluated_run_count": {
+            "type": "integer",
+            "title": "Evaluated Run Count"
+          },
+          "missing_metrics_count": {
+            "type": "integer",
+            "title": "Missing Metrics Count"
+          },
+          "window": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Window"
+          },
+          "thresholds": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Thresholds"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "checks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluated_run_count",
+          "missing_metrics_count",
+          "window",
+          "thresholds",
+          "summary",
+          "checks",
+          "passed"
+        ],
+        "title": "OpsSloResponse"
       },
       "ValidationError": {
         "properties": {

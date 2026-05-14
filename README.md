@@ -153,6 +153,13 @@ curl -H "X-API-Key: replace_with_api_key" \
 
 `/ops` sirve la UI operativa. El audit trail de operador se persiste mediante `GET/POST /ops/audit-trail`; el log es append-only y no guarda valores de `X-API-Key`. El detalle de jobs expone `cost_summary` cuando existe `run_metrics.json`.
 
+SLO operativo:
+
+```bash
+curl -H "X-API-Key: replace_with_api_key" \
+  "http://localhost:8000/ops/slo?limit=50"
+```
+
 ## Seguridad
 
 - `.env`, `credentials/`, `outputs/`, `runs/`, caches y bytecode no deben versionarse.

@@ -277,6 +277,14 @@ First-response runbook:
 4. If retry rate spikes, inspect provider-specific stages before changing prompt/model settings.
 5. If p95 duration spikes, compare `duration_seconds` by stage and prioritize SEMrush, SERP, audit or OpenAI based on the slowest stage.
 
+Operational endpoint:
+
+```bash
+curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/ops/slo?limit=50"
+```
+
+The dashboard served at `/ops` also shows the latest SLO evaluation for the selected list limit.
+
 ## Cache Management
 
 Provider cache files live under the configured `cfg.cache_dir` (`data/cache` by default). Inspect cache state:

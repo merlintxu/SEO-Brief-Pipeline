@@ -140,6 +140,16 @@ class OperatorAuditEventsListResponse(BaseModel):
     next_cursor: int | None = None
 
 
+class OpsSloResponse(BaseModel):
+    evaluated_run_count: int
+    missing_metrics_count: int
+    window: dict
+    thresholds: dict
+    summary: dict
+    checks: list[dict]
+    passed: bool
+
+
 class JobDetailResponse(BaseModel):
     job: JobResponse
     status_file: dict | None = None

@@ -153,11 +153,14 @@ This file is the entrypoint for coding agents working in this repository.
   - `tools/batch_runner.py` accepts CSV or JSON keyword input.
   - each keyword gets an isolated run id and output directory.
   - failures continue by default unless `--stop-on-error` is set.
+- Added SLO dashboard/API integration:
+  - protected `GET /ops/slo` evaluates recent job metrics with `seo_pipeline/slo.py`.
+  - dashboard shows SLO status, run counts, p95 duration, retry rate and failed checks.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: wire SLO evaluation into dashboard/API or evaluate queue backend upgrade.
+2. Immediate next PR focus after merge: evaluate queue backend upgrade or extend admin filters by date/provider/error.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

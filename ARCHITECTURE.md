@@ -49,6 +49,7 @@ Endpoints:
 - `GET /jobs/{run_id}/events`: authenticated, paginated lifecycle event stream for one run.
 - `GET /ops/audit-trail`: authenticated, paginated append-only operator audit trail.
 - `POST /ops/audit-trail`: authenticated, appends one operator action/outcome event.
+- `GET /ops/slo`: authenticated, evaluates recent run metrics against operational SLO thresholds.
 - `DELETE /jobs/{run_id}`: authenticated, deletes job metadata only (no artifact deletion).
 - `POST /jobs/cleanup`: authenticated, triggers bounded cleanup of terminal jobs.
 - `POST /jobs/{run_id}/retry`: authenticated, requeues failed jobs as new runs and persists lineage via `source_run_id`.
@@ -68,6 +69,7 @@ Security behavior:
 - Operator audit events are persisted in SQLite table `operator_audit_events`; the API intentionally exposes append/list only.
 - Run metrics include a cost summary with provider call estimates and OpenAI token/cost estimates; job detail exposes this summary when metrics exist.
 - SLO evaluation is a pure metrics layer in `seo_pipeline/slo.py`; it consumes `run_metrics.json` payloads and does not require external monitoring infrastructure.
+- The ops API/dashboard can evaluate recent job metrics through `GET /ops/slo` without changing job or briefing contracts.
 - Cache operations are constrained to the resolved configured cache root via `seo_pipeline/cache_admin.py`.
 - Batch execution is a CLI layer over `run_full_pipeline()` in `seo_pipeline/batch.py`; each item receives its own `run_id`, `status.json` and output directory.
 
