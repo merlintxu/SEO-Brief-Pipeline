@@ -234,6 +234,10 @@ def test_get_and_delete_job_endpoints(tmp_path):
         json.dumps({"status": "done", "step": "done", "message": "ok"}),
         encoding="utf-8",
     )
+    (output_dir / "run_metrics.json").write_text(
+        json.dumps({"costs": {"currency": "USD", "total_estimated_cost_usd": 0.0123, "estimates": []}}),
+        encoding="utf-8",
+    )
     job_store.create_job(run_id=run_id, keyword="kw-detail", output_dir=str(output_dir))
     job_store.update_status(run_id, status="done", step="done", message="ok")
 
@@ -242,6 +246,7 @@ def test_get_and_delete_job_endpoints(tmp_path):
     detail = client.get(f"/jobs/{run_id}", headers=headers)
     assert detail.status_code == 200
     assert detail.json()["job"]["run_id"] == run_id
+    assert detail.json()["cost_summary"]["total_estimated_cost_usd"] == 0.0123
     assert isinstance(detail.json().get("events"), list)
     assert len(detail.json()["events"]) >= 2
     assert detail.json()["events"][0]["run_id"] == run_id

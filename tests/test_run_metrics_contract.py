@@ -112,6 +112,10 @@ def test_run_metrics_contract_keeps_core_fields_and_stage_observability(tmp_path
     assert "prompt_run" in metrics
     assert "version" in metrics["prompt_run"]
     assert "mode" in metrics["prompt_run"]
+    assert "costs" in metrics
+    assert metrics["costs"]["currency"] == "USD"
+    assert "total_estimated_cost_usd" in metrics["costs"]
+    assert any(item["provider"] == "openai" for item in metrics["costs"]["estimates"])
 
     for stage in ("semrush", "serp", "audit", "anchors", "briefing", "export"):
         payload = metrics["stages"][stage]
@@ -120,3 +124,5 @@ def test_run_metrics_contract_keeps_core_fields_and_stage_observability(tmp_path
         assert "retries" in payload
         assert "duration_seconds" in payload
         assert "items_processed" in payload
+    assert metrics["stages"]["briefing"]["estimated_cost_usd"] > 0
+    assert metrics["stages"]["briefing"]["total_tokens_estimated"] > 0

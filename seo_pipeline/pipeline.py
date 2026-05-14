@@ -14,6 +14,7 @@ import os
 
 from seo_pipeline.config import get_config
 from seo_pipeline.artifacts import AUDIT_REPORT_JSON, RUN_METRICS_JSON, SERP_RAW_JSON
+from seo_pipeline.cost_tracking import estimate_openai_text_cost, provider_call_estimate, summarize_costs
 from seo_pipeline.constants import (
     DEFAULT_RELATED_LIMIT,
     DEFAULT_SERP_NUM,
@@ -120,8 +121,15 @@ def run_full_pipeline(
         "keyword": keyword,
         "started_at": datetime.now().isoformat(timespec="seconds"),
         "stages": {},
+        "costs": {
+            "currency": "USD",
+            "total_estimated_cost_usd": 0.0,
+            "unknown_cost_estimate_count": 0,
+            "estimates": [],
+        },
     }
     stage_retries: dict[str, int] = {}
+    cost_estimates = []
 
     retry_attempts = 3
     retry_base_delay = 2
@@ -253,6 +261,14 @@ def run_full_pipeline(
             related_keywords=len(semrush_data.keywords_secundarias),
             search_volume=semrush_data.keyword_principal.search_volume,
         )
+        cost_estimates.append(
+            provider_call_estimate(
+                provider="semrush",
+                service="keyword_related",
+                calls=1 + stage_retries.get("semrush", 0),
+                notes="Provider unit pricing is account-specific; call count is persisted for cost reconciliation.",
+            )
+        )
 
         # ===================================================================
         # 2. SERP Google (SerpAPI)
@@ -305,6 +321,14 @@ def run_full_pipeline(
             related_searches=serp_snapshot.related_searches_count,
             ai_overview_present=serp_snapshot.ai_overview_present,
             provider_order=list(serp_provider_plan.provider_order),
+        )
+        cost_estimates.append(
+            provider_call_estimate(
+                provider=serp_snapshot.provider,
+                service="serp_search",
+                calls=1 + stage_retries.get("serp", 0),
+                notes="SERP provider pricing varies by plan/provider; call count is persisted for reconciliation.",
+            )
         )
 
         # ===================================================================
@@ -552,6 +576,21 @@ def run_full_pipeline(
         }
         metrics["prompt_run"] = results["prompt_run"]
         results["briefing"] = briefing
+        briefing_cost = estimate_openai_text_cost(
+            model=prompt_bundle.model,
+            input_payload={
+                "system_prompt": prompt_bundle.system_prompt,
+                "keyword": keyword,
+                "semrush_data": semrush_data.model_dump(),
+                "serp_snapshot": serp_snapshot.model_dump(),
+                "audit_report": enrichment.audit_report.model_dump(),
+                "anchors": anchors.model_dump(),
+                "cannibalization_notes": cannibal_notes,
+                "planner_artifact": briefing_plan.model_dump(),
+            },
+            output_payload=briefing.model_dump(),
+        )
+        cost_estimates.append(briefing_cost)
         _stage_finish(
             "briefing",
             stage_started,
@@ -561,6 +600,10 @@ def run_full_pipeline(
             faqs=len(briefing.faqs),
             prompt_version=prompt_bundle.version,
             model=prompt_bundle.model,
+            input_tokens_estimated=briefing_cost.input_tokens_estimated,
+            output_tokens_estimated=briefing_cost.output_tokens_estimated,
+            total_tokens_estimated=briefing_cost.total_tokens_estimated,
+            estimated_cost_usd=briefing_cost.estimated_cost_usd,
         )
 
         # ===================================================================
@@ -615,6 +658,14 @@ def run_full_pipeline(
                 )
                 results["sheets"] = sheets_result
                 _stage_finish("sheets", stage_started, provider="google_sheets", items_processed=1, **sheets_result)
+                cost_estimates.append(
+                    provider_call_estimate(
+                        provider="google_sheets",
+                        service="row_upsert",
+                        calls=1,
+                        notes="Google Sheets API cost is not estimated; call count is persisted for reconciliation.",
+                    )
+                )
                 _log("info", "Fila subida correctamente a Sheets", stage="sheets")
             except Exception as e:
                 error_category = classify_error(e)
@@ -640,6 +691,8 @@ def run_full_pipeline(
             }
 
         _log("info", "=== PIPELINE COMPLETADO CON Ã‰XITO ===")
+        metrics["costs"] = summarize_costs(cost_estimates)
+        results["costs"] = metrics["costs"]
         _write_metrics("done")
         results["metrics_path"] = str(output_dir / RUN_METRICS_JSON)
         _write_status(step="done", message="Pipeline completado", percent=100, state="done")

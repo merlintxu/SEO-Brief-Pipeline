@@ -114,8 +114,11 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
     assert result["csv"].exists()
     assert result["xlsx"].exists()
     assert Path(result["metrics_path"]).exists()
+    assert "costs" in result
+    assert result["costs"]["total_estimated_cost_usd"] > 0
     metrics = json.loads((output_dir / "run_metrics.json").read_text(encoding="utf-8"))
     assert metrics["status"] == "done"
+    assert metrics["costs"]["currency"] == "USD"
     assert set(metrics["stages"]) >= {"semrush", "serp", "audit", "anchors", "briefing", "export"}
     for stage in ("semrush", "serp", "audit", "anchors", "briefing", "export"):
         assert "provider" in metrics["stages"][stage]

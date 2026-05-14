@@ -26,6 +26,7 @@ Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditor�
 - Exportación a JSON, Markdown, CSV/XLSX y subida opcional a Google Sheets.
 - API FastAPI con autenticación por `X-API-Key`, rate limiting y descargas por whitelist.
 - Dashboard operativo `/ops` con administración de jobs y audit trail append-only para acciones de operador.
+- Métricas por run con estimaciones de coste y tokens en `run_metrics.json`.
 
 ## Instalación
 
@@ -136,7 +137,7 @@ curl -H "X-API-Key: replace_with_api_key" \
   "http://localhost:8000/ops/audit-trail?limit=50&cursor=0"
 ```
 
-`/ops` sirve la UI operativa. El audit trail de operador se persiste mediante `GET/POST /ops/audit-trail`; el log es append-only y no guarda valores de `X-API-Key`.
+`/ops` sirve la UI operativa. El audit trail de operador se persiste mediante `GET/POST /ops/audit-trail`; el log es append-only y no guarda valores de `X-API-Key`. El detalle de jobs expone `cost_summary` cuando existe `run_metrics.json`.
 
 ## Seguridad
 

@@ -251,6 +251,14 @@ Common files:
   - `prompt_run.temperature`
   - `prompt_run.planner_version`
   - `prompt_run.mode` (`planner_writer`)
+- cost summary:
+  - `costs.currency`
+  - `costs.total_estimated_cost_usd`
+  - `costs.unknown_cost_estimate_count`
+  - `costs.estimates[]` with provider, service, calls, token estimates and estimated cost.
+  - OpenAI estimates use serialized prompt/output token approximation and static model pricing; provider-specific SEMrush/SERP/Sheets prices are marked unknown unless reconciled externally.
+
+`GET /jobs/{run_id}` also returns `cost_summary` when `run_metrics.json` exists for that run.
 
 Generated files are ignored by Git.
 
