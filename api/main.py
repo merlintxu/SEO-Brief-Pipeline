@@ -36,7 +36,7 @@ from api.job_store import InvalidJobTransitionError, JobStore
 
 from seo_pipeline.config import get_config
 from seo_pipeline.pipeline import run_full_pipeline
-from seo_pipeline.artifacts import DOWNLOADABLE_ARTIFACTS
+from seo_pipeline.artifacts import DOWNLOADABLE_ARTIFACTS, RUN_METRICS_JSON
 from seo_pipeline.utils.errors import classify_error
 from api.schemas import (
     BriefingRequest,
@@ -250,14 +250,31 @@ def _operator_audit_to_dict(event) -> dict:
     }
 
 
+def _sync_job_metrics_from_output(job) -> None:
+    metrics_path = Path(job.output_dir) / RUN_METRICS_JSON
+    if not metrics_path.exists():
+        return
+    payload = load_json(metrics_path, default={})
+    if isinstance(payload, dict):
+        job_store.persist_run_metrics(job.run_id, payload)
+
+
 def _job_metrics_has_provider(job, provider: str) -> bool:
-    metrics_path = Path(job.output_dir) / "run_metrics.json"
+    _sync_job_metrics_from_output(job)
+    expected = provider.strip().lower()
+    stage_metrics = job_store.list_stage_metrics(job.run_id)
+    if any((metric.provider or "").lower() == expected for metric in stage_metrics):
+        return True
+    provider_calls = job_store.list_provider_calls(job.run_id)
+    if any(call.provider.lower() == expected for call in provider_calls):
+        return True
+
+    metrics_path = Path(job.output_dir) / RUN_METRICS_JSON
     if not metrics_path.exists():
         return False
     payload = load_json(metrics_path, default={})
     if not isinstance(payload, dict):
         return False
-    expected = provider.strip().lower()
     stages = payload.get("stages", {})
     if isinstance(stages, dict):
         for stage in stages.values():
@@ -308,6 +325,10 @@ def _queue_pipeline_run(
                 status_path=current_status_path,
                 output_dir=current_run_dir,
             )
+            metrics_path = current_run_dir / RUN_METRICS_JSON
+            metrics_payload = load_json(metrics_path, default={}) if metrics_path.exists() else {}
+            if isinstance(metrics_payload, dict) and metrics_payload:
+                job_store.persist_run_metrics(current_run_id, metrics_payload)
             final_status = load_json(current_status_path, default={})
             try:
                 job_store.update_status(
@@ -332,6 +353,10 @@ def _queue_pipeline_run(
                     },
                 )
                 try:
+                    metrics_path = current_run_dir / RUN_METRICS_JSON
+                    metrics_payload = load_json(metrics_path, default={}) if metrics_path.exists() else {}
+                    if isinstance(metrics_payload, dict) and metrics_payload:
+                        job_store.persist_run_metrics(current_run_id, metrics_payload)
                     job_store.update_status(
                         current_run_id,
                         status="failed",
@@ -584,7 +609,8 @@ async def get_job(run_id: str, api_key: str = Depends(get_api_key)):
         raise HTTPException(status_code=404, detail="Run_id no encontrado")
     status_path = Path(job.output_dir) / "status.json"
     status_payload = load_json(status_path, default={}) if status_path.exists() else None
-    metrics_path = Path(job.output_dir) / "run_metrics.json"
+    _sync_job_metrics_from_output(job)
+    metrics_path = Path(job.output_dir) / RUN_METRICS_JSON
     metrics_payload = load_json(metrics_path, default={}) if metrics_path.exists() else {}
     cost_summary = metrics_payload.get("costs") if isinstance(metrics_payload, dict) else None
     events = [
@@ -696,7 +722,8 @@ async def evaluate_operational_slo(
     metrics_payloads = []
     missing_metrics_count = 0
     for job in jobs:
-        metrics_path = Path(job.output_dir) / "run_metrics.json"
+        _sync_job_metrics_from_output(job)
+        metrics_path = Path(job.output_dir) / RUN_METRICS_JSON
         if not metrics_path.exists():
             missing_metrics_count += 1
             continue

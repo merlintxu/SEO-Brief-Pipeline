@@ -86,10 +86,126 @@ def test_job_store_list_jobs_desc_order(tmp_path: Path):
 def test_job_store_delete_job(tmp_path: Path):
     store = JobStore(tmp_path / "jobs.db")
     store.create_job("run_del", "kw", "outputs/run_del")
+    store.persist_run_metrics(
+        "run_del",
+        {
+            "stages": {"briefing": {"status": "ok", "provider": "openai"}},
+            "costs": {"estimates": [{"provider": "openai", "service": "briefing", "calls": 1}]},
+            "prompt_run": {"key": "brief_generator", "version": "v1"},
+        },
+    )
     deleted = store.delete_job("run_del")
     assert deleted == 1
     assert store.get_job("run_del") is None
     assert store.list_job_events("run_del") == []
+    assert store.list_stage_metrics("run_del") == []
+    assert store.list_provider_calls("run_del") == []
+    assert store.get_prompt_run("run_del") is None
+
+
+def test_job_store_initializes_metrics_tables_idempotently(tmp_path: Path):
+    db_path = tmp_path / "jobs.db"
+    JobStore(db_path)
+    JobStore(db_path)
+
+    with JobStore(db_path)._connect() as conn:
+        tables = {
+            row["name"]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+
+    assert {"job_stage_metrics", "provider_calls", "prompt_runs"} <= tables
+
+
+def test_job_store_persists_run_metrics_from_payload(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run_metrics", "kw", "outputs/run_metrics")
+    store.persist_run_metrics(
+        "run_metrics",
+        {
+            "stages": {
+                "semrush": {
+                    "status": "ok",
+                    "provider": "semrush",
+                    "retries": 1,
+                    "items_processed": 12,
+                    "duration_seconds": 2.5,
+                },
+                "briefing": {
+                    "status": "ok",
+                    "provider": "openai",
+                    "estimated_cost_usd": 0.42,
+                    "total_tokens_estimated": 2100,
+                },
+            },
+            "costs": {
+                "estimates": [
+                    {
+                        "provider": "openai",
+                        "service": "briefing",
+                        "calls": 1,
+                        "estimated_cost_usd": 0.42,
+                        "total_tokens_estimated": 2100,
+                        "notes": "estimate",
+                    },
+                    {
+                        "provider": "serpapi",
+                        "service": "search",
+                        "calls": 1,
+                        "notes": "plan-specific",
+                    },
+                ]
+            },
+            "prompt_run": {
+                "key": "brief_generator",
+                "version": "v1",
+                "planner_version": "v1",
+                "mode": "planner_writer",
+                "model": "gpt-4o-mini",
+                "temperature": 0.2,
+            },
+        },
+    )
+
+    stages = store.list_stage_metrics("run_metrics")
+    assert [stage.stage for stage in stages] == ["semrush", "briefing"]
+    assert stages[0].provider == "semrush"
+    assert stages[0].retries == 1
+    assert stages[1].estimated_cost_usd == 0.42
+
+    calls = store.list_provider_calls("run_metrics")
+    assert [(call.provider, call.service) for call in calls] == [
+        ("openai", "briefing"),
+        ("serpapi", "search"),
+    ]
+    assert calls[0].total_tokens_estimated == 2100
+
+    prompt_run = store.get_prompt_run("run_metrics")
+    assert prompt_run is not None
+    assert prompt_run.key == "brief_generator"
+    assert prompt_run.mode == "planner_writer"
+    assert prompt_run.temperature == 0.2
+
+
+def test_job_store_persist_run_metrics_is_idempotent(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run_replace", "kw", "outputs/run_replace")
+
+    store.persist_run_metrics("run_replace", {"stages": {"old": {"provider": "old"}}})
+    store.persist_run_metrics(
+        "run_replace",
+        {
+            "stages": {"new": {"provider": "new"}},
+            "costs": {"estimates": [{"provider": "new", "service": "call", "calls": 2}]},
+        },
+    )
+
+    assert [stage.stage for stage in store.list_stage_metrics("run_replace")] == ["new"]
+    calls = store.list_provider_calls("run_replace")
+    assert len(calls) == 1
+    assert calls[0].calls == 2
 
 
 def test_job_store_operator_audit_trail_is_append_only(tmp_path: Path):

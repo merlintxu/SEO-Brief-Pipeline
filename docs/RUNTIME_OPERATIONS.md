@@ -185,6 +185,10 @@ docs/contracts/openapi.json
    - table: `job_events`
    - automatic writes on `create_job` and `update_status`
    - `GET /jobs/{run_id}` returns latest events first for operator traceability.
+14. Run metrics are also indexed in SQLite for operational queries:
+   - tables: `job_stage_metrics`, `provider_calls`, `prompt_runs`
+   - source of truth remains `outputs/{run_id}/run_metrics.json`
+   - the API syncs the index when a background run finishes or when an existing job with metrics is inspected.
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 
@@ -260,6 +264,7 @@ Common files:
   - OpenAI estimates use serialized prompt/output token approximation and static model pricing; provider-specific SEMrush/SERP/Sheets prices are marked unknown unless reconciled externally.
 
 `GET /jobs/{run_id}` also returns `cost_summary` when `run_metrics.json` exists for that run.
+SQLite stores a queryable copy of stage metrics, provider call estimates and prompt run metadata so future admin endpoints can build timelines without changing the artifact contract.
 
 ## SLO And Alert Groundwork
 
