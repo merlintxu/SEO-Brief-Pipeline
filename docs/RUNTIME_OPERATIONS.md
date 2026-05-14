@@ -165,6 +165,7 @@ docs/contracts/openapi.json
    - optional filters: `created_from`, `created_to`, `error_category`, `provider`
    - `GET /jobs/{run_id}`
    - `GET /jobs/{run_id}/events?limit=50&cursor=0`
+   - `GET /jobs/{run_id}/metrics`
    - `DELETE /jobs/{run_id}` (metadata only)
    - `POST /jobs/cleanup`
    - `POST /jobs/{run_id}/retry`
@@ -265,6 +266,7 @@ Common files:
 
 `GET /jobs/{run_id}` also returns `cost_summary` when `run_metrics.json` exists for that run.
 SQLite stores a queryable copy of stage metrics, provider call estimates and prompt run metadata so future admin endpoints can build timelines without changing the artifact contract.
+`GET /jobs/{run_id}/metrics` returns that persisted timeline as `stage_metrics`, `provider_calls`, `prompt_run` and an aggregate `summary`.
 
 ## SLO And Alert Groundwork
 

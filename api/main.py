@@ -45,6 +45,7 @@ from api.schemas import (
     JobDeleteResponse,
     JobDetailResponse,
     JobEventsListResponse,
+    JobMetricsResponse,
     JobRetryResponse,
     JobsCleanupRequest,
     JobsCleanupResponse,
@@ -247,6 +248,70 @@ def _operator_audit_to_dict(event) -> dict:
         "run_id": event.run_id,
         "metadata": event.metadata,
         "created_at": event.created_at,
+    }
+
+
+def _stage_metric_to_dict(metric) -> dict:
+    return {
+        "run_id": metric.run_id,
+        "stage": metric.stage,
+        "status": metric.status,
+        "provider": metric.provider,
+        "retries": metric.retries,
+        "items_processed": metric.items_processed,
+        "duration_seconds": metric.duration_seconds,
+        "error_category": metric.error_category,
+        "estimated_cost_usd": metric.estimated_cost_usd,
+        "total_tokens_estimated": metric.total_tokens_estimated,
+        "created_at": metric.created_at,
+    }
+
+
+def _provider_call_to_dict(call) -> dict:
+    return {
+        "id": call.id,
+        "run_id": call.run_id,
+        "provider": call.provider,
+        "service": call.service,
+        "calls": call.calls,
+        "estimated_cost_usd": call.estimated_cost_usd,
+        "total_tokens_estimated": call.total_tokens_estimated,
+        "notes": call.notes,
+        "created_at": call.created_at,
+    }
+
+
+def _prompt_run_to_dict(prompt_run) -> dict | None:
+    if prompt_run is None:
+        return None
+    return {
+        "run_id": prompt_run.run_id,
+        "key": prompt_run.key,
+        "version": prompt_run.version,
+        "planner_version": prompt_run.planner_version,
+        "mode": prompt_run.mode,
+        "model": prompt_run.model,
+        "temperature": prompt_run.temperature,
+        "created_at": prompt_run.created_at,
+    }
+
+
+def _job_metrics_summary(stage_metrics, provider_calls) -> dict:
+    total_retries = sum(metric.retries or 0 for metric in stage_metrics)
+    failed_stages = [
+        metric.stage
+        for metric in stage_metrics
+        if metric.status and metric.status not in {"ok", "done", "skipped"}
+    ]
+    total_duration = sum(metric.duration_seconds or 0 for metric in stage_metrics)
+    total_estimated_cost = sum(call.estimated_cost_usd or 0 for call in provider_calls)
+    return {
+        "stage_count": len(stage_metrics),
+        "provider_call_count": len(provider_calls),
+        "failed_stages": failed_stages,
+        "total_retries": total_retries,
+        "total_duration_seconds": round(total_duration, 6),
+        "total_estimated_cost_usd": round(total_estimated_cost, 6),
     }
 
 
@@ -665,6 +730,32 @@ async def list_job_events(
     ]
     next_cursor = cursor + limit if len(events) == limit else None
     return JSONResponse(content={"items": events, "count": len(events), "next_cursor": next_cursor})
+
+
+@app.get(
+    "/jobs/{run_id}/metrics",
+    tags=["jobs"],
+    response_model=JobMetricsResponse,
+    summary="Get Job Metrics",
+    description="Get persisted stage metrics, provider calls and prompt metadata for a single run.",
+)
+async def get_job_metrics(run_id: str, api_key: str = Depends(get_api_key)):
+    job = job_store.get_job(run_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Run_id no encontrado")
+    _sync_job_metrics_from_output(job)
+    stage_metrics = job_store.list_stage_metrics(run_id)
+    provider_calls = job_store.list_provider_calls(run_id)
+    prompt_run = job_store.get_prompt_run(run_id)
+    return JSONResponse(
+        content={
+            "run_id": run_id,
+            "stage_metrics": [_stage_metric_to_dict(metric) for metric in stage_metrics],
+            "provider_calls": [_provider_call_to_dict(call) for call in provider_calls],
+            "prompt_run": _prompt_run_to_dict(prompt_run),
+            "summary": _job_metrics_summary(stage_metrics, provider_calls),
+        }
+    )
 
 
 @app.get(

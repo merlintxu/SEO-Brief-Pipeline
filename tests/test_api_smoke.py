@@ -119,6 +119,7 @@ def test_ops_dashboard_route_serves_html(tmp_path):
     response = client.get("/ops")
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
+    assert "/jobs/${runId}/metrics" in response.text
 
 
 def test_briefing_status_falls_back_to_job_store(tmp_path):
@@ -343,6 +344,95 @@ def test_get_and_delete_job_endpoints(tmp_path):
 
     missing = client.get(f"/jobs/{run_id}", headers=headers)
     assert missing.status_code == 404
+
+
+def test_job_metrics_endpoint_requires_auth_and_returns_timeline(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app, job_store
+
+    run_id = f"run_job_metrics_{int(time.time() * 1000)}"
+    output_dir = tmp_path / "outputs" / run_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "run_metrics.json").write_text(
+        json.dumps(
+            {
+                "stages": {
+                    "serp": {
+                        "status": "ok",
+                        "provider": "serpapi",
+                        "retries": 1,
+                        "items_processed": 10,
+                        "duration_seconds": 3.25,
+                    },
+                    "briefing": {
+                        "status": "failed",
+                        "provider": "openai",
+                        "error_category": "rate_limit",
+                    },
+                },
+                "costs": {
+                    "estimates": [
+                        {
+                            "provider": "openai",
+                            "service": "briefing",
+                            "calls": 1,
+                            "estimated_cost_usd": 0.12,
+                            "total_tokens_estimated": 1000,
+                        }
+                    ]
+                },
+                "prompt_run": {
+                    "key": "brief_generator",
+                    "version": "v1",
+                    "planner_version": "v1",
+                    "mode": "planner_writer",
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.2,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    job_store.create_job(run_id=run_id, keyword="kw-metrics", output_dir=str(output_dir))
+    job_store.update_status(run_id, status="failed", step="briefing", message="rate limited")
+
+    client = TestClient(app)
+    headers = {"X-API-Key": "secret-token-2025-test-key-long-enough"}
+    unauthorized = client.get(f"/jobs/{run_id}/metrics")
+    assert unauthorized.status_code == 403
+
+    response = client.get(f"/jobs/{run_id}/metrics", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["run_id"] == run_id
+    assert [item["stage"] for item in body["stage_metrics"]] == ["serp", "briefing"]
+    assert body["provider_calls"][0]["provider"] == "openai"
+    assert body["prompt_run"]["mode"] == "planner_writer"
+    assert body["summary"]["failed_stages"] == ["briefing"]
+    assert body["summary"]["total_retries"] == 1
+
+
+def test_job_metrics_endpoint_returns_empty_payload_without_metrics(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app, job_store
+
+    run_id = f"run_job_no_metrics_{int(time.time() * 1000)}"
+    output_dir = tmp_path / "outputs" / run_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    job_store.create_job(run_id=run_id, keyword="kw-no-metrics", output_dir=str(output_dir))
+
+    client = TestClient(app)
+    response = client.get(
+        f"/jobs/{run_id}/metrics",
+        headers={"X-API-Key": "secret-token-2025-test-key-long-enough"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["stage_metrics"] == []
+    assert body["provider_calls"] == []
+    assert body["prompt_run"] is None
+    assert body["summary"]["stage_count"] == 0
 
 
 def test_jobs_cleanup_endpoint(tmp_path):

@@ -163,11 +163,14 @@ This file is the entrypoint for coding agents working in this repository.
   - SQLite tables: `job_stage_metrics`, `provider_calls`, `prompt_runs`.
   - populated from `run_metrics.json` after API background runs finish and when existing job metrics are inspected.
   - `run_metrics.json` remains the artifact contract and source of truth.
+- Added job metrics timeline API/dashboard integration:
+  - protected `GET /jobs/{run_id}/metrics` returns stage metrics, provider calls, prompt run metadata and summary counts.
+  - `/ops` job detail now renders persisted metrics alongside lifecycle events.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: expose persisted job metrics through API and dashboard timeline.
+2. Immediate next PR focus after merge: add resumable batch runs and manifest summaries.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
