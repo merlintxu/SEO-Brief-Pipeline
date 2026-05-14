@@ -65,6 +65,7 @@ Security behavior:
 - Job lifecycle events are persisted in SQLite table `job_events` for operational traceability.
 - Operator audit events are persisted in SQLite table `operator_audit_events`; the API intentionally exposes append/list only.
 - Run metrics include a cost summary with provider call estimates and OpenAI token/cost estimates; job detail exposes this summary when metrics exist.
+- SLO evaluation is a pure metrics layer in `seo_pipeline/slo.py`; it consumes `run_metrics.json` payloads and does not require external monitoring infrastructure.
 
 ## Configuration
 

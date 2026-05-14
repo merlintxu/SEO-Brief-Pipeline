@@ -260,6 +260,23 @@ Common files:
 
 `GET /jobs/{run_id}` also returns `cost_summary` when `run_metrics.json` exists for that run.
 
+## SLO And Alert Groundwork
+
+SLO evaluation is implemented in `seo_pipeline/slo.py` and operates on windows of `run_metrics.json` payloads. Default thresholds:
+
+- success rate: `>= 95%`
+- p95 run duration: `<= 900s`
+- retry rate: `<= 20%` of runs with any retry
+- categorized failure rate: `<= 10%`
+
+First-response runbook:
+
+1. Check `/jobs?limit=50&status=failed` for recent failures.
+2. Inspect `GET /jobs/{run_id}` and `GET /jobs/{run_id}/events`.
+3. Download `run_metrics.json` and compare slow stages, retries, `error_category`, `quality_gates`, `quorum` and `costs`.
+4. If retry rate spikes, inspect provider-specific stages before changing prompt/model settings.
+5. If p95 duration spikes, compare `duration_seconds` by stage and prioritize SEMrush, SERP, audit or OpenAI based on the slowest stage.
+
 Generated files are ignored by Git.
 
 ## Docker
