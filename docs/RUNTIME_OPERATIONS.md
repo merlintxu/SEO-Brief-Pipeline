@@ -299,6 +299,7 @@ Provider retries use a shared policy in `seo_pipeline/vendors/retry_policy.py`: 
 Briefing generation now goes through `seo_pipeline/llm/` instead of calling provider SDKs directly from the pipeline. The OpenAI adapter preserves current structured-output behavior and records provider/model metadata in `prompt_run`. Future adapters should implement the same structured generation contract and return a validated `SEOBriefing`.
 
 Set `LLM_PROVIDER=ollama`, `OLLAMA_BASE_URL` and `OLLAMA_MODEL` to run the briefing step through a local Ollama-compatible server. Tests mock Ollama HTTP calls; CI does not require a local model server.
+Set `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` to run the same structured briefing contract through Anthropic. Tests mock Anthropic HTTP calls; CI does not call external model providers.
 
 Operational endpoint:
 

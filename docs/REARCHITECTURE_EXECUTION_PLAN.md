@@ -129,6 +129,16 @@ Acceptance:
 - Tests mock Ollama HTTP responses.
 - CI does not require a local model server.
 
+### PR C5 - Anthropic adapter
+
+- Add `LLM_PROVIDER=anthropic` support through the LLM gateway.
+- Validate Anthropic JSON text responses against `SEOBriefing`.
+
+Acceptance:
+
+- Tests mock Anthropic HTTP responses.
+- CI does not call external model providers.
+
 ## Epic D - Persistence Upgrade (Operational DB)
 
 ### Goal

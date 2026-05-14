@@ -162,6 +162,26 @@ Operational notes:
 
 - Ollama must return JSON that validates against `SEOBriefing`.
 - Automated tests mock the HTTP API and do not require a local Ollama server.
+
+## Anthropic
+
+Code: `seo_pipeline/llm/anthropic_adapter.py`
+
+Purpose:
+
+- Run the structured briefing step through Anthropic Messages API while preserving the same `SEOBriefing` validation contract.
+
+Configuration:
+
+- `LLM_PROVIDER=anthropic`
+- `ANTHROPIC_API_KEY`
+- `ANTHROPIC_MODEL` (defaults to `claude-3-5-sonnet-latest` when not provided)
+- `ANTHROPIC_BASE_URL` (optional, defaults to `https://api.anthropic.com`)
+
+Operational notes:
+
+- Anthropic responses must contain JSON text that validates against `SEOBriefing`.
+- Automated tests mock HTTP calls and do not call Anthropic.
 - structured output does not satisfy `SEOBriefing`
 
 ## Google Search Console
