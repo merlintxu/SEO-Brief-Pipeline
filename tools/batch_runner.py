@@ -19,6 +19,7 @@ def main() -> int:
     parser.add_argument("--batch-id", default=None, help="Optional stable batch id.")
     parser.add_argument("--output-dir", type=Path, default=None, help="Defaults to runs/batch_<batch_id>.")
     parser.add_argument("--stop-on-error", action="store_true", help="Stop after first failed keyword.")
+    parser.add_argument("--resume", action="store_true", help="Skip items already marked done in batch_manifest.json.")
     args = parser.parse_args()
 
     items = load_batch_items(args.input)
@@ -27,6 +28,7 @@ def main() -> int:
         batch_id=args.batch_id,
         output_dir=args.output_dir,
         stop_on_error=args.stop_on_error,
+        resume=args.resume,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 1 if summary["failed"] and args.stop_on_error else 0

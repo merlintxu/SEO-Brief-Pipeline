@@ -153,6 +153,9 @@ This file is the entrypoint for coding agents working in this repository.
   - `tools/batch_runner.py` accepts CSV or JSON keyword input.
   - each keyword gets an isolated run id and output directory.
   - failures continue by default unless `--stop-on-error` is set.
+- Added resumable batch keyword runs:
+  - `tools/batch_runner.py --resume` skips items already marked `done` in `batch_manifest.json`.
+  - batch summaries now include `skipped`, per-item timestamps and `error_summary`.
 - Added SLO dashboard/API integration:
   - protected `GET /ops/slo` evaluates recent job metrics with `seo_pipeline/slo.py`.
   - dashboard shows SLO status, run counts, p95 duration, retry rate and failed checks.
@@ -170,7 +173,7 @@ This file is the entrypoint for coding agents working in this repository.
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: add resumable batch runs and manifest summaries.
+2. Immediate next PR focus after merge: centralize API job lifecycle service as queue-backend preparation.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
