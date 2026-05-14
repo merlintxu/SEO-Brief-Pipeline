@@ -914,6 +914,18 @@
             ],
             "title": "Status File"
           },
+          "cost_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Summary"
+          },
           "events": {
             "items": {
               "$ref": "#/components/schemas/JobEventResponse"

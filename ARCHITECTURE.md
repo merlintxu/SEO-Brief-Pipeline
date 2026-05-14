@@ -64,6 +64,7 @@ Security behavior:
 - JobStore now uses a backend facade: SQLite is operational; PostgreSQL backend is scaffolded for migration but not yet enabled.
 - Job lifecycle events are persisted in SQLite table `job_events` for operational traceability.
 - Operator audit events are persisted in SQLite table `operator_audit_events`; the API intentionally exposes append/list only.
+- Run metrics include a cost summary with provider call estimates and OpenAI token/cost estimates; job detail exposes this summary when metrics exist.
 
 ## Configuration
 

@@ -143,6 +143,7 @@ class OperatorAuditEventsListResponse(BaseModel):
 class JobDetailResponse(BaseModel):
     job: JobResponse
     status_file: dict | None = None
+    cost_summary: dict | None = None
     events: list[JobEventResponse] = Field(default_factory=list)
 
 

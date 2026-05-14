@@ -82,6 +82,7 @@ Execution checkpoint:
 - E3 dashboard serving/session baseline added: API route `/ops` plus session-default API-key persistence with optional remember mode.
 - F1 lightweight operator audit trail added in dashboard UI (actions, confirmations, outcomes).
 - F2 operator audit persistence added with append-only SQLite events and protected `GET/POST /ops/audit-trail`.
+- G1 cost tracking baseline added in run metrics and job detail payloads.
 
 ### Structured run logging
 
