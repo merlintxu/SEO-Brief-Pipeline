@@ -294,6 +294,10 @@ First-response runbook:
 
 Provider retries use a shared policy in `seo_pipeline/vendors/retry_policy.py`: transient network, timeout, rate-limit and 5xx/provider-unavailable failures are retryable; auth, quota and validation/configuration failures are terminal and should fail fast with a categorized error.
 
+## LLM Gateway
+
+Briefing generation now goes through `seo_pipeline/llm/` instead of calling provider SDKs directly from the pipeline. The OpenAI adapter preserves current structured-output behavior and records provider/model metadata in `prompt_run`. Future adapters should implement the same structured generation contract and return a validated `SEOBriefing`.
+
 Operational endpoint:
 
 ```bash

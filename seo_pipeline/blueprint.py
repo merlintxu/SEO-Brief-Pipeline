@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import json
-from openai import OpenAI, RateLimitError, OpenAIError
 from pydantic import BaseModel, Field
 
 from seo_pipeline.models import AnchorSet, BriefingPlan, SEOBriefing, SerpSnapshot
+from seo_pipeline.llm.gateway import generate_structured_briefing
 from seo_pipeline.utils.text import normalize_ws
 from seo_pipeline.prompt_registry import resolve_prompt_bundle
 from seo_pipeline.utils.logging import logger
@@ -59,13 +59,13 @@ def generate_briefing(
     temperature: float | None = None,
     prompt_version: str = "v1",
     planner_artifact: Dict[str, Any] | None = None,
+    llm_provider: str = "openai",
 ) -> SEOBriefing:
     """
     Genera el briefing completo utilizando OpenAI structured outputs nativos.
     Garantiza 100 % parseo correcto del JSON sin necesidad de instructor.
     Ahora usa SerpSnapshot normalizado en lugar de raw SERP JSON.
     """
-    client = OpenAI(api_key=openai_api_key)
     prompt_bundle = resolve_prompt_bundle("brief_generator", prompt_version)
     resolved_model = model or prompt_bundle.model
     resolved_temperature = temperature if temperature is not None else prompt_bundle.temperature
@@ -112,27 +112,18 @@ Instrucciones estrictas:
     try:
         logger.info(f"Generando briefing con {resolved_model} ({prompt_bundle.version}) para: {keyword}")
         
-        # Usar structured outputs nativo de OpenAI (beta)
-        completion = client.beta.chat.completions.parse(
+        briefing = generate_structured_briefing(
+            provider=llm_provider,
+            api_key=openai_api_key,
             model=resolved_model,
             temperature=resolved_temperature,
-            messages=[
-                {"role": "system", "content": prompt_bundle.system_prompt},
-                {"role": "user", "content": user_prompt.strip()}
-            ],
-            response_format=SEOBriefing
+            system_prompt=prompt_bundle.system_prompt,
+            user_prompt=user_prompt.strip(),
+            response_model=SEOBriefing,
         )
-        
-        briefing = completion.choices[0].message.parsed
         logger.info(f"Briefing generado correctamente para: {keyword}")
         return briefing
 
-    except RateLimitError:
-        logger.error("Rate limit alcanzado con OpenAI")
-        raise
-    except OpenAIError as e:
-        logger.error(f"OpenAI error generando briefing para {keyword}: {e}")
-        raise
     except Exception as e:
         logger.error(f"Error generando briefing para {keyword}: {e}")
         raise
