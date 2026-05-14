@@ -27,6 +27,7 @@ Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditor�
 - API FastAPI con autenticación por `X-API-Key`, rate limiting y descargas por whitelist.
 - Dashboard operativo `/ops` con administración de jobs y audit trail append-only para acciones de operador.
 - Métricas por run con estimaciones de coste y tokens en `run_metrics.json`.
+- Evaluación SLO local sobre ventanas de `run_metrics.json`.
 
 ## Instalación
 

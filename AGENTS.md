@@ -142,11 +142,15 @@ This file is the entrypoint for coding agents working in this repository.
   - `run_metrics.json` includes `costs` with USD totals, estimate rows and unknown provider count.
   - OpenAI briefing stage stores estimated input/output/total tokens and estimated cost.
   - `GET /jobs/{run_id}` exposes `cost_summary` from `run_metrics.json`.
+- Added G2 SLO groundwork:
+  - `seo_pipeline/slo.py` evaluates rolling windows of `run_metrics.json` payloads.
+  - SLO checks cover success rate, p95 duration, retry rate and categorized failure rate.
+  - operations docs include default thresholds and first-response runbook.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: G2 SLO and alerts groundwork from `docs/REARCHITECTURE_EXECUTION_PLAN.md`.
+2. Immediate next PR focus after merge: wire SLO evaluation into dashboard/API or external alerting.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
