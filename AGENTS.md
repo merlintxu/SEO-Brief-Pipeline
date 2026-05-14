@@ -182,6 +182,10 @@ This file is the entrypoint for coding agents working in this repository.
   - `apps/gradio_app.py` starts DB-first local operator UI.
   - supports provider selection for OpenAI, Ollama and Anthropic.
   - lists jobs and reads persisted outputs/metrics from SQLite.
+- Made DB-first no-Sheets mode explicit:
+  - API and pipeline defaults now keep `upload_to_sheets=false`.
+  - Google Sheets remains an optional export when explicitly enabled and configured.
+  - README and operations docs describe the DB-first model/provider workflow.
 - Added SLO dashboard/API integration:
   - protected `GET /ops/slo` evaluates recent job metrics with `seo_pipeline/slo.py`.
   - dashboard shows SLO status, run counts, p95 duration, retry rate and failed checks.
@@ -199,7 +203,7 @@ This file is the entrypoint for coding agents working in this repository.
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: make DB-first no-Sheets mode explicit in defaults/docs.
+2. Immediate next PR focus after merge: continue production persistence hardening, likely PostgreSQL backend implementation or DB migrations.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

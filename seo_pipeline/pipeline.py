@@ -65,7 +65,7 @@ def run_full_pipeline(
     related_limit: int = DEFAULT_RELATED_LIMIT,
     serp_num: int = DEFAULT_SERP_NUM,
     top_competitors_count: int = DEFAULT_TOP_COMPETITORS,
-    upload_to_sheets: bool = True,
+    upload_to_sheets: bool = False,
     status_path: Optional[Path] = None,
     output_dir: Optional[Path] = None,
     gsc_months_back: int = 11,

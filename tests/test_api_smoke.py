@@ -174,6 +174,13 @@ def test_jobs_endpoint_requires_auth_and_lists_items(tmp_path):
     assert any(item["run_id"] == run_id for item in body["items"])
 
 
+def test_briefing_request_defaults_to_no_sheets():
+    from api.schemas import BriefingRequest
+
+    request = BriefingRequest(keyword="default sheets")
+    assert request.upload_to_sheets is False
+
+
 def test_jobs_endpoint_supports_status_and_search_filters(tmp_path):
     setup_cfg(tmp_path)
     from api.main import app, job_store
