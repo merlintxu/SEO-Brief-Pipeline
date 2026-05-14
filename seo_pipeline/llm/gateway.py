@@ -1,6 +1,7 @@
 """Provider gateway for structured briefing generation."""
 from __future__ import annotations
 
+from seo_pipeline.llm.anthropic_adapter import AnthropicAdapter
 from seo_pipeline.llm.base import StructuredGenerationRequest, T
 from seo_pipeline.llm.ollama_adapter import OllamaAdapter
 from seo_pipeline.llm.openai_adapter import OpenAIAdapter
@@ -30,4 +31,11 @@ def generate_structured_briefing(
         return OpenAIAdapter(api_key=api_key).generate_structured(request, response_model)
     if provider_name == "ollama":
         return OllamaAdapter(base_url=base_url or "http://localhost:11434").generate_structured(request, response_model)
+    if provider_name == "anthropic":
+        if not api_key:
+            raise RuntimeError("ANTHROPIC_API_KEY is required for LLM_PROVIDER=anthropic")
+        return AnthropicAdapter(
+            api_key=api_key,
+            base_url=base_url or "https://api.anthropic.com",
+        ).generate_structured(request, response_model)
     raise RuntimeError(f"Unsupported LLM_PROVIDER: {provider}")

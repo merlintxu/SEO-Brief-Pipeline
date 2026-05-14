@@ -571,7 +571,7 @@ def run_full_pipeline(
             audit_report=enrichment.audit_report.model_dump(),
             anchors=anchors,
             cannibalization_notes=cannibal_notes,
-            openai_api_key=cfg.active_client.openai_key,
+            openai_api_key=llm_settings.api_key or cfg.active_client.openai_key,
             model=resolved_model,
             temperature=prompt_bundle.temperature,
             prompt_version=prompt_bundle.version,

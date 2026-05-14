@@ -85,3 +85,31 @@ def test_gateway_routes_to_ollama_adapter(monkeypatch):
     assert result.h1 == "Brief H1"
     assert observed["base_url"] == "http://ollama.test"
     assert observed["request"].model == "llama3.1"
+
+
+def test_gateway_routes_to_anthropic_adapter(monkeypatch):
+    observed = {}
+
+    def fake_generate(self, request, response_model):
+        observed["base_url"] = self.base_url
+        observed["request"] = request
+        observed["response_model"] = response_model
+        return _briefing()
+
+    monkeypatch.setattr(AnthropicAdapter, "generate_structured", fake_generate)
+
+    result = generate_structured_briefing(
+        provider="anthropic",
+        api_key="anthropic-key",
+        model="claude-test",
+        temperature=0.1,
+        system_prompt="system",
+        user_prompt="user",
+        response_model=SEOBriefing,
+        base_url="https://anthropic.test",
+    )
+
+    assert result.h1 == "Brief H1"
+    assert observed["base_url"] == "https://anthropic.test"
+    assert observed["request"].model == "claude-test"
+from seo_pipeline.llm.anthropic_adapter import AnthropicAdapter
