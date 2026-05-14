@@ -1,6 +1,6 @@
 # SEO Brief Pipeline
 
-Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditoría de competidores, OpenAI structured outputs, Google Search Console y Google Sheets.
+Pipeline DB-first para generar briefings SEO usando datos de SEMrush, SERP real, auditoría de competidores, modelos OpenAI/Ollama/Anthropic, Google Search Console opcional y export opcional a Google Sheets.
 
 ## Documentación
 
@@ -22,7 +22,8 @@ Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditor�
 - Auditoría de URLs competidoras: title, H1, meta description, word count, headings y schema signals.
 - Detección opcional de canibalización con Google Search Console.
 - Generación de anchors internos y externos.
-- Generación de briefing SEO con OpenAI y modelo Pydantic `SEOBriefing`.
+- Generación de briefing SEO con gateway de modelos y contrato Pydantic `SEOBriefing`.
+- Persistencia SQLite de jobs, métricas, outputs finales y audit trail.
 - Exportación a JSON, Markdown, CSV/XLSX y subida opcional a Google Sheets.
 - API FastAPI con autenticación por `X-API-Key`, rate limiting y descargas por whitelist.
 - Dashboard operativo `/ops` con administración de jobs y audit trail append-only para acciones de operador.
@@ -59,6 +60,11 @@ Variables principales:
 SEMRUSH_TOKEN=replace_with_semrush_token
 SERPAPI_KEY=replace_with_serpapi_key
 OPENAI_API_KEY=replace_with_openai_key
+LLM_PROVIDER=openai
+# OLLAMA_BASE_URL=http://localhost:11434
+# OLLAMA_MODEL=llama3.1
+# ANTHROPIC_API_KEY=replace_with_anthropic_key
+# ANTHROPIC_MODEL=claude-3-5-sonnet-latest
 API_KEY=replace_with_strong_api_key_at_least_20_chars
 DFSP_USERNAME=replace_with_dataforseo_login
 DFSP_PASSWORD=replace_with_dataforseo_password
@@ -105,6 +111,12 @@ Batch:
 python tools/batch_runner.py data/batch_keywords.csv --batch-id manual_20260514
 ```
 
+Gradio local:
+
+```bash
+python apps/gradio_app.py
+```
+
 ## API
 
 Todos los endpoints salvo `/health`, `/docs`, `/openapi.json` y `/redoc` requieren header:
@@ -143,6 +155,7 @@ curl -H "X-API-Key: replace_with_api_key" \
 ```
 
 Las descargas solo permiten nombres incluidos en la whitelist de `api/main.py`; no existe mount `/static` para exponer todo `outputs/`. Cada run también escribe `run_metrics.json` con duraciones y conteos por etapa.
+El modo operativo por defecto es DB-first: `upload_to_sheets` está desactivado salvo que se solicite explícitamente.
 
 Dashboard operativo:
 

@@ -951,8 +951,8 @@
           "upload_to_sheets": {
             "type": "boolean",
             "title": "Upload To Sheets",
-            "description": "Upload result to Google Sheets",
-            "default": true
+            "description": "Optional Google Sheets export. Disabled by default in DB-first mode.",
+            "default": false
           },
           "related_limit": {
             "type": "integer",

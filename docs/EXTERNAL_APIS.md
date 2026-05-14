@@ -234,6 +234,11 @@ Credential:
 
 - Service account JSON path in `ClientConfig.sheets_sa_path`
 
+Operational status:
+
+- Optional export only. DB-first mode does not require Google Sheets for normal operation.
+- New API/Gradio runs default to `upload_to_sheets=false`.
+
 Inputs:
 
 - spreadsheet id

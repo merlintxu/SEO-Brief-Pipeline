@@ -885,7 +885,7 @@ async def retry_job(run_id: str, background: BackgroundTasks, api_key: str = Dep
     retry_request = BriefingRequest(
         keyword=job.keyword,
         target_url=None,
-        upload_to_sheets=True,
+        upload_to_sheets=False,
         related_limit=30,
         serp_num=10,
     )

@@ -157,7 +157,7 @@ docs/contracts/openapi.json
 3. API creates `run_id` and writes `outputs/{run_id}/status.json`.
 4. API schedules a FastAPI background task.
 5. Background task calls `run_full_pipeline()`.
-6. Pipeline updates status as it moves through SEMrush, SERP, audit, GSC, anchors, OpenAI, export and optional Sheets.
+6. Pipeline updates status as it moves through SEMrush, SERP, audit, GSC, anchors, selected LLM provider, export and optional Sheets.
 7. Client polls `GET /briefing/{run_id}`.
 8. Client downloads whitelisted files via `GET /outputs/{run_id}/{filename}`.
 9. Operators can inspect and maintain job metadata:
@@ -309,7 +309,7 @@ Launch the DB-first Gradio operator interface locally:
 python apps/gradio_app.py
 ```
 
-The Gradio app can start a briefing, select `openai`, `ollama` or `anthropic`, list recent jobs from SQLite and inspect persisted DB output/metrics. Google Sheets upload defaults to disabled in this UI; file artifacts remain available on disk.
+The Gradio app can start a briefing, select `openai`, `ollama` or `anthropic`, list recent jobs from SQLite and inspect persisted DB output/metrics. Google Sheets upload defaults to disabled in all new run surfaces; file artifacts remain available on disk.
 
 Operational endpoint:
 
@@ -425,7 +425,7 @@ curl -H "X-API-Key: replace_with_api_key" "http://localhost:8000/jobs/replace_wi
 curl -X POST -H "X-API-Key: replace_with_api_key" -H "Content-Type: application/json" -d "{\"max_age_days\":30,\"statuses\":[\"done\",\"failed\"]}" http://localhost:8000/jobs/cleanup
 ```
 
-For a real briefing, start with `upload_to_sheets=false` until provider credentials and output files are verified.
+For a real briefing, keep `upload_to_sheets=false` unless a Sheets export is explicitly needed. DB-first mode persists jobs, metrics and final outputs in SQLite by default.
 
 ## Admin Jobs Operational Checklist
 

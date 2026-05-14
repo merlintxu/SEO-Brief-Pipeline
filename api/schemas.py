@@ -18,8 +18,8 @@ class BriefingRequest(BaseModel):
         description="Optional target URL to analyze",
     )
     upload_to_sheets: bool = Field(
-        default=True,
-        description="Upload result to Google Sheets",
+        default=False,
+        description="Optional Google Sheets export. Disabled by default in DB-first mode.",
     )
     related_limit: int = Field(
         default=30,
