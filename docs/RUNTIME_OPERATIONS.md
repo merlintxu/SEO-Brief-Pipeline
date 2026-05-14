@@ -134,7 +134,9 @@ Current UX behaviors:
 - Operator audit trail in UI:
   - panel "Trail Operativo" logs operator actions and outcomes.
   - logs include confirmation decisions for destructive actions.
-  - retention in UI memory only (latest 50 entries), with manual clear button.
+  - latest 50 events are shown in the UI.
+  - events are persisted best-effort through the protected append-only API.
+  - "Limpiar Vista" clears the local dashboard view only; persisted audit events remain.
 
 OpenAPI contract export:
 
@@ -166,14 +168,19 @@ docs/contracts/openapi.json
    - `POST /jobs/cleanup`
    - `POST /jobs/{run_id}/retry`
    - `POST /jobs/{run_id}/cancel`
-10. Retry lineage is persisted in `JobStore`:
+10. Operators can inspect and append the operator audit trail:
+   - `GET /ops/audit-trail?limit=50&cursor=0`
+   - `POST /ops/audit-trail`
+   - payload: `action`, `result`, optional `run_id`, optional `metadata`
+   - this log is append-only; there is no delete endpoint.
+11. Retry lineage is persisted in `JobStore`:
    - retried jobs store `source_run_id` (parent failed run).
    - this enables operational traceability for repeated retries/chains.
-11. Jobs admin endpoints expose explicit response contracts in OpenAPI:
+12. Jobs admin endpoints expose explicit response contracts in OpenAPI:
    - list: `items`, `count`, `next_cursor`
    - detail: `job`, `status_file`, `events`
    - retry/cancel/delete/cleanup: stable typed payloads
-12. Job lifecycle events are persisted in SQLite:
+13. Job lifecycle events are persisted in SQLite:
    - table: `job_events`
    - automatic writes on `create_job` and `update_status`
    - `GET /jobs/{run_id}` returns latest events first for operator traceability.

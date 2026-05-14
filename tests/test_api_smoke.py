@@ -191,6 +191,38 @@ def test_jobs_endpoint_limit_validation(tmp_path):
     assert too_high.status_code == 422
 
 
+def test_operator_audit_trail_endpoints_require_auth_and_persist_events(tmp_path):
+    setup_cfg(tmp_path)
+    from api.main import app
+
+    client = TestClient(app)
+    headers = {"X-API-Key": "secret-token-2025-test-key-long-enough"}
+
+    unauthorized = client.get("/ops/audit-trail")
+    assert unauthorized.status_code == 403
+
+    created = client.post(
+        "/ops/audit-trail",
+        headers=headers,
+        json={
+            "action": "delete_confirm",
+            "result": "confirmed",
+            "run_id": "run_audit_api",
+            "metadata": "run_id=run_audit_api",
+        },
+    )
+    assert created.status_code == 200
+    created_body = created.json()
+    assert created_body["action"] == "delete_confirm"
+    assert created_body["run_id"] == "run_audit_api"
+
+    listed = client.get("/ops/audit-trail?limit=5&cursor=0", headers=headers)
+    assert listed.status_code == 200
+    body = listed.json()
+    assert body["count"] >= 1
+    assert any(item["id"] == created_body["id"] for item in body["items"])
+
+
 def test_get_and_delete_job_endpoints(tmp_path):
     setup_cfg(tmp_path)
     from api.main import app, job_store

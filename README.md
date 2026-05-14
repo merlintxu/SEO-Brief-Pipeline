@@ -25,6 +25,7 @@ Pipeline para generar briefings SEO usando datos de SEMrush, SERP real, auditor�
 - Generación de briefing SEO con OpenAI y modelo Pydantic `SEOBriefing`.
 - Exportación a JSON, Markdown, CSV/XLSX y subida opcional a Google Sheets.
 - API FastAPI con autenticación por `X-API-Key`, rate limiting y descargas por whitelist.
+- Dashboard operativo `/ops` con administración de jobs y audit trail append-only para acciones de operador.
 
 ## Instalación
 
@@ -127,6 +128,15 @@ curl -H "X-API-Key: replace_with_api_key" \
 ```
 
 Las descargas solo permiten nombres incluidos en la whitelist de `api/main.py`; no existe mount `/static` para exponer todo `outputs/`. Cada run también escribe `run_metrics.json` con duraciones y conteos por etapa.
+
+Dashboard operativo:
+
+```bash
+curl -H "X-API-Key: replace_with_api_key" \
+  "http://localhost:8000/ops/audit-trail?limit=50&cursor=0"
+```
+
+`/ops` sirve la UI operativa. El audit trail de operador se persiste mediante `GET/POST /ops/audit-trail`; el log es append-only y no guarda valores de `X-API-Key`.
 
 ## Seguridad
 

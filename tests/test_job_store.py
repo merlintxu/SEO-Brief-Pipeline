@@ -92,6 +92,28 @@ def test_job_store_delete_job(tmp_path: Path):
     assert store.list_job_events("run_del") == []
 
 
+def test_job_store_operator_audit_trail_is_append_only(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    first = store.append_operator_audit_event(
+        action="cancel_confirm",
+        result="confirmed",
+        run_id="run_audit",
+        metadata="run_id=run_audit",
+    )
+    second = store.append_operator_audit_event(
+        action="cancel",
+        result="ok",
+        run_id="run_audit",
+        metadata="run_id=run_audit",
+    )
+
+    assert first.id < second.id
+    events = store.list_operator_audit_events(limit=10)
+    assert [event.action for event in events] == ["cancel", "cancel_confirm"]
+    assert events[0].run_id == "run_audit"
+    assert events[0].metadata == "run_id=run_audit"
+
+
 def test_job_store_cleanup_old_jobs(tmp_path: Path):
     store = JobStore(tmp_path / "jobs.db")
     store.create_job("run_old_done", "kw1", "outputs/run_old_done")

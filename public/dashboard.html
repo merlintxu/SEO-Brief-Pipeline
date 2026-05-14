@@ -98,7 +98,7 @@
     <section class="bg-white border border-slate-200 rounded-lg p-4">
       <div class="flex items-center justify-between">
         <h2 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4"></i>Trail Operativo</h2>
-        <button id="clearTrailBtn" class="px-3 py-1 border border-slate-300 rounded text-xs">Limpiar</button>
+        <button id="clearTrailBtn" class="px-3 py-1 border border-slate-300 rounded text-xs">Limpiar Vista</button>
       </div>
       <div id="opsTrail" class="space-y-2 text-xs"></div>
     </section>
@@ -157,19 +157,56 @@
         <div class="border border-slate-200 rounded p-2">
           <div class="font-mono">${item.ts} | ${item.action} | ${item.result}</div>
           <div>${item.meta}</div>
+          <div class="text-slate-500">run_id=${item.run_id || "-"}</div>
         </div>
       `).join("") || "<div class='text-slate-500'>Sin eventos operativos.</div>";
     }
 
-    function pushAuditTrail(action, result, meta) {
+    function extractRunId(meta) {
+      const match = String(meta || "").match(/run_id=([^ ]+)/);
+      return match ? match[1] : null;
+    }
+
+    async function persistAuditTrail(action, result, meta, runId) {
+      try {
+        await apiFetch("/ops/audit-trail", {
+          method: "POST",
+          body: JSON.stringify({
+            action,
+            result,
+            run_id: runId || null,
+            metadata: meta || null,
+          }),
+        });
+      } catch (_) {}
+    }
+
+    async function loadAuditTrail() {
+      try {
+        const data = await apiFetch("/ops/audit-trail?limit=50&cursor=0");
+        state.auditTrail = data.items.map((item) => ({
+          ts: item.created_at,
+          action: item.action,
+          result: item.result,
+          meta: item.metadata || "-",
+          run_id: item.run_id || null,
+        }));
+        renderAuditTrail();
+      } catch (_) {}
+    }
+
+    function pushAuditTrail(action, result, meta, runId = null, persist = true) {
+      const resolvedRunId = runId || extractRunId(meta);
       state.auditTrail.unshift({
         ts: new Date().toISOString(),
         action,
         result,
-        meta: meta || "-"
+        meta: meta || "-",
+        run_id: resolvedRunId
       });
       if (state.auditTrail.length > 50) state.auditTrail = state.auditTrail.slice(0, 50);
       renderAuditTrail();
+      if (persist) persistAuditTrail(action, result, meta, resolvedRunId);
     }
 
     async function apiFetch(path, options = {}) {
@@ -298,7 +335,7 @@
       await loadJobs();
     }
 
-    byId("saveConfigBtn").addEventListener("click", () => { saveConfig(); checkHealth(); });
+    byId("saveConfigBtn").addEventListener("click", () => { saveConfig(); checkHealth(); loadAuditTrail(); });
     byId("checkHealthBtn").addEventListener("click", checkHealth);
     byId("clearKeyBtn").addEventListener("click", () => {
       byId("apiKey").value = "";
@@ -309,6 +346,7 @@
     byId("clearTrailBtn").addEventListener("click", () => {
       state.auditTrail = [];
       renderAuditTrail();
+      pushAuditTrail("clear_trail_view", "ok", "local dashboard view cleared; persisted audit remains");
     });
     byId("briefForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -349,24 +387,24 @@
       try {
         if (action === "detail") {
           await loadJobDetail(runId);
-          pushAuditTrail("detail", "ok", `run_id=${runId}`);
+          pushAuditTrail("detail", "ok", `run_id=${runId}`, runId);
         }
         if (action === "retry") {
           await apiFetch(`/jobs/${runId}/retry`, { method: "POST" });
           await loadJobs();
-          pushAuditTrail("retry", "ok", `run_id=${runId}`);
+          pushAuditTrail("retry", "ok", `run_id=${runId}`, runId);
         }
         if (action === "cancel") {
           const confirmed = window.confirm(`Cancelar job ${runId}?`);
-          pushAuditTrail("cancel_confirm", confirmed ? "confirmed" : "cancelled", `run_id=${runId}`);
+          pushAuditTrail("cancel_confirm", confirmed ? "confirmed" : "cancelled", `run_id=${runId}`, runId);
           if (!confirmed) return;
           await apiFetch(`/jobs/${runId}/cancel`, { method: "POST" });
           await loadJobs();
-          pushAuditTrail("cancel", "ok", `run_id=${runId}`);
+          pushAuditTrail("cancel", "ok", `run_id=${runId}`, runId);
         }
         if (action === "delete") {
           const confirmed = window.confirm(`Eliminar metadata del job ${runId}?`);
-          pushAuditTrail("delete_confirm", confirmed ? "confirmed" : "cancelled", `run_id=${runId}`);
+          pushAuditTrail("delete_confirm", confirmed ? "confirmed" : "cancelled", `run_id=${runId}`, runId);
           if (!confirmed) return;
           await apiFetch(`/jobs/${runId}`, { method: "DELETE" });
           if (state.selectedRunId === runId) {
@@ -374,10 +412,10 @@
             byId("jobEvents").innerHTML = "";
           }
           await loadJobs();
-          pushAuditTrail("delete", "ok", `run_id=${runId}`);
+          pushAuditTrail("delete", "ok", `run_id=${runId}`, runId);
         }
       } catch (err) {
-        pushAuditTrail(action, "error", `run_id=${runId} error=${mapErrorMessage(err)}`);
+        pushAuditTrail(action, "error", `run_id=${runId} error=${mapErrorMessage(err)}`, runId);
         showResultError(err);
       }
     });
@@ -385,7 +423,7 @@
     saveConfig();
     checkHealth();
     loadJobs().catch(() => {});
-    renderAuditTrail();
+    loadAuditTrail().finally(renderAuditTrail);
   </script>
 </body>
 </html>
