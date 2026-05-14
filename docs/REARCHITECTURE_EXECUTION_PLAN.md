@@ -108,6 +108,17 @@ Acceptance:
 - Planner and writer artifacts are saved for debugging.
 - Tests validate schema and consistency checks.
 
+### PR C3 - LLM gateway
+
+- Route structured briefing generation through `seo_pipeline/llm/`.
+- Keep OpenAI as the default adapter.
+- Persist provider/model metadata in `prompt_run`.
+
+Acceptance:
+
+- Current OpenAI behavior remains compatible.
+- Gateway tests cover provider routing and unsupported providers.
+
 ## Epic D - Persistence Upgrade (Operational DB)
 
 ### Goal

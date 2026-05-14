@@ -570,10 +570,12 @@ def run_full_pipeline(
             temperature=prompt_bundle.temperature,
             prompt_version=prompt_bundle.version,
             planner_artifact=briefing_plan.model_dump(),
+            llm_provider="openai",
         )
         results["prompt_run"] = {
             "key": prompt_bundle.key,
             "version": prompt_bundle.version,
+            "provider": "openai",
             "model": prompt_bundle.model,
             "temperature": prompt_bundle.temperature,
             "planner_version": briefing_plan.planner_version,
