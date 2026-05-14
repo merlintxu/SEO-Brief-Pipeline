@@ -102,6 +102,8 @@
     <section class="bg-white border border-slate-200 rounded-lg p-4">
       <h2 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i>Detalle de Job</h2>
       <div id="jobDetail" class="text-sm text-slate-700">Selecciona un job para ver detalle.</div>
+      <h3 class="font-medium mt-4 mb-2">Métricas</h3>
+      <div id="jobMetrics" class="text-sm space-y-2"></div>
       <h3 class="font-medium mt-4 mb-2">Eventos</h3>
       <div id="jobEvents" class="text-sm space-y-2"></div>
     </section>
@@ -271,6 +273,43 @@
       }
     }
 
+    function renderJobMetrics(metrics) {
+      const prompt = metrics.prompt_run;
+      const summary = metrics.summary || {};
+      const stages = metrics.stage_metrics || [];
+      const calls = metrics.provider_calls || [];
+      const failed = summary.failed_stages?.length ? summary.failed_stages.join(", ") : "-";
+      const promptHtml = prompt ? `
+        <div class="border border-slate-200 rounded p-2">
+          <div class="font-semibold">Prompt</div>
+          <div>key=${prompt.key || "-"} version=${prompt.version || "-"} planner=${prompt.planner_version || "-"}</div>
+          <div>mode=${prompt.mode || "-"} model=${prompt.model || "-"} temp=${prompt.temperature ?? "-"}</div>
+        </div>` : "";
+      const stageHtml = stages.map((stage) => `
+        <div class="border border-slate-200 rounded p-2">
+          <div class="font-mono text-xs">${stage.stage} | ${stage.status || "-"} | ${stage.provider || "-"}</div>
+          <div>duration=${stage.duration_seconds ?? "-"}s retries=${stage.retries ?? 0} items=${stage.items_processed ?? "-"}</div>
+          <div class="text-xs text-slate-500">error=${stage.error_category || "-"} cost=${stage.estimated_cost_usd ?? "-"}</div>
+        </div>`).join("");
+      const callHtml = calls.map((call) => `
+        <div class="border border-slate-200 rounded p-2">
+          <div class="font-mono text-xs">${call.provider} | ${call.service}</div>
+          <div>calls=${call.calls ?? "-"} cost=${call.estimated_cost_usd ?? "-"} tokens=${call.total_tokens_estimated ?? "-"}</div>
+          <div class="text-xs text-slate-500">${call.notes || ""}</div>
+        </div>`).join("");
+      byId("jobMetrics").innerHTML = `
+        <div class="grid md:grid-cols-5 gap-2 text-xs">
+          <div class="border border-slate-200 rounded p-2"><b>stages</b><br>${summary.stage_count ?? 0}</div>
+          <div class="border border-slate-200 rounded p-2"><b>calls</b><br>${summary.provider_call_count ?? 0}</div>
+          <div class="border border-slate-200 rounded p-2"><b>retries</b><br>${summary.total_retries ?? 0}</div>
+          <div class="border border-slate-200 rounded p-2"><b>duration</b><br>${summary.total_duration_seconds ?? 0}s</div>
+          <div class="border border-slate-200 rounded p-2"><b>failed</b><br>${failed}</div>
+        </div>
+        ${promptHtml}
+        <div class="grid md:grid-cols-2 gap-2">${stageHtml || "<div class='text-slate-500'>Sin métricas de stages.</div>"}</div>
+        <div class="grid md:grid-cols-2 gap-2">${callHtml || "<div class='text-slate-500'>Sin provider calls.</div>"}</div>`;
+    }
+
     async function loadJobs() {
       const status = byId("filterStatus").value.trim();
       const q = byId("filterQ").value.trim();
@@ -308,9 +347,10 @@
 
     async function loadJobDetail(runId) {
       state.selectedRunId = runId;
-      const [detail, events] = await Promise.all([
+      const [detail, events, metrics] = await Promise.all([
         apiFetch(`/jobs/${runId}`),
-        apiFetch(`/jobs/${runId}/events?limit=50&cursor=0`)
+        apiFetch(`/jobs/${runId}/events?limit=50&cursor=0`),
+        apiFetch(`/jobs/${runId}/metrics`)
       ]);
       byId("jobDetail").innerHTML = `
         <div><b>run_id:</b> ${detail.job.run_id}</div>
@@ -319,6 +359,7 @@
         <div><b>message:</b> ${detail.job.message}</div>
         <div><b>error_category:</b> ${detail.job.error_category || "-"}</div>
         <div><b>source_run_id:</b> ${detail.job.source_run_id || "-"}</div>`;
+      renderJobMetrics(metrics);
       byId("jobEvents").innerHTML = events.items.map((e) => `
         <div class="border border-slate-200 rounded p-2">
           <div class="font-mono text-xs">${e.created_at} | ${e.status} | ${e.step}</div>
@@ -445,6 +486,7 @@
           await apiFetch(`/jobs/${runId}`, { method: "DELETE" });
           if (state.selectedRunId === runId) {
             byId("jobDetail").textContent = "Selecciona un job para ver detalle.";
+            byId("jobMetrics").innerHTML = "";
             byId("jobEvents").innerHTML = "";
           }
           await loadJobs();

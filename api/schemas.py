@@ -102,6 +102,51 @@ class JobEventsListResponse(BaseModel):
     next_cursor: int | None = None
 
 
+class JobStageMetricResponse(BaseModel):
+    run_id: str
+    stage: str
+    status: str | None = None
+    provider: str | None = None
+    retries: int | None = None
+    items_processed: int | None = None
+    duration_seconds: float | None = None
+    error_category: str | None = None
+    estimated_cost_usd: float | None = None
+    total_tokens_estimated: int | None = None
+    created_at: str
+
+
+class ProviderCallResponse(BaseModel):
+    id: int
+    run_id: str
+    provider: str
+    service: str
+    calls: int | None = None
+    estimated_cost_usd: float | None = None
+    total_tokens_estimated: int | None = None
+    notes: str | None = None
+    created_at: str
+
+
+class PromptRunResponse(BaseModel):
+    run_id: str
+    key: str | None = None
+    version: str | None = None
+    planner_version: str | None = None
+    mode: str | None = None
+    model: str | None = None
+    temperature: float | None = None
+    created_at: str
+
+
+class JobMetricsResponse(BaseModel):
+    run_id: str
+    stage_metrics: list[JobStageMetricResponse]
+    provider_calls: list[ProviderCallResponse]
+    prompt_run: PromptRunResponse | None = None
+    summary: dict
+
+
 class OperatorAuditEventRequest(BaseModel):
     action: str = Field(..., min_length=1, max_length=64)
     result: str = Field(..., min_length=1, max_length=32)

@@ -136,6 +136,7 @@ Acceptance:
 Acceptance:
 
 - `run_id` lifecycle timeline query is available through `/jobs/{run_id}/events`.
+- `run_id` metrics timeline query is available through `/jobs/{run_id}/metrics`.
 - Stage metrics, provider call estimates and prompt runs are indexed from `run_metrics.json` in SQLite.
 - Tests validate writes and reads for each table.
 
@@ -191,6 +192,7 @@ Acceptance:
 
 Acceptance:
 
+- Run detail includes persisted stage metrics, provider calls and prompt metadata.
 - All admin actions available from UI with clear success/error feedback.
 
 ## Epic G - Cost, Performance, And SLO
