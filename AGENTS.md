@@ -170,6 +170,10 @@ This file is the entrypoint for coding agents working in this repository.
   - `seo_pipeline/llm/` routes structured briefing generation through provider adapters.
   - OpenAI remains the default adapter and current structured-output behavior is preserved.
   - `prompt_run` now includes provider metadata.
+- Added Ollama LLM adapter:
+  - `LLM_PROVIDER=ollama`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`.
+  - structured responses are validated against `SEOBriefing`.
+  - CI uses mocks and does not require a local Ollama server.
 - Added SLO dashboard/API integration:
   - protected `GET /ops/slo` evaluates recent job metrics with `seo_pipeline/slo.py`.
   - dashboard shows SLO status, run counts, p95 duration, retry rate and failed checks.
@@ -187,7 +191,7 @@ This file is the entrypoint for coding agents working in this repository.
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: add Ollama/local model adapter behind the LLM gateway.
+2. Immediate next PR focus after merge: add Anthropic adapter behind the LLM gateway.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.

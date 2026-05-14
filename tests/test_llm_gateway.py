@@ -1,5 +1,6 @@
 from seo_pipeline.llm.base import StructuredGenerationRequest
 from seo_pipeline.llm.gateway import generate_structured_briefing
+from seo_pipeline.llm.ollama_adapter import OllamaAdapter
 from seo_pipeline.llm.openai_adapter import OpenAIAdapter
 from seo_pipeline.models import SEOBriefing
 
@@ -58,3 +59,29 @@ def test_gateway_rejects_unknown_provider():
         assert "Unsupported LLM_PROVIDER" in str(exc)
     else:
         raise AssertionError("expected RuntimeError")
+
+
+def test_gateway_routes_to_ollama_adapter(monkeypatch):
+    observed = {}
+
+    def fake_generate(self, request, response_model):
+        observed["base_url"] = self.base_url
+        observed["request"] = request
+        observed["response_model"] = response_model
+        return _briefing()
+
+    monkeypatch.setattr(OllamaAdapter, "generate_structured", fake_generate)
+
+    result = generate_structured_briefing(
+        provider="ollama",
+        model="llama3.1",
+        temperature=0.1,
+        system_prompt="system",
+        user_prompt="user",
+        response_model=SEOBriefing,
+        base_url="http://ollama.test",
+    )
+
+    assert result.h1 == "Brief H1"
+    assert observed["base_url"] == "http://ollama.test"
+    assert observed["request"].model == "llama3.1"

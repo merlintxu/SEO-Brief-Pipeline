@@ -143,6 +143,25 @@ Expected failures:
 - invalid key
 - quota/rate limit
 - model access issue
+
+## Ollama
+
+Code: `seo_pipeline/llm/ollama_adapter.py`
+
+Purpose:
+
+- Run the structured briefing step against a local or cloud-hosted Ollama-compatible HTTP endpoint.
+
+Configuration:
+
+- `LLM_PROVIDER=ollama`
+- `OLLAMA_BASE_URL` (default `http://localhost:11434`)
+- `OLLAMA_MODEL`
+
+Operational notes:
+
+- Ollama must return JSON that validates against `SEOBriefing`.
+- Automated tests mock the HTTP API and do not require a local Ollama server.
 - structured output does not satisfy `SEOBriefing`
 
 ## Google Search Console
