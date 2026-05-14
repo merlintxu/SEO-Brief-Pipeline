@@ -106,6 +106,8 @@ Acceptance:
 
 ### Stronger vendor retry policies
 
+Status: implemented.
+
 Make retry exceptions provider-aware.
 
 Acceptance:
