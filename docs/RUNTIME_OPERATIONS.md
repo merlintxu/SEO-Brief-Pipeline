@@ -190,6 +190,10 @@ docs/contracts/openapi.json
    - tables: `job_stage_metrics`, `provider_calls`, `prompt_runs`
    - source of truth remains `outputs/{run_id}/run_metrics.json`
    - the API syncs the index when a background run finishes or when an existing job with metrics is inspected.
+15. Final outputs are indexed in SQLite for DB-first operation:
+   - tables: `job_outputs`, `job_artifacts`, `briefing_records`
+   - source artifacts remain on disk for download compatibility
+   - API-triggered runs persist briefing JSON, row24-equivalent data and artifact paths after pipeline completion.
 
 For API-triggered runs, status, final exports and `run_metrics.json` are written under the same `outputs/{run_id}` directory. CLI and notebook runs use the active project's configured output directory unless `output_dir` is passed explicitly.
 
@@ -269,6 +273,7 @@ Common files:
 `GET /jobs/{run_id}` also returns `cost_summary` when `run_metrics.json` exists for that run.
 SQLite stores a queryable copy of stage metrics, provider call estimates and prompt run metadata so future admin endpoints can build timelines without changing the artifact contract.
 `GET /jobs/{run_id}/metrics` returns that persisted timeline as `stage_metrics`, `provider_calls`, `prompt_run` and an aggregate `summary`.
+SQLite also stores final briefing metadata and artifact references so operators can query completed work without relying on Google Sheets.
 
 ## SLO And Alert Groundwork
 

@@ -94,6 +94,15 @@ def test_job_store_delete_job(tmp_path: Path):
             "prompt_run": {"key": "brief_generator", "version": "v1"},
         },
     )
+    store.persist_job_output(
+        "run_del",
+        keyword="kw",
+        briefing={"h1": "H1", "meta_title": "Title", "meta_description": "Desc"},
+        row24={"Keyword": "kw"},
+        artifacts={"json": "outputs/run_del/briefing.json"},
+        provider="openai",
+        model="gpt-4o",
+    )
     deleted = store.delete_job("run_del")
     assert deleted == 1
     assert store.get_job("run_del") is None
@@ -101,9 +110,12 @@ def test_job_store_delete_job(tmp_path: Path):
     assert store.list_stage_metrics("run_del") == []
     assert store.list_provider_calls("run_del") == []
     assert store.get_prompt_run("run_del") is None
+    assert store.get_job_output("run_del") is None
+    assert store.list_job_artifacts("run_del") == []
+    assert store.get_briefing_record("run_del") is None
 
 
-def test_job_store_initializes_metrics_tables_idempotently(tmp_path: Path):
+def test_job_store_initializes_operational_tables_idempotently(tmp_path: Path):
     db_path = tmp_path / "jobs.db"
     JobStore(db_path)
     JobStore(db_path)
@@ -116,7 +128,71 @@ def test_job_store_initializes_metrics_tables_idempotently(tmp_path: Path):
             ).fetchall()
         }
 
-    assert {"job_stage_metrics", "provider_calls", "prompt_runs"} <= tables
+    assert {
+        "job_stage_metrics",
+        "provider_calls",
+        "prompt_runs",
+        "job_outputs",
+        "job_artifacts",
+        "briefing_records",
+    } <= tables
+
+
+def test_job_store_persists_job_output_records(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run_output", "kw output", "outputs/run_output")
+    store.persist_job_output(
+        "run_output",
+        keyword="kw output",
+        briefing={"h1": "Best H1", "meta_title": "Meta", "meta_description": "Desc"},
+        row24={"Keyword": "kw output", "URL": "https://example.com"},
+        artifacts={
+            "json": "outputs/run_output/briefing.json",
+            "markdown": "outputs/run_output/briefing.md",
+        },
+        provider="openai",
+        model="gpt-4o",
+    )
+
+    output = store.get_job_output("run_output")
+    assert output is not None
+    assert output.briefing_json["h1"] == "Best H1"
+    assert output.row24_json["Keyword"] == "kw output"
+
+    artifacts = store.list_job_artifacts("run_output")
+    assert [(item.artifact_type, item.path) for item in artifacts] == [
+        ("json", "outputs/run_output/briefing.json"),
+        ("markdown", "outputs/run_output/briefing.md"),
+    ]
+
+    briefing = store.get_briefing_record("run_output")
+    assert briefing is not None
+    assert briefing.h1 == "Best H1"
+    assert briefing.model == "gpt-4o"
+
+
+def test_job_store_persist_job_output_is_idempotent(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job("run_output_replace", "kw", "outputs/run_output_replace")
+    store.persist_job_output(
+        "run_output_replace",
+        keyword="kw",
+        briefing={"h1": "Old"},
+        row24={"Keyword": "old"},
+        artifacts={"json": "old.json"},
+    )
+    store.persist_job_output(
+        "run_output_replace",
+        keyword="kw",
+        briefing={"h1": "New"},
+        row24={"Keyword": "new"},
+        artifacts={"markdown": "new.md"},
+    )
+
+    assert store.get_job_output("run_output_replace").briefing_json["h1"] == "New"
+    artifacts = store.list_job_artifacts("run_output_replace")
+    assert len(artifacts) == 1
+    assert artifacts[0].artifact_type == "markdown"
 
 
 def test_job_store_persists_run_metrics_from_payload(tmp_path: Path):

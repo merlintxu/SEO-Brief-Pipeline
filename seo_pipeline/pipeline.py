@@ -628,6 +628,7 @@ def run_full_pipeline(
             top_competitors=top_competitors,
             run_id=run_id,
         )
+        results["row24"] = row24
 
         export_paths = export_all_formats(
             run_id=run_id,
