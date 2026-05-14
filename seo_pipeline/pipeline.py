@@ -55,6 +55,7 @@ from seo_pipeline.models import (
 from seo_pipeline.quality_gates import evaluate_quality_gates
 from seo_pipeline.quorum import QuorumPolicy, evaluate_quorum
 from seo_pipeline.prompt_registry import resolve_prompt_bundle
+from seo_pipeline.llm.config import get_llm_settings
 
 
 def run_full_pipeline(
@@ -97,7 +98,11 @@ def run_full_pipeline(
     )
 
     cfg = get_config()
-    runtime_requirements = validate_runtime_requirements(cfg)
+    llm_settings = get_llm_settings()
+    runtime_requirements = validate_runtime_requirements(
+        cfg,
+        require_openai=llm_settings.provider == "openai",
+    )
     serp_provider_plan = resolve_serp_provider_plan(cfg.active_client)
 
     run_id = run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -542,13 +547,14 @@ def run_full_pipeline(
             results["partial_data"] = False
 
         # ===================================================================
-        # 6. Briefing con OpenAI + Instructor (structured output)
+        # 6. Briefing con LLM gateway (structured output)
         # ===================================================================
-        _log("info", "6/8 Generando briefing con OpenAI (gpt-4o)...", stage="briefing")
-        _write_status(step="briefing", message="Generando briefing con OpenAI", percent=80)
-        stage_started = _stage_start("briefing", provider="openai")
+        _log("info", f"6/8 Generando briefing con {llm_settings.provider}...", stage="briefing")
+        _write_status(step="briefing", message=f"Generando briefing con {llm_settings.provider}", percent=80)
+        stage_started = _stage_start("briefing", provider=llm_settings.provider)
         prompt_version = os.getenv("BRIEFING_PROMPT_VERSION", "v1").strip() or "v1"
         prompt_bundle = resolve_prompt_bundle("brief_generator", prompt_version)
+        resolved_model = llm_settings.model or prompt_bundle.model
         briefing_plan = build_briefing_plan_artifact(
             keyword=keyword,
             serp_snapshot=serp_snapshot,
@@ -566,47 +572,56 @@ def run_full_pipeline(
             anchors=anchors,
             cannibalization_notes=cannibal_notes,
             openai_api_key=cfg.active_client.openai_key,
-            model=prompt_bundle.model,
+            model=resolved_model,
             temperature=prompt_bundle.temperature,
             prompt_version=prompt_bundle.version,
             planner_artifact=briefing_plan.model_dump(),
-            llm_provider="openai",
+            llm_provider=llm_settings.provider,
+            llm_base_url=llm_settings.base_url,
         )
         results["prompt_run"] = {
             "key": prompt_bundle.key,
             "version": prompt_bundle.version,
-            "provider": "openai",
-            "model": prompt_bundle.model,
+            "provider": llm_settings.provider,
+            "model": resolved_model,
             "temperature": prompt_bundle.temperature,
             "planner_version": briefing_plan.planner_version,
             "mode": "planner_writer",
         }
         metrics["prompt_run"] = results["prompt_run"]
         results["briefing"] = briefing
-        briefing_cost = estimate_openai_text_cost(
-            model=prompt_bundle.model,
-            input_payload={
-                "system_prompt": prompt_bundle.system_prompt,
-                "keyword": keyword,
-                "semrush_data": semrush_data.model_dump(),
-                "serp_snapshot": serp_snapshot.model_dump(),
-                "audit_report": enrichment.audit_report.model_dump(),
-                "anchors": anchors.model_dump(),
-                "cannibalization_notes": cannibal_notes,
-                "planner_artifact": briefing_plan.model_dump(),
-            },
-            output_payload=briefing.model_dump(),
-        )
+        if llm_settings.provider == "openai":
+            briefing_cost = estimate_openai_text_cost(
+                model=resolved_model,
+                input_payload={
+                    "system_prompt": prompt_bundle.system_prompt,
+                    "keyword": keyword,
+                    "semrush_data": semrush_data.model_dump(),
+                    "serp_snapshot": serp_snapshot.model_dump(),
+                    "audit_report": enrichment.audit_report.model_dump(),
+                    "anchors": anchors.model_dump(),
+                    "cannibalization_notes": cannibal_notes,
+                    "planner_artifact": briefing_plan.model_dump(),
+                },
+                output_payload=briefing.model_dump(),
+            )
+        else:
+            briefing_cost = provider_call_estimate(
+                provider=llm_settings.provider,
+                service="structured_briefing",
+                calls=1 + stage_retries.get("briefing", 0),
+                notes="Local/non-OpenAI model cost is not estimated by this pipeline.",
+            )
         cost_estimates.append(briefing_cost)
         _stage_finish(
             "briefing",
             stage_started,
-            provider="openai",
+            provider=llm_settings.provider,
             items_processed=len(briefing.headings) + len(briefing.faqs),
             headings=len(briefing.headings),
             faqs=len(briefing.faqs),
             prompt_version=prompt_bundle.version,
-            model=prompt_bundle.model,
+            model=resolved_model,
             input_tokens_estimated=briefing_cost.input_tokens_estimated,
             output_tokens_estimated=briefing_cost.output_tokens_estimated,
             total_tokens_estimated=briefing_cost.total_tokens_estimated,

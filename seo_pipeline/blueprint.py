@@ -53,13 +53,14 @@ def generate_briefing(
     serp_snapshot: SerpSnapshot,
     audit_report: Dict,
     anchors: AnchorSet,
-    openai_api_key: str,
+    openai_api_key: str | None,
     cannibalization_notes: str = "",
     model: str | None = None,
     temperature: float | None = None,
     prompt_version: str = "v1",
     planner_artifact: Dict[str, Any] | None = None,
     llm_provider: str = "openai",
+    llm_base_url: str | None = None,
 ) -> SEOBriefing:
     """
     Genera el briefing completo utilizando OpenAI structured outputs nativos.
@@ -120,6 +121,7 @@ Instrucciones estrictas:
             system_prompt=prompt_bundle.system_prompt,
             user_prompt=user_prompt.strip(),
             response_model=SEOBriefing,
+            base_url=llm_base_url,
         )
         logger.info(f"Briefing generado correctamente para: {keyword}")
         return briefing

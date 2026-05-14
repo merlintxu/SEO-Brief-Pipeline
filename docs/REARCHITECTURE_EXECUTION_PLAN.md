@@ -119,6 +119,16 @@ Acceptance:
 - Current OpenAI behavior remains compatible.
 - Gateway tests cover provider routing and unsupported providers.
 
+### PR C4 - Ollama/local adapter
+
+- Add `LLM_PROVIDER=ollama` support through the LLM gateway.
+- Validate local model JSON responses against `SEOBriefing`.
+
+Acceptance:
+
+- Tests mock Ollama HTTP responses.
+- CI does not require a local model server.
+
 ## Epic D - Persistence Upgrade (Operational DB)
 
 ### Goal
