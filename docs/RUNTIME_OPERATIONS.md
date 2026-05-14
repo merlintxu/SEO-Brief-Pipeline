@@ -301,6 +301,16 @@ Briefing generation now goes through `seo_pipeline/llm/` instead of calling prov
 Set `LLM_PROVIDER=ollama`, `OLLAMA_BASE_URL` and `OLLAMA_MODEL` to run the briefing step through a local Ollama-compatible server. Tests mock Ollama HTTP calls; CI does not require a local model server.
 Set `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` to run the same structured briefing contract through Anthropic. Tests mock Anthropic HTTP calls; CI does not call external model providers.
 
+## Gradio Ops UI
+
+Launch the DB-first Gradio operator interface locally:
+
+```bash
+python apps/gradio_app.py
+```
+
+The Gradio app can start a briefing, select `openai`, `ollama` or `anthropic`, list recent jobs from SQLite and inspect persisted DB output/metrics. Google Sheets upload defaults to disabled in this UI; file artifacts remain available on disk.
+
 Operational endpoint:
 
 ```bash

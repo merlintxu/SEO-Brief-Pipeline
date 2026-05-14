@@ -240,6 +240,17 @@ Acceptance:
 - Run detail includes persisted stage metrics, provider calls and prompt metadata.
 - All admin actions available from UI with clear success/error feedback.
 
+### PR F3 - Gradio DB-first ops UI
+
+- Add `apps/gradio_app.py` for local operator workflows.
+- Support model provider selection for `openai`, `ollama` and `anthropic`.
+- Read jobs, metrics and final outputs from SQLite.
+
+Acceptance:
+
+- Callback tests run without launching a Gradio server.
+- Gradio UI defaults to no Sheets upload.
+
 ## Epic G - Cost, Performance, And SLO
 
 ### Goal

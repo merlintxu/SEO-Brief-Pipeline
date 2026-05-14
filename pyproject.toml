@@ -32,6 +32,7 @@ dependencies = [
     "uvicorn>=0.27.0",
     "httpx>=0.26.0",
     "slowapi>=0.1.9",
+    "gradio>=4.44.0",
 ]
 
 [project.optional-dependencies]
@@ -51,6 +52,8 @@ py-modules = ["client_manager"]
 include = [
     "api",
     "api.*",
+    "apps",
+    "apps.*",
     "seo_pipeline",
     "seo_pipeline.*",
 ]
