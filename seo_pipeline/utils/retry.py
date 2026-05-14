@@ -17,6 +17,7 @@ def retry_call(
     max_delay: float | None = None,
     jitter: float = 0.1,
     exceptions: tuple[type[Exception], ...] = (Exception,),
+    should_retry: Callable[[Exception], bool] | None = None,
     on_retry: Callable[[int, Exception, float], None] | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
     rng: random.Random | None = None,
@@ -32,6 +33,7 @@ def retry_call(
         max_delay: Optional cap for the computed delay.
         jitter: Proportional jitter applied to each delay. Use ``0`` to disable.
         exceptions: Exception types that trigger a retry.
+        should_retry: Optional predicate for provider-aware retry decisions.
         on_retry: Optional callback receiving ``(attempt, exc, delay)`` before sleeping.
         sleep_fn: Sleep function injected for tests (defaults to ``time.sleep``).
         rng: Random generator to make jitter deterministic in tests.
@@ -56,6 +58,8 @@ def retry_call(
             return fn(*args, **kwargs)
         except exceptions as exc:  # type: ignore[misc]
             last_exc = exc
+            if should_retry is not None and not should_retry(exc):
+                raise
             attempt += 1
 
             if attempt >= retries:

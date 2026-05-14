@@ -64,3 +64,23 @@ def test_retry_call_raises_last_exception():
 
     with pytest.raises(RuntimeError, match="nope"):
         retry_call(always_fails, retries=2, sleep_fn=lambda _: None, jitter=0, exceptions=(RuntimeError,))
+
+
+def test_retry_call_respects_should_retry_predicate():
+    attempts = 0
+
+    def auth_failure():
+        nonlocal attempts
+        attempts += 1
+        raise RuntimeError("invalid api key")
+
+    with pytest.raises(RuntimeError, match="invalid api key"):
+        retry_call(
+            auth_failure,
+            retries=3,
+            sleep_fn=lambda _: None,
+            jitter=0,
+            should_retry=lambda exc: False,
+        )
+
+    assert attempts == 1

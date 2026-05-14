@@ -28,6 +28,7 @@ from seo_pipeline.vendors.serp_io import (
     normalize_serp_snapshot,
 )
 from seo_pipeline.vendors.capabilities import resolve_serp_provider_plan
+from seo_pipeline.vendors.retry_policy import provider_retry_policy
 from seo_pipeline.audit.content_audit import audit_urls
 from seo_pipeline.anchors import generate_anchors
 from seo_pipeline.blueprint import build_briefing_plan_artifact, generate_briefing
@@ -244,6 +245,7 @@ def run_full_pipeline(
             retries=retry_attempts,
             base_delay=retry_base_delay,
             jitter=0.2,
+            should_retry=provider_retry_policy("semrush"),
             on_retry=_log_retry_factory("fetch_related", retry_attempts, stage="semrush", provider="semrush"),
         )
         results["semrush"] = semrush_data
@@ -288,6 +290,7 @@ def run_full_pipeline(
             retries=retry_attempts,
             base_delay=retry_base_delay,
             jitter=0.2,
+            should_retry=provider_retry_policy("serp"),
             on_retry=_log_retry_factory("search_raw", retry_attempts, stage="serp", provider="serpapi_or_dataforseo"),
         )
         serp_path = output_dir / SERP_RAW_JSON
@@ -343,6 +346,7 @@ def run_full_pipeline(
             retries=retry_attempts,
             base_delay=retry_base_delay,
             jitter=0.2,
+            should_retry=provider_retry_policy("scrape_failover"),
             on_retry=_log_retry_factory("audit_urls", retry_attempts, stage="audit", provider="scrape_failover"),
         )
         audit_path = output_dir / AUDIT_REPORT_JSON
@@ -381,6 +385,7 @@ def run_full_pipeline(
                     retries=retry_attempts,
                     base_delay=retry_base_delay,
                     jitter=0.2,
+                    should_retry=provider_retry_policy("gsc"),
                     on_retry=_log_retry_factory("fetch_cannibalization", retry_attempts, stage="gsc", provider="gsc"),
                 )
                 if cannibal.items:

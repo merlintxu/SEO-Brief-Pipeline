@@ -287,6 +287,8 @@ First-response runbook:
 4. If retry rate spikes, inspect provider-specific stages before changing prompt/model settings.
 5. If p95 duration spikes, compare `duration_seconds` by stage and prioritize SEMrush, SERP, audit or OpenAI based on the slowest stage.
 
+Provider retries use a shared policy in `seo_pipeline/vendors/retry_policy.py`: transient network, timeout, rate-limit and 5xx/provider-unavailable failures are retryable; auth, quota and validation/configuration failures are terminal and should fail fast with a categorized error.
+
 Operational endpoint:
 
 ```bash
