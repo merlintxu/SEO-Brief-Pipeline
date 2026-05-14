@@ -212,6 +212,8 @@ Allowed transitions:
 - `done -> done`
 - `failed -> failed`
 
+API lifecycle writes go through `api.job_lifecycle.JobLifecycleService`. The service keeps the current FastAPI background-task backend but centralizes enqueue, start, terminal failure, cancellation and stale-running detection so a future queue backend has one integration point.
+
 The status payload includes:
 
 - `status`
