@@ -63,7 +63,16 @@ def test_api_smoke_post_poll_and_download(tmp_path, monkeypatch):
         (output_dir / "status.json").write_text(json.dumps(status_payload), encoding="utf-8")
         (output_dir / "run_metrics.json").write_text(json.dumps(metrics_payload), encoding="utf-8")
         (output_dir / "briefing.json").write_text(json.dumps(briefing_payload), encoding="utf-8")
-        return {"run_id": run_id, "keyword": keyword, "output_dir": str(output_dir)}
+        return {
+            "run_id": run_id,
+            "keyword": keyword,
+            "output_dir": str(output_dir),
+            "briefing": {"h1": "Smoke H1", "meta_title": "Smoke", "meta_description": "Desc"},
+            "row24": {"Keyword": keyword},
+            "json": output_dir / "briefing.json",
+            "metrics_path": output_dir / "run_metrics.json",
+            "prompt_run": {"model": "gpt-4o"},
+        }
 
     monkeypatch.setattr("api.main.run_full_pipeline", fake_run_full_pipeline)
 
@@ -109,6 +118,13 @@ def test_api_smoke_post_poll_and_download(tmp_path, monkeypatch):
     )
     assert briefing_file.status_code == 200
     assert briefing_file.json()["h1"] == "Smoke H1"
+
+    from api.main import job_store
+
+    output = job_store.get_job_output(run_id)
+    assert output is not None
+    assert output.briefing_json["h1"] == "Smoke H1"
+    assert job_store.get_briefing_record(run_id).model == "gpt-4o"
 
 
 def test_ops_dashboard_route_serves_html(tmp_path):

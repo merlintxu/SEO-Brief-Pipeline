@@ -140,6 +140,19 @@ Acceptance:
 - Stage metrics, provider call estimates and prompt runs are indexed from `run_metrics.json` in SQLite.
 - Tests validate writes and reads for each table.
 
+### PR D4 - DB-first final output store
+
+- Persist final briefing output metadata in SQLite:
+  - `job_outputs`,
+  - `job_artifacts`,
+  - `briefing_records`.
+- Keep generated files as downloadable artifacts.
+
+Acceptance:
+
+- API-triggered successful runs persist briefing JSON, row24-equivalent data and artifact paths.
+- Tests validate idempotent writes and cleanup/delete behavior.
+
 ## Epic E - Admin API V2 (Non-breaking Extension)
 
 ### Goal

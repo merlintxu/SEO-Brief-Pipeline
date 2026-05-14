@@ -325,6 +325,28 @@ def _sync_job_metrics_from_output(job) -> None:
         job_store.persist_run_metrics(job.run_id, payload)
 
 
+def _persist_job_output_from_result(run_id: str, keyword: str, result: dict) -> None:
+    briefing = result.get("briefing")
+    row24 = result.get("row24")
+    briefing_payload = briefing.model_dump() if hasattr(briefing, "model_dump") else briefing
+    row24_payload = row24.model_dump() if hasattr(row24, "model_dump") else row24
+    artifacts = {
+        key: str(value)
+        for key, value in result.items()
+        if key in {"json", "markdown", "csv", "xlsx", "metrics_path", "serp_raw_path", "audit_path"}
+    }
+    prompt_run = result.get("prompt_run") if isinstance(result.get("prompt_run"), dict) else {}
+    job_store.persist_job_output(
+        run_id,
+        keyword=keyword,
+        briefing=briefing_payload if isinstance(briefing_payload, dict) else None,
+        row24=row24_payload if isinstance(row24_payload, dict) else None,
+        artifacts=artifacts,
+        provider="openai" if prompt_run else None,
+        model=prompt_run.get("model"),
+    )
+
+
 def _job_metrics_has_provider(job, provider: str) -> bool:
     _sync_job_metrics_from_output(job)
     expected = provider.strip().lower()
@@ -374,7 +396,7 @@ def _queue_pipeline_run(
         try:
             if not job_lifecycle.start(current_run_id):
                 return
-            run_full_pipeline(
+            result = run_full_pipeline(
                 keyword=req.keyword,
                 target_url=req.target_url,
                 run_id=current_run_id,
@@ -384,6 +406,7 @@ def _queue_pipeline_run(
                 status_path=current_status_path,
                 output_dir=current_run_dir,
             )
+            _persist_job_output_from_result(current_run_id, req.keyword, result)
             metrics_path = current_run_dir / RUN_METRICS_JSON
             metrics_payload = load_json(metrics_path, default={}) if metrics_path.exists() else {}
             if isinstance(metrics_payload, dict) and metrics_payload:

@@ -88,6 +88,37 @@ class PromptRunRecord:
     created_at: str
 
 
+@dataclass(frozen=True)
+class JobOutputRecord:
+    run_id: str
+    keyword: str
+    briefing_json: dict[str, Any] | None
+    row24_json: dict[str, Any] | None
+    created_at: str
+    updated_at: str
+
+
+@dataclass(frozen=True)
+class JobArtifactRecord:
+    id: int
+    run_id: str
+    artifact_type: str
+    path: str
+    created_at: str
+
+
+@dataclass(frozen=True)
+class BriefingRecord:
+    run_id: str
+    keyword: str
+    h1: str | None
+    meta_title: str | None
+    meta_description: str | None
+    model: str | None
+    provider: str | None
+    created_at: str
+
+
 class JobStoreBackend(Protocol):
     def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None: ...
     def update_status(self, run_id: str, *, status: str, step: str, message: str, error_category: str | None = None) -> None: ...
@@ -110,6 +141,20 @@ class JobStoreBackend(Protocol):
     def list_stage_metrics(self, run_id: str) -> list[JobStageMetricRecord]: ...
     def list_provider_calls(self, run_id: str) -> list[ProviderCallRecord]: ...
     def get_prompt_run(self, run_id: str) -> PromptRunRecord | None: ...
+    def persist_job_output(
+        self,
+        run_id: str,
+        *,
+        keyword: str,
+        briefing: dict[str, Any] | None,
+        row24: dict[str, Any] | None,
+        artifacts: dict[str, str],
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> None: ...
+    def get_job_output(self, run_id: str) -> JobOutputRecord | None: ...
+    def list_job_artifacts(self, run_id: str) -> list[JobArtifactRecord]: ...
+    def get_briefing_record(self, run_id: str) -> BriefingRecord | None: ...
     def delete_job(self, run_id: str) -> int: ...
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int: ...
 
@@ -219,6 +264,43 @@ class SQLiteJobStoreBackend:
                     mode TEXT,
                     model TEXT,
                     temperature REAL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS job_outputs (
+                    run_id TEXT PRIMARY KEY,
+                    keyword TEXT NOT NULL,
+                    briefing_json TEXT,
+                    row24_json TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS job_artifacts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL,
+                    artifact_type TEXT NOT NULL,
+                    path TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS briefing_records (
+                    run_id TEXT PRIMARY KEY,
+                    keyword TEXT NOT NULL,
+                    h1 TEXT,
+                    meta_title TEXT,
+                    meta_description TEXT,
+                    model TEXT,
+                    provider TEXT,
                     created_at TEXT NOT NULL
                 )
                 """
@@ -527,12 +609,95 @@ class SQLiteJobStoreBackend:
                 return None
             return self._row_to_prompt_run_record(row)
 
+    def persist_job_output(
+        self,
+        run_id: str,
+        *,
+        keyword: str,
+        briefing: dict[str, Any] | None,
+        row24: dict[str, Any] | None,
+        artifacts: dict[str, str],
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> None:
+        now = datetime.now().isoformat(timespec="seconds")
+        briefing_json = _json_dumps(briefing) if briefing is not None else None
+        row24_json = _json_dumps(row24) if row24 is not None else None
+        h1 = _optional_str((briefing or {}).get("h1"))
+        meta_title = _optional_str((briefing or {}).get("meta_title"))
+        meta_description = _optional_str((briefing or {}).get("meta_description"))
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO job_outputs (run_id, keyword, briefing_json, row24_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(run_id) DO UPDATE SET
+                    keyword = excluded.keyword,
+                    briefing_json = excluded.briefing_json,
+                    row24_json = excluded.row24_json,
+                    updated_at = excluded.updated_at
+                """,
+                (run_id, keyword, briefing_json, row24_json, now, now),
+            )
+            conn.execute("DELETE FROM job_artifacts WHERE run_id = ?", (run_id,))
+            for artifact_type, path in artifacts.items():
+                conn.execute(
+                    """
+                    INSERT INTO job_artifacts (run_id, artifact_type, path, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (run_id, artifact_type, path, now),
+                )
+            conn.execute(
+                """
+                INSERT INTO briefing_records (
+                    run_id, keyword, h1, meta_title, meta_description, model, provider, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(run_id) DO UPDATE SET
+                    keyword = excluded.keyword,
+                    h1 = excluded.h1,
+                    meta_title = excluded.meta_title,
+                    meta_description = excluded.meta_description,
+                    model = excluded.model,
+                    provider = excluded.provider,
+                    created_at = excluded.created_at
+                """,
+                (run_id, keyword, h1, meta_title, meta_description, model, provider, now),
+            )
+            conn.commit()
+
+    def get_job_output(self, run_id: str) -> JobOutputRecord | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM job_outputs WHERE run_id = ?", (run_id,)).fetchone()
+            if row is None:
+                return None
+            return self._row_to_job_output_record(row)
+
+    def list_job_artifacts(self, run_id: str) -> list[JobArtifactRecord]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM job_artifacts WHERE run_id = ? ORDER BY id ASC",
+                (run_id,),
+            ).fetchall()
+            return [self._row_to_job_artifact_record(row) for row in rows]
+
+    def get_briefing_record(self, run_id: str) -> BriefingRecord | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM briefing_records WHERE run_id = ?", (run_id,)).fetchone()
+            if row is None:
+                return None
+            return self._row_to_briefing_record(row)
+
     def delete_job(self, run_id: str) -> int:
         with self._connect() as conn:
             conn.execute("DELETE FROM job_events WHERE run_id = ?", (run_id,))
             conn.execute("DELETE FROM job_stage_metrics WHERE run_id = ?", (run_id,))
             conn.execute("DELETE FROM provider_calls WHERE run_id = ?", (run_id,))
             conn.execute("DELETE FROM prompt_runs WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM job_outputs WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM job_artifacts WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM briefing_records WHERE run_id = ?", (run_id,))
             cursor = conn.execute("DELETE FROM jobs WHERE run_id = ?", (run_id,))
             conn.commit()
             return cursor.rowcount
@@ -566,6 +731,9 @@ class SQLiteJobStoreBackend:
                 conn.execute("DELETE FROM job_stage_metrics WHERE run_id = ?", (run_id,))
                 conn.execute("DELETE FROM provider_calls WHERE run_id = ?", (run_id,))
                 conn.execute("DELETE FROM prompt_runs WHERE run_id = ?", (run_id,))
+                conn.execute("DELETE FROM job_outputs WHERE run_id = ?", (run_id,))
+                conn.execute("DELETE FROM job_artifacts WHERE run_id = ?", (run_id,))
+                conn.execute("DELETE FROM briefing_records WHERE run_id = ?", (run_id,))
             cursor = conn.execute(query, (cutoff, *statuses))
             conn.commit()
             return cursor.rowcount
@@ -648,6 +816,40 @@ class SQLiteJobStoreBackend:
             mode=row["mode"],
             model=row["model"],
             temperature=row["temperature"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _row_to_job_output_record(row: sqlite3.Row) -> JobOutputRecord:
+        return JobOutputRecord(
+            run_id=row["run_id"],
+            keyword=row["keyword"],
+            briefing_json=_json_loads(row["briefing_json"]),
+            row24_json=_json_loads(row["row24_json"]),
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+    @staticmethod
+    def _row_to_job_artifact_record(row: sqlite3.Row) -> JobArtifactRecord:
+        return JobArtifactRecord(
+            id=row["id"],
+            run_id=row["run_id"],
+            artifact_type=row["artifact_type"],
+            path=row["path"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _row_to_briefing_record(row: sqlite3.Row) -> BriefingRecord:
+        return BriefingRecord(
+            run_id=row["run_id"],
+            keyword=row["keyword"],
+            h1=row["h1"],
+            meta_title=row["meta_title"],
+            meta_description=row["meta_description"],
+            model=row["model"],
+            provider=row["provider"],
             created_at=row["created_at"],
         )
 
@@ -740,6 +942,28 @@ class PostgresJobStoreBackend:
         raise NotImplementedError
 
     def get_prompt_run(self, run_id: str) -> PromptRunRecord | None:
+        raise NotImplementedError
+
+    def persist_job_output(
+        self,
+        run_id: str,
+        *,
+        keyword: str,
+        briefing: dict[str, Any] | None,
+        row24: dict[str, Any] | None,
+        artifacts: dict[str, str],
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> None:
+        raise NotImplementedError
+
+    def get_job_output(self, run_id: str) -> JobOutputRecord | None:
+        raise NotImplementedError
+
+    def list_job_artifacts(self, run_id: str) -> list[JobArtifactRecord]:
+        raise NotImplementedError
+
+    def get_briefing_record(self, run_id: str) -> BriefingRecord | None:
         raise NotImplementedError
 
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
@@ -839,6 +1063,36 @@ class JobStore:
     def get_prompt_run(self, run_id: str) -> PromptRunRecord | None:
         return self._backend.get_prompt_run(run_id)
 
+    def persist_job_output(
+        self,
+        run_id: str,
+        *,
+        keyword: str,
+        briefing: dict[str, Any] | None,
+        row24: dict[str, Any] | None,
+        artifacts: dict[str, str],
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> None:
+        self._backend.persist_job_output(
+            run_id,
+            keyword=keyword,
+            briefing=briefing,
+            row24=row24,
+            artifacts=artifacts,
+            provider=provider,
+            model=model,
+        )
+
+    def get_job_output(self, run_id: str) -> JobOutputRecord | None:
+        return self._backend.get_job_output(run_id)
+
+    def list_job_artifacts(self, run_id: str) -> list[JobArtifactRecord]:
+        return self._backend.list_job_artifacts(run_id)
+
+    def get_briefing_record(self, run_id: str) -> BriefingRecord | None:
+        return self._backend.get_briefing_record(run_id)
+
     def cleanup_old_jobs(self, *, max_age_days: int = 30, statuses: tuple[str, ...] = ("done", "failed")) -> int:
         return self._backend.cleanup_old_jobs(max_age_days=max_age_days, statuses=statuses)
 
@@ -866,3 +1120,18 @@ def _optional_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _json_dumps(value: Any) -> str:
+    import json
+
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _json_loads(value: str | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    import json
+
+    loaded = json.loads(value)
+    return loaded if isinstance(loaded, dict) else None
