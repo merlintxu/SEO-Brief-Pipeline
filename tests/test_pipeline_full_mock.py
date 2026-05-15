@@ -35,6 +35,10 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
         gsc_property="https://example.com/",
         sheets_id="",
         output_dir="outputs",
+        runtime={
+            "llm": {"provider": "openai", "model": "gpt-project-test", "prompt_version": "v1"},
+            "providers": {"serp": {"provider_order": ["serpapi"]}},
+        },
     )
 
     monkeypatch.setattr(
@@ -103,6 +107,9 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
     assert "partial_data" in result
     assert "prompt_run" in result
     assert result["prompt_run"]["mode"] == "planner_writer"
+    assert result["prompt_run"]["provider"] == "openai"
+    assert result["prompt_run"]["model"] == "gpt-project-test"
+    assert result["provider_plan"]["serp"]["provider_order"] == ["serpapi"]
     assert "keyword_set" in result
     assert "competitor_set" in result
     assert "enrichment_set" in result

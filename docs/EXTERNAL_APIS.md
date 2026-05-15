@@ -157,6 +157,10 @@ Configuration:
 - `LLM_PROVIDER=ollama`
 - `OLLAMA_BASE_URL` (default `http://localhost:11434`)
 - `OLLAMA_MODEL`
+- Preferred project runtime:
+  - `data/projects.json` -> `runtime.llm.provider=ollama`
+  - `data/projects.json` -> `runtime.llm.model`
+  - optional `data/projects.json` -> `runtime.llm.base_url`
 
 Operational notes:
 
@@ -177,12 +181,42 @@ Configuration:
 - `ANTHROPIC_API_KEY`
 - `ANTHROPIC_MODEL` (defaults to `claude-3-5-sonnet-latest` when not provided)
 - `ANTHROPIC_BASE_URL` (optional, defaults to `https://api.anthropic.com`)
+- Preferred project runtime:
+  - `data/projects.json` -> `runtime.llm.provider=anthropic`
+  - `data/projects.json` -> `runtime.llm.model`
+  - optional `data/projects.json` -> `runtime.llm.base_url`
 
 Operational notes:
 
 - Anthropic responses must contain JSON text that validates against `SEOBriefing`.
 - Automated tests mock HTTP calls and do not call Anthropic.
 - structured output does not satisfy `SEOBriefing`
+
+## Project Runtime Provider Order
+
+Each project can define the provider/model defaults used before launching a
+briefing:
+
+```json
+{
+  "runtime": {
+    "llm": {
+      "provider": "openai",
+      "model": "gpt-4o-2024-11-20",
+      "prompt_version": "v1"
+    },
+    "providers": {
+      "serp": {
+        "provider_order": ["serpapi", "dataforseo"]
+      }
+    }
+  }
+}
+```
+
+This makes model choice and SERP API order explicit per project. Environment
+variables still provide secrets and operational endpoints, but the active
+project runtime is the default execution plan validated by the API preflight.
 
 ## Google Search Console
 

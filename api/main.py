@@ -57,6 +57,8 @@ from api.schemas import (
 )
 from seo_pipeline.slo import evaluate_slo_window
 from seo_pipeline.utils.io import ensure_dir, load_json
+from seo_pipeline.llm.config import get_llm_settings
+from seo_pipeline.runtime_validation import RuntimeValidationError, validate_runtime_requirements
 
 # ============================================================================
 # SECURITY & CONFIGURATION
@@ -520,6 +522,12 @@ async def create_briefing(
         )
 
     try:
+        llm_settings = get_llm_settings(cfg.active_project)
+        validate_runtime_requirements(
+            cfg,
+            require_openai=llm_settings.provider == "openai",
+            llm_settings=llm_settings,
+        )
         # Create run_id and initial status file
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         outputs_dir = Path("outputs")
@@ -546,6 +554,8 @@ async def create_briefing(
             output_dir=str(run_dir),
             files=files
         )
+    except RuntimeValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

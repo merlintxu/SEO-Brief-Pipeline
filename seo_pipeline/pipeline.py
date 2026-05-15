@@ -98,12 +98,13 @@ def run_full_pipeline(
     )
 
     cfg = get_config()
-    llm_settings = get_llm_settings()
+    llm_settings = get_llm_settings(cfg.active_project)
     runtime_requirements = validate_runtime_requirements(
         cfg,
         require_openai=llm_settings.provider == "openai",
+        llm_settings=llm_settings,
     )
-    serp_provider_plan = resolve_serp_provider_plan(cfg.active_client)
+    serp_provider_plan = resolve_serp_provider_plan(cfg.active_client, cfg.active_project)
 
     run_id = run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path(output_dir) if output_dir else cfg.get_output_dir() / run_id
@@ -552,7 +553,7 @@ def run_full_pipeline(
         _log("info", f"6/8 Generando briefing con {llm_settings.provider}...", stage="briefing")
         _write_status(step="briefing", message=f"Generando briefing con {llm_settings.provider}", percent=80)
         stage_started = _stage_start("briefing", provider=llm_settings.provider)
-        prompt_version = os.getenv("BRIEFING_PROMPT_VERSION", "v1").strip() or "v1"
+        prompt_version = llm_settings.prompt_version
         prompt_bundle = resolve_prompt_bundle("brief_generator", prompt_version)
         resolved_model = llm_settings.model or prompt_bundle.model
         briefing_plan = build_briefing_plan_artifact(
@@ -585,6 +586,7 @@ def run_full_pipeline(
             "provider": llm_settings.provider,
             "model": resolved_model,
             "temperature": prompt_bundle.temperature,
+            "base_url_configured": bool(llm_settings.base_url),
             "planner_version": briefing_plan.planner_version,
             "mode": "planner_writer",
         }

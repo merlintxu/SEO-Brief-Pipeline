@@ -76,9 +76,32 @@ The pipeline loads:
 - `data/clients.json`
 - `data/projects.json`
 
-Client config holds credentials and provider defaults.
+Client config holds credentials and regional defaults.
 
-Project config holds domain, GSC property, Sheets id and output path.
+Project config holds domain, GSC property, Sheets id, output path and the
+runtime selection used before a job is queued. Every project should include:
+
+```json
+{
+  "runtime": {
+    "llm": {
+      "provider": "openai",
+      "model": "gpt-4o-2024-11-20",
+      "prompt_version": "v1"
+    },
+    "providers": {
+      "serp": {
+        "provider_order": ["serpapi", "dataforseo"]
+      }
+    }
+  }
+}
+```
+
+Supported LLM providers are `openai`, `ollama` and `anthropic`. Supported SERP
+providers are `serpapi` and `dataforseo`. The API validates this active project
+runtime before launching `/briefing`; invalid or incomplete runtime config
+returns `400` instead of starting a background job.
 
 Use the CLI for interactive management:
 
