@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from seo_pipeline.config import ClientConfig
+from seo_pipeline.config import ClientConfig, ProjectConfig
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -20,12 +20,18 @@ class SerpProviderPlan:
     use_dataforseo: bool
 
 
-def resolve_serp_provider_plan(client: ClientConfig | None) -> SerpProviderPlan:
+def resolve_serp_provider_plan(
+    client: ClientConfig | None,
+    project: ProjectConfig | None = None,
+) -> SerpProviderPlan:
     # Defaults keep existing behavior: SerpAPI primary, DataForSEO fallback.
     enable_serpapi = _env_bool("SERP_ENABLE_SERPAPI", True)
     enable_dataforseo = _env_bool("SERP_ENABLE_DATAFORSEO", True)
-    order_raw = os.getenv("SERP_PROVIDER_ORDER", "serpapi,dataforseo")
-    requested = tuple(item.strip().lower() for item in order_raw.split(",") if item.strip())
+    if project:
+        requested = tuple(project.runtime.providers.serp.provider_order)
+    else:
+        order_raw = os.getenv("SERP_PROVIDER_ORDER", "serpapi,dataforseo")
+        requested = tuple(item.strip().lower() for item in order_raw.split(",") if item.strip())
 
     has_serpapi_key = bool(client and client.serpapi_key)
     has_dfso_creds = bool(client and client.dataforseo_login and client.dataforseo_password)
@@ -39,8 +45,9 @@ def resolve_serp_provider_plan(client: ClientConfig | None) -> SerpProviderPlan:
         if name == "dataforseo" and enable_dataforseo and has_dfso_creds:
             allowed.append(name)
 
-    # Ensure deterministic fallback if order env is invalid or empty.
-    if not allowed:
+    # Environment fallback preserves legacy behavior. Project runtime order is
+    # explicit, so missing credentials should surface as an empty plan.
+    if not allowed and project is None:
         if enable_serpapi and has_serpapi_key:
             allowed.append("serpapi")
         if enable_dataforseo and has_dfso_creds:

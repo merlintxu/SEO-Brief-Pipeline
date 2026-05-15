@@ -76,6 +76,26 @@ SENTRY_DSN=
 - `data/clients.json`
 - `data/projects.json`
 
+Cada proyecto debe declarar su runtime antes de lanzarse. El bloque `runtime`
+define el proveedor/modelo LLM y el orden de APIs SERP para ese proyecto:
+
+```json
+{
+  "runtime": {
+    "llm": {
+      "provider": "openai",
+      "model": "gpt-4o-2024-11-20",
+      "prompt_version": "v1"
+    },
+    "providers": {
+      "serp": {
+        "provider_order": ["serpapi", "dataforseo"]
+      }
+    }
+  }
+}
+```
+
 Los service accounts de Google deben vivir en `credentials/`, que está ignorado por Git.
 
 ## Uso Rápido

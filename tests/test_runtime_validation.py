@@ -35,7 +35,7 @@ def test_validate_runtime_requirements_reports_missing_required_providers():
 
     message = str(exc.value)
     assert "SEMRUSH_TOKEN" in message
-    assert "SERPAPI_KEY o credenciales DataForSEO completas" in message
+    assert "credentials for project.runtime.providers.serp.provider_order" in message
     assert "OPENAI_API_KEY" in message
 
 

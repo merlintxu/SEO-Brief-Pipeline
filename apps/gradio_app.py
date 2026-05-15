@@ -9,6 +9,7 @@ from typing import Callable
 from api.job_lifecycle import JobLifecycleService
 from api.job_store import JobStore
 from seo_pipeline.artifacts import RUN_METRICS_JSON
+from seo_pipeline.config import ProjectRuntimeConfig, get_config
 from seo_pipeline.pipeline import run_full_pipeline
 from seo_pipeline.utils.io import ensure_dir, load_json
 
@@ -91,8 +92,11 @@ def launch_briefing_callback(
         return f"Run {run_id} could not start."
 
     old_env = {key: os.environ.get(key) for key in ("LLM_PROVIDER", "LLM_MODEL", "OLLAMA_MODEL", "OLLAMA_BASE_URL", "ANTHROPIC_MODEL")}
+    cfg = get_config()
+    old_runtime = cfg.active_project.runtime if cfg.active_project else None
     try:
         _set_model_env(provider, model, ollama_base_url)
+        _set_active_project_runtime(provider, model, ollama_base_url)
         result = pipeline_func(
             keyword=keyword,
             target_url=target_url.strip() or None,
@@ -112,6 +116,8 @@ def launch_briefing_callback(
         lifecycle.fail_from_exception(run_id, status_path, exc)
         return f"Run `{run_id}` failed: {exc}"
     finally:
+        if cfg.active_project and old_runtime is not None:
+            cfg.active_project.runtime = old_runtime
         _restore_env(old_env)
 
 
@@ -180,6 +186,23 @@ def _set_model_env(provider: str, model: str, ollama_base_url: str) -> None:
             os.environ["ANTHROPIC_MODEL"] = model.strip()
     if provider == "ollama" and ollama_base_url.strip():
         os.environ["OLLAMA_BASE_URL"] = ollama_base_url.strip()
+
+
+def _set_active_project_runtime(provider: str, model: str, ollama_base_url: str) -> None:
+    cfg = get_config()
+    if not cfg.active_project:
+        return
+    provider = (provider or "openai").strip().lower()
+    current_serp = cfg.active_project.runtime.providers.serp.provider_order
+    cfg.active_project.runtime = ProjectRuntimeConfig(
+        llm={
+            "provider": provider,
+            "model": model.strip() or None,
+            "base_url": ollama_base_url.strip() if provider == "ollama" and ollama_base_url.strip() else None,
+            "prompt_version": cfg.active_project.runtime.llm.prompt_version,
+        },
+        providers={"serp": {"provider_order": current_serp}},
+    )
 
 
 def _restore_env(values: dict[str, str | None]) -> None:

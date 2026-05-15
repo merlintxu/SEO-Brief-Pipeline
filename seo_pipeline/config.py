@@ -9,8 +9,8 @@ from __future__ import annotations
 import os
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, ValidationError
+from typing import Dict, Optional
+from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 
 # Cargar variables de entorno (.env o Colab secrets)
@@ -31,6 +31,65 @@ class ClientConfig(BaseModel):
     default_gl: str = "es"
     default_hl: str = "es-es"
 
+
+class ProjectLlmConfig(BaseModel):
+    provider: str = Field(default="openai")
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+    prompt_version: str = "v1"
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"openai", "ollama", "anthropic"}:
+            raise ValueError("llm.provider must be one of: openai, ollama, anthropic")
+        return normalized
+
+    @field_validator("model", "base_url", mode="before")
+    @classmethod
+    def normalize_optional_string(cls, value: object) -> object:
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        return value
+
+    @field_validator("prompt_version")
+    @classmethod
+    def validate_prompt_version(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("llm.prompt_version must not be empty")
+        return normalized
+
+
+class ProjectSerpConfig(BaseModel):
+    provider_order: list[str] = Field(default_factory=lambda: ["serpapi", "dataforseo"], min_length=1)
+
+    @field_validator("provider_order")
+    @classmethod
+    def validate_provider_order(cls, value: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for item in value:
+            provider = item.strip().lower()
+            if provider not in {"serpapi", "dataforseo"}:
+                raise ValueError("serp.provider_order only supports: serpapi, dataforseo")
+            if provider not in normalized:
+                normalized.append(provider)
+        if not normalized:
+            raise ValueError("serp.provider_order must not be empty")
+        return normalized
+
+
+class ProjectProviderConfig(BaseModel):
+    serp: ProjectSerpConfig = Field(default_factory=ProjectSerpConfig)
+
+
+class ProjectRuntimeConfig(BaseModel):
+    llm: ProjectLlmConfig = Field(default_factory=ProjectLlmConfig)
+    providers: ProjectProviderConfig = Field(default_factory=ProjectProviderConfig)
+
+
 class ProjectConfig(BaseModel):
     project_id: str
     client_id: str
@@ -39,6 +98,7 @@ class ProjectConfig(BaseModel):
     gsc_property: str  # URL completa de la propiedad GSC[](https://example.com/)
     sheets_id: str     # ID o URL de la hoja de cálculo principal
     output_dir: str = "outputs"
+    runtime: ProjectRuntimeConfig = Field(default_factory=ProjectRuntimeConfig)
 
 class PipelineConfig:
     _instance: Optional["PipelineConfig"] = None

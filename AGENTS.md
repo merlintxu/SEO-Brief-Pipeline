@@ -186,6 +186,11 @@ This file is the entrypoint for coding agents working in this repository.
   - API and pipeline defaults now keep `upload_to_sheets=false`.
   - Google Sheets remains an optional export when explicitly enabled and configured.
   - README and operations docs describe the DB-first model/provider workflow.
+- Added project runtime configuration:
+  - `ProjectConfig.runtime.llm` defines per-project LLM provider, model, base URL and prompt version.
+  - `ProjectConfig.runtime.providers.serp.provider_order` defines per-project SERP API order.
+  - API preflight validates the active project runtime before queuing `/briefing`.
+  - pipeline metrics retain the resolved LLM provider/model and SERP provider plan for each run.
 - Added SLO dashboard/API integration:
   - protected `GET /ops/slo` evaluates recent job metrics with `seo_pipeline/slo.py`.
   - dashboard shows SLO status, run counts, p95 duration, retry rate and failed checks.
@@ -203,7 +208,7 @@ This file is the entrypoint for coding agents working in this repository.
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: continue production persistence hardening, likely PostgreSQL backend implementation or DB migrations.
+2. Immediate next PR focus after merge: add project runtime management endpoints/UI so operators can edit model/provider defaults without editing JSON directly.
 3. Continue typed stage contracts and quality gates before adding new provider complexity.
 4. Introduce prompt registry + versioning before prompt tuning experiments.
 5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
