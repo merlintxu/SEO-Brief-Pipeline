@@ -76,6 +76,10 @@ class JobResponse(BaseModel):
     error_category: str | None = None
     output_dir: str
     source_run_id: str | None = None
+    client_id: str | None = None
+    project_id: str | None = None
+    brief_type: str | None = None
+    target_url: str | None = None
     created_at: str
     updated_at: str
 

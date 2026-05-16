@@ -329,6 +329,91 @@ Acceptance:
 - A missing GSC permission produces a clear diagnostic.
 - Empty data is represented as `skipped_empty` or equivalent metadata.
 
+## Stage 6b - Optional GA4 URL Metrics
+
+Main file:
+
+- `seo_pipeline/vendors/ga4_io.py`
+
+Function:
+
+- `fetch_url_metrics()`
+
+Inputs:
+
+- GA4 property ID.
+- service account JSON path.
+- target URL.
+- date window.
+
+Outputs:
+
+- `ga4_url_metrics` in the pipeline result.
+- `ga4` stage in `run_metrics.json`.
+
+Current behavior:
+
+- Runs only when `target_url`, `ClientConfig.gsc_sa_path` and `ProjectConfig.ga4_property_id` are configured.
+- Fetches sessions, users, page views, conversions and engagement rate for the exact page path.
+- Failure is logged and stored in metrics but does not block the run.
+
+Risks:
+
+- GA4 service account access is separate from GSC access even when the same JSON file is used.
+- URL path matching can miss canonical variants, trailing slash differences or localized paths.
+
+Improvements:
+
+- Add typed GA4 enrichment contracts if these metrics become prompt inputs.
+- Support canonical URL aliases and query-string matching policies per project.
+- Track GA4 access diagnostics in a persisted operator checks table.
+
+Acceptance:
+
+- Existing-page jobs can include GA4 metrics without breaking new-page jobs.
+- CI mocks GA4 services and never calls the real Analytics Data API.
+
+## Stage 6c - Google AI Search Readiness
+
+Main file:
+
+- `seo_pipeline/ai_search_readiness.py`
+
+Artifacts:
+
+- `ai_search_readiness.json`
+- `target_audit_report.json` for existing-page runs
+
+Current behavior:
+
+- New-page runs generate readiness requirements for the future page.
+- Existing-page runs audit the target URL and produce technical, content, media,
+  structured data and agent-friendly signals.
+- Readiness findings are injected into the briefing prompt.
+- A post-generation `brief_quality_review` checks for minimum quality,
+  E-E-A-T/media gaps and unsupported AEO/GEO shortcuts such as `llms.txt` as a
+  Google AI Search requirement.
+
+Project vertical modes:
+
+- `content`
+- `ecommerce`
+- `local`
+- `saas`
+- `marketplace`
+
+Risks:
+
+- Live target URL audits can be blocked or slow.
+- Readiness scoring is deterministic and should be treated as guidance, not a
+  ranking prediction.
+
+Improvements:
+
+- Reuse one fetched HTML payload for target audit and readiness analysis.
+- Add richer ecommerce/local fixtures.
+- Add optional rendered DOM checks for JavaScript-heavy pages.
+
 ## Stage 7 - Anchor Generation
 
 Main file:

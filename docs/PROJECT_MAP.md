@@ -12,6 +12,10 @@
 - `pyproject.toml`, `requirements.txt`: packaging and dependencies.
 - `client_manager.py`: interactive local CLI.
 
+Root-level ad-hoc smoke scripts are intentionally not part of the maintained
+surface. Keep repeatable tests under `tests/`; put documented manual utilities
+under `tools/`.
+
 ## API Package
 
 `api/main.py`
@@ -38,17 +42,38 @@
 
 - `run_full_pipeline()` is the central orchestrator.
 - It pulls config, calls vendors, writes intermediate artifacts, builds the briefing and exports outputs.
-- Uses `retry_call()` around SEMrush, SERP, audit and GSC calls.
+- Uses `retry_call()` around SEMrush, SERP, audit, GSC and GA4 calls.
 
 `seo_pipeline/config.py`
 
-- Defines `ClientConfig`, `ProjectConfig` and singleton `PipelineConfig`.
+- Defines `RuntimeSettings`, `ClientConfig`, `ProjectConfig` and singleton `PipelineConfig`.
 - Loads `data/clients.json` and `data/projects.json`.
+- Loads ignored local provider settings from `config/runtime_settings.json`.
 - Uses `.env` via `load_dotenv()`.
+
+`seo_pipeline/options.py`
+
+- Centralizes Gradio-selectable SEMrush database, Google locale, LLM model and SERP provider options.
+- Prevents common runtime settings from accepting arbitrary unsupported text.
+
+`seo_pipeline/operator_ui.py`
+
+- Service layer for the local operator console.
+- Provides setup health, active context, effective project config previews, config preflight, launch validation, run tables and run detail summaries.
+
+`seo_pipeline/ai_search_readiness.py`
+
+- Deterministic Google AI Search readiness checks.
+- Builds new-page readiness requirements, existing-page target URL readiness reports and post-generation briefing quality reviews.
 
 `seo_pipeline/models.py`
 
 - Pydantic contracts for vendor data, audit reports, GSC reports, anchors, briefing output and row24 export.
+
+`seo_pipeline/integration_checks.py`
+
+- Operator-facing connection checks for SEMrush, SERP, GSC, GA4, Sheets and LLM configuration.
+- Returns sanitized status rows for Gradio without exposing secret values.
 
 `seo_pipeline/constants.py`
 
@@ -105,6 +130,16 @@ Data returned: `AuditReport` containing `AuditEntry` records with URL, status co
 
 - `build_service()`: builds Search Console service from service account.
 - `fetch_cannibalization()`: aggregates query/page performance into cannibalization report.
+
+`seo_pipeline/vendors/ga4_io.py`
+
+- `build_service()`: builds Analytics Data API service from service account.
+- `fetch_url_metrics()`: fetches URL-level sessions, users, views, conversions and engagement rate.
+
+`seo_pipeline/vendors/drive_io.py`
+
+- `build_service()`: builds Drive API service from service account.
+- `list_spreadsheets()`: discovers Google Sheets visible to the service account.
 
 `seo_pipeline/vendors/sheets_io.py`
 

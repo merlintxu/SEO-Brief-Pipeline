@@ -11,7 +11,8 @@ from pathlib import Path
 import json
 from pydantic import BaseModel, Field
 
-from seo_pipeline.models import AnchorSet, BriefingPlan, SEOBriefing, SerpSnapshot
+from seo_pipeline.models import AiSearchReadinessReport, AnchorSet, BriefingPlan, SEOBriefing, SerpSnapshot
+from seo_pipeline.ai_search_readiness import myth_guardrails_text, readiness_context_text
 from seo_pipeline.llm.gateway import generate_structured_briefing
 from seo_pipeline.utils.text import normalize_ws
 from seo_pipeline.prompt_registry import resolve_prompt_bundle
@@ -59,6 +60,7 @@ def generate_briefing(
     temperature: float | None = None,
     prompt_version: str = "v1",
     planner_artifact: Dict[str, Any] | None = None,
+    ai_search_readiness: Dict[str, Any] | None = None,
     llm_provider: str = "openai",
     llm_base_url: str | None = None,
 ) -> SEOBriefing:
@@ -101,6 +103,12 @@ Secundarios: {", ".join(anchors.secondary)}
 
 ## Planificador (paso 1)
 {json.dumps(planner_artifact, ensure_ascii=False, indent=2) if planner_artifact else "No planner artifact provided."}
+
+## Google AI Search readiness
+{readiness_context_text(None if ai_search_readiness is None else AiSearchReadinessReport(**ai_search_readiness))}
+
+## Guardrails anti-hacks AEO/GEO
+{myth_guardrails_text()}
 
 Instrucciones estrictas:
 1. El artículo debe superar claramente a todos los resultados actuales en profundidad, actualización, estructura y valor para el usuario.

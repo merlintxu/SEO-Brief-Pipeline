@@ -30,6 +30,9 @@ graph TD
 
 - `api/main.py`: FastAPI app, API key validation, rate limit middleware, Sentry lifespan, background tasks and file downloads.
 - `public/dashboard.html`: static operational UI for authenticated briefing and jobs administration.
+- `apps/gradio_app.py`: local operator console baseline for setup, client/project configuration, connection checks, runs and result review.
+- `seo_pipeline/operator_ui.py`: UI service layer for setup health, active context, effective config, preflight, launch validation and run summaries.
+- `seo_pipeline/ai_search_readiness.py`: Google AI Search readiness checks, target URL readiness signals and briefing quality review.
 - `client_manager.py`: interactive CLI for local client/project management and runs.
 - `tools/cache_admin.py`: safe cache inspection and cleanup CLI.
 - `tools/batch_runner.py`: CSV/JSON batch keyword runner with isolated per-keyword runs.
@@ -78,19 +81,22 @@ Security behavior:
 Configuration uses JSON files, not YAML:
 
 - `data/clients.json`: client credentials and defaults.
-- `data/projects.json`: project domain, GSC property, Sheets id and output directory.
+- `data/projects.json`: project domain, GSC property, optional GA4 property ID, Sheets id, runtime defaults and output directory.
+- `config/runtime_settings.json`: ignored local global provider credentials and LLM base URL.
 - `.env`: local environment variables loaded via `python-dotenv`; ignored by Git.
 
 Main classes:
 
-- `ClientConfig`: SEMrush, SerpAPI, OpenAI, DataForSEO, GSC and Sheets settings.
-- `ProjectConfig`: project id, client id, base domain, GSC property, Sheets id and output directory.
+- `RuntimeSettings`: global SEMrush, SerpAPI, OpenAI, Anthropic, DataForSEO and LLM base URL settings.
+- `ClientConfig`: client id/name, default base domain, default SEMrush database, Google locale, GSC and Sheets paths.
+- `ProjectConfig`: project id, client id, optional base-domain/locale overrides, GSC property, optional GA4 property ID, Sheets id, runtime defaults and output directory.
+- `ProjectConfig.project_type`: vertical mode for readiness and briefing requirements (`content`, `ecommerce`, `local`, `saas`, `marketplace`).
 - `PipelineConfig`: singleton returned by `get_config()`.
 
 `PipelineConfig.get_output_dir()` writes to:
 
 ```text
-{PIPELINE_ROOT or cwd}/{project.output_dir}/{project.project_id}/{run_id}
+{PIPELINE_ROOT or cwd}/{project.output_dir}/{project.client_id}/{project.project_id}/{run_id}
 ```
 
 When the API launches a run, it passes its own `outputs/{run_id}` directory into the pipeline so status, metrics and downloads resolve from the same directory. Direct CLI/notebook runs still use the project output path above unless an explicit `output_dir` is provided.
@@ -106,11 +112,14 @@ When the API launches a run, it passes its own `outputs/{run_id}` directory into
 5. Top URL extraction and competitor domain extraction.
 6. Competitor content audit through `audit_urls`.
 7. Optional GSC cannibalization through `fetch_cannibalization`.
-8. Anchor generation through `generate_anchors`.
-9. OpenAI structured briefing through `generate_briefing`.
-10. Row 24 creation through `build_row24`.
-11. Export with `export_all_formats`.
-12. Optional Google Sheets upsert.
+8. Optional GA4 URL metrics through `fetch_url_metrics` for existing-page runs.
+9. Google AI Search readiness and optional target URL audit.
+10. Anchor generation through `generate_anchors`.
+11. LLM structured briefing through `generate_briefing`.
+12. Brief quality review.
+13. Row 24 creation through `build_row24`.
+14. Export with `export_all_formats`.
+15. Optional Google Sheets upsert.
 
 Stage contract note:
 
@@ -120,6 +129,8 @@ Stage contract note:
 - A quorum policy evaluates partial-data coverage before briefing generation and records a decision (`continue`/`fail`) in metrics; enforcement is configurable.
 - Prompt selection is now resolved through a versioned registry and the selected prompt metadata is persisted for traceability (`prompt_run`).
 - Brief generation is now split into planner/writer steps: a deterministic planner artifact is built first, then consumed by the writer LLM call.
+- GA4 enrichment is optional and non-blocking. It records a `ga4` stage in `run_metrics.json` and stores URL metrics under `ga4_url_metrics` when available.
+- Google AI Search readiness produces `ai_search_readiness.json`; existing-page runs can also produce `target_audit_report.json`.
 
 Transient vendor calls use `retry_call` with:
 
@@ -152,6 +163,7 @@ The API request/response schemas live in `api/schemas.py`:
 - SerpAPI: `seo_pipeline/vendors/serp_io.py`.
 - DataForSEO: `seo_pipeline/vendors/dataforseo_serp.py`.
 - Google Search Console: `seo_pipeline/vendors/gsc_io.py`.
+- Google Analytics 4: `seo_pipeline/vendors/ga4_io.py`.
 - Google Sheets: `seo_pipeline/vendors/sheets_io.py`.
 - Scraper helper: `seo_pipeline/vendors/scrapers.py`.
 
@@ -191,6 +203,7 @@ CI also fails if tracked files include:
 
 ## Known Technical Debt
 
+- The operator UX/UI is being redesigned through `docs/UX_UI_REDESIGN_PLAN.md`.
 - Some legacy code comments/docstrings still need a controlled UTF-8 cleanup pass.
 - Provider-neutral SERP normalization should be formalized into a typed contract.
 - API jobs still use in-process background tasks; durable queue state is a production improvement.

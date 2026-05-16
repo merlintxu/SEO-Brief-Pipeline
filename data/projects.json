@@ -3,14 +3,50 @@
     "project_id": "que es un seguro de decesos",
     "client_id": "ADESLAS",
     "name": "que es un seguro de decesos",
-    "base_domain": "https://www.segurcaixaadeslas.es/",
+    "base_domain": null,
     "gsc_property": "https://www.segurcaixaadeslas.es",
     "sheets_id": "https://docs.google.com/spreadsheets/d/1AdwjuNcv-dgPyQaVk1m4zBWZOPZ6IaaIQvufA4zF-BY/edit",
+    "ga4_property_id": null,
+    "project_type": "content",
+    "semrush_database": null,
+    "google_gl": null,
+    "google_hl": null,
     "output_dir": "runs",
     "runtime": {
       "llm": {
-        "provider": "openai",
-        "model": "gpt-4o-2024-11-20",
+        "provider": "ollama",
+        "model": "gemma4:26b",
+        "base_url": "http://localhost:11434",
+        "prompt_version": "v1"
+      },
+      "providers": {
+        "serp": {
+          "provider_order": [
+            "serpapi",
+            "dataforseo"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "project_id": "que_es_un_seguro_de_decesos",
+    "client_id": "ADESLAS",
+    "name": "que es un seguro de decesos",
+    "base_domain": null,
+    "gsc_property": "https://www.segurcaixaadeslas.es",
+    "sheets_id": "https://docs.google.com/spreadsheets/d/1AdwjuNcv-dgPyQaVk1m4zBWZOPZ6IaaIQvufA4zF-BY/edit",
+    "ga4_property_id": null,
+    "project_type": "content",
+    "semrush_database": null,
+    "google_gl": null,
+    "google_hl": null,
+    "output_dir": "runs",
+    "runtime": {
+      "llm": {
+        "provider": "ollama",
+        "model": "gemma4:e4b",
+        "base_url": "http://localhost:11434",
         "prompt_version": "v1"
       },
       "providers": {

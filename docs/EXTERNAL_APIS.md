@@ -256,6 +256,88 @@ Implementation note:
 
 - Search Console `clicks` are mapped to the `GscPage.clicks` model field.
 
+## Google Analytics 4
+
+Code: `seo_pipeline/vendors/ga4_io.py`
+
+Purpose:
+
+- Enrich existing-page briefing jobs with URL-level GA4 metrics.
+- Support operator connection checks from the Gradio app.
+
+Credential:
+
+- Service account JSON path in `ClientConfig.gsc_sa_path`
+- GA4 property ID in `ProjectConfig.ga4_property_id`
+
+Scope:
+
+```text
+https://www.googleapis.com/auth/analytics.readonly
+```
+
+Metrics requested:
+
+- `sessions`
+- `totalUsers`
+- `screenPageViews`
+- `conversions`
+- `engagementRate`
+
+Runtime behavior:
+
+- GA4 runs only when a `target_url` is present and the selected project has `ga4_property_id`.
+- Results are persisted in the pipeline result as `ga4_url_metrics`.
+- `run_metrics.json` includes a `ga4` stage with status, retries and item counts.
+- GA4 failures are non-blocking and should not fail the full briefing run.
+
+Expected failures:
+
+- missing service account file
+- service account not granted access to the GA4 property
+- wrong property ID
+- Analytics Data API disabled
+
+Testing rule:
+
+- Tests must mock the Google Analytics service and must not call GA4.
+
+## Google Drive
+
+Code: `seo_pipeline/vendors/drive_io.py`
+
+Purpose:
+
+- Discover Google Sheets visible to the configured service account.
+- Let operators copy a spreadsheet ID/URL into a project without manually opening Drive.
+
+Credential:
+
+- Service account JSON path in `ClientConfig.sheets_sa_path`
+
+Scope:
+
+```text
+https://www.googleapis.com/auth/drive.metadata.readonly
+```
+
+Runtime behavior:
+
+- The Gradio Projects tab can search recent spreadsheets by name.
+- Discovery returns spreadsheet name, ID and web URL.
+- This is service-account based discovery, not interactive end-user OAuth.
+
+Expected failures:
+
+- missing service account file
+- Drive API disabled
+- spreadsheet not shared with the service account
+- organization policy blocks external service accounts
+
+Testing rule:
+
+- Tests must mock Drive services. CI must not call the real Drive API.
+
 ## Google Sheets
 
 Code: `seo_pipeline/vendors/sheets_io.py`

@@ -69,6 +69,17 @@ JOB_STORE_BACKEND=sqlite
 # JOB_STORE_POSTGRES_DSN=postgresql://user:pass@host:5432/dbname  # scaffold only, not enabled yet
 ```
 
+Local Gradio operation can also store shared provider settings in the ignored
+file:
+
+```text
+config/runtime_settings.json
+```
+
+This file may contain provider credentials and must not be committed. Values in
+that file are merged into the active client at runtime without writing secrets to
+`data/clients.json`.
+
 ## Client And Project Config
 
 The pipeline loads:
@@ -78,15 +89,29 @@ The pipeline loads:
 
 Client config holds credentials and regional defaults.
 
-Project config holds domain, GSC property, Sheets id, output path and the
-runtime selection used before a job is queued. Every project should include:
+Client config holds non-secret defaults such as base domain, SEMrush database
+and Google locale. Project config can override those defaults and holds GSC,
+GA4, Sheets, output path and runtime selection used before a job is queued.
+Every project should include:
 
 ```json
 {
+  "project_id": "example_project",
+  "client_id": "example_client",
+  "name": "Example Project",
+  "base_domain": null,
+  "gsc_property": "https://example.com/",
+  "ga4_property_id": "123456789",
+  "project_type": "content",
+  "sheets_id": "spreadsheet-id-or-url",
+  "semrush_database": null,
+  "google_gl": null,
+  "google_hl": null,
   "runtime": {
     "llm": {
-      "provider": "openai",
-      "model": "gpt-4o-2024-11-20",
+      "provider": "ollama",
+      "model": "gemma4:26b",
+      "base_url": "http://localhost:11434",
       "prompt_version": "v1"
     },
     "providers": {
@@ -103,11 +128,24 @@ providers are `serpapi` and `dataforseo`. The API validates this active project
 runtime before launching `/briefing`; invalid or incomplete runtime config
 returns `400` instead of starting a background job.
 
+The default local LLM provider is `ollama` with `gemma4:26b`. OpenAI and
+Anthropic remain selectable per project.
+
+`ga4_property_id` is optional. When configured together with a client service
+account path, existing-page briefing runs can enrich the job with GA4 URL metrics.
+
+`project_type` controls Google AI Search readiness checks and vertical-specific
+briefing requirements. Supported values are `content`, `ecommerce`, `local`,
+`saas` and `marketplace`.
+
 Use the CLI for interactive management:
 
 ```bash
 python client_manager.py
 ```
+
+For local operator workflows, prefer the Gradio app because it can create/update
+clients and projects, run connection checks and launch jobs from the same UI.
 
 ## Running The API
 
@@ -257,6 +295,8 @@ Common files:
 - `run_metrics.json`
 - `serp_raw.json`
 - `audit_report.json`
+- `target_audit_report.json` for existing-page runs
+- `ai_search_readiness.json`
 - briefing JSON
 - briefing Markdown
 - row24 CSV
@@ -292,6 +332,9 @@ Common files:
   - `costs.unknown_cost_estimate_count`
   - `costs.estimates[]` with provider, service, calls, token estimates and estimated cost.
   - OpenAI estimates use serialized prompt/output token approximation and static model pricing; provider-specific SEMrush/SERP/Sheets prices are marked unknown unless reconciled externally.
+- AI Search readiness summary:
+  - `ai_search_readiness.json` contains deterministic Google AI Search readiness signals.
+  - `brief_quality_review` in metrics records post-generation quality/myth guardrail findings.
 
 `GET /jobs/{run_id}` also returns `cost_summary` when `run_metrics.json` exists for that run.
 SQLite stores a queryable copy of stage metrics, provider call estimates and prompt run metadata so future admin endpoints can build timelines without changing the artifact contract.
@@ -333,6 +376,26 @@ python apps/gradio_app.py
 ```
 
 The Gradio app can start a briefing, select `openai`, `ollama` or `anthropic`, list recent jobs from SQLite and inspect persisted DB output/metrics. Google Sheets upload defaults to disabled in all new run surfaces; file artifacts remain available on disk.
+
+The current Gradio app implements the integrated redesign baseline documented in
+`docs/UX_UI_REDESIGN_PLAN.md`: first-run setup, shared active context, guided
+launch and run review.
+
+The Gradio app also includes local operator workflows for:
+
+- checking setup readiness from the Home tab.
+- creating/updating clients without displaying stored secrets.
+- loading existing clients into the form, editing them and saving back to `data/clients.json`.
+- creating/updating projects, including inherited client defaults, GA4 property ID and runtime defaults.
+- loading existing projects into the form, editing them and saving back to `data/projects.json`.
+- previewing effective inherited project configuration before launch.
+- running provider connection checks for SEMrush, SERP, GSC, GA4, Sheets and LLM configuration.
+- discovering Google Sheets visible to the configured service account through Drive metadata.
+- launching `new_page` or `existing_page` briefing jobs under a selected client/project after validation.
+- reviewing run status, timeline, metrics, provider calls, prompt metadata and artifacts.
+- canceling queued/running jobs, deleting job metadata and cleaning up old terminal jobs.
+
+See `docs/GRADIO_OPERATOR_WORKFLOWS.md` for the full operator workflow.
 
 Operational endpoint:
 
@@ -382,6 +445,24 @@ Each keyword receives an isolated run id under the batch output directory. Failu
 Use `--resume` with the same `--batch-id` and output directory to skip items already marked `done` in `batch_manifest.json` and retry only incomplete items. The summary includes `done`, `failed`, `skipped`, per-item timestamps and `error_summary`.
 
 Generated files are ignored by Git.
+
+## Repository Cleanup
+
+Canonical automated tests live under `tests/` and are run with `pytest -q`.
+Do not add root-level `test_*.py` smoke scripts for manual experiments; place
+operator utilities under `tools/` with sanitized configuration and documented
+usage. Local generated directories such as `.pytest_cache/`, `__pycache__/`,
+`*.egg-info/`, `outputs/`, `runs/` and `logs/` are ignored and should never be
+staged.
+
+Before publishing changes, run:
+
+```bash
+python tools/check_repo_guard.py
+git ls-files '.env' '*__pycache__*' '*.pyc' '*.egg-info'
+```
+
+Both commands must finish without reporting tracked secrets or generated files.
 
 ## Docker
 
@@ -434,7 +515,7 @@ Before deploy:
 python -m pip install -e ".[test]"
 pytest -q
 git diff --check
-git ls-files '.env' '*__pycache__*' '*.pyc'
+git ls-files '.env' '*__pycache__*' '*.pyc' '*.egg-info'
 ```
 
 After deploy:

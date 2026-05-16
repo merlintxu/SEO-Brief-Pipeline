@@ -1,6 +1,6 @@
 import pytest
 
-from seo_pipeline.config import ProjectConfig
+from seo_pipeline.config import ClientConfig, ProjectConfig, RuntimeSettings, get_config
 from seo_pipeline.llm.config import get_llm_settings
 from seo_pipeline.vendors.capabilities import resolve_serp_provider_plan
 
@@ -41,6 +41,32 @@ def test_project_runtime_config_resolves_llm_settings(monkeypatch):
     assert settings.model == "llama3.1"
     assert settings.base_url == "http://ollama.local:11434"
     assert settings.prompt_version == "v1"
+
+
+def test_default_project_runtime_is_local_ollama_gemma():
+    project = ProjectConfig(
+        project_id="p-default",
+        client_id="c1",
+        name="Default",
+        base_domain="example.com",
+        gsc_property="",
+        sheets_id="",
+    )
+
+    assert project.runtime.llm.provider == "ollama"
+    assert project.runtime.llm.model == "gemma4:26b"
+
+
+def test_global_runtime_settings_are_applied_to_active_client(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cfg = get_config()
+    cfg.runtime_settings = RuntimeSettings(semrush_token="global-semrush", serpapi_key="global-serp")
+    client = ClientConfig(client_id="c1", name="Client")
+
+    effective = cfg.apply_effective_client_defaults(client)
+
+    assert effective.semrush_token == "global-semrush"
+    assert effective.serpapi_key == "global-serp"
 
 
 def test_project_runtime_config_drives_serp_provider_order(monkeypatch):

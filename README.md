@@ -12,6 +12,7 @@ Pipeline DB-first para generar briefings SEO usando datos de SEMrush, SERP real,
 - [Runtime operations](docs/RUNTIME_OPERATIONS.md): ejecución local, API, debugging y despliegue.
 - [Immediate action plan](docs/IMMEDIATE_ACTION_PLAN.md): próximas acciones operativas y criterios de aceptación.
 - [Improvement roadmap](docs/IMPROVEMENT_ROADMAP.md): plan priorizado de mejoras.
+- [UX/UI redesign plan](docs/UX_UI_REDESIGN_PLAN.md): rediseño global de la consola operativa en PRs.
 - [Troubleshooting](TROUBLESHOOTING.md): diagnóstico de fallos frecuentes.
 - [Security](SECURITY.md): normas de credenciales e incident response.
 
@@ -21,6 +22,7 @@ Pipeline DB-first para generar briefings SEO usando datos de SEMrush, SERP real,
 - Análisis SERP con SerpAPI y fallback opcional a DataForSEO.
 - Auditoría de URLs competidoras: title, H1, meta description, word count, headings y schema signals.
 - Detección opcional de canibalización con Google Search Console.
+- Readiness Google AI Search para páginas nuevas y existentes, con auditoría de URL objetivo en páginas existentes.
 - Generación de anchors internos y externos.
 - Generación de briefing SEO con gateway de modelos y contrato Pydantic `SEOBriefing`.
 - Persistencia SQLite de jobs, métricas, outputs finales y audit trail.
@@ -75,6 +77,7 @@ SENTRY_DSN=
 
 - `data/clients.json`
 - `data/projects.json`
+- `config/runtime_settings.json` desde Gradio para credenciales globales locales
 
 Cada proyecto debe declarar su runtime antes de lanzarse. El bloque `runtime`
 define el proveedor/modelo LLM y el orden de APIs SERP para ese proyecto:
@@ -83,8 +86,9 @@ define el proveedor/modelo LLM y el orden de APIs SERP para ese proyecto:
 {
   "runtime": {
     "llm": {
-      "provider": "openai",
-      "model": "gpt-4o-2024-11-20",
+      "provider": "ollama",
+      "model": "gemma4:26b",
+      "base_url": "http://localhost:11434",
       "prompt_version": "v1"
     },
     "providers": {
@@ -95,6 +99,17 @@ define el proveedor/modelo LLM y el orden de APIs SERP para ese proyecto:
   }
 }
 ```
+
+Los proyectos pueden declarar `ga4_property_id` para enriquecer briefings de
+páginas existentes con métricas GA4 de URL. La app Gradio permite crear/editar
+clientes y proyectos sin tocar JSON manualmente.
+
+Los proyectos también pueden declarar `project_type` (`content`, `ecommerce`,
+`local`, `saas`, `marketplace`) para activar requisitos de briefing y checks de
+readiness específicos de vertical.
+
+Los clientes pueden definir un dominio base, SEMrush database y Google `gl`/`hl`
+por defecto. Los proyectos heredan esos valores y pueden sobreescribirlos.
 
 Los service accounts de Google deben vivir en `credentials/`, que está ignorado por Git.
 
@@ -136,6 +151,13 @@ Gradio local:
 ```bash
 python apps/gradio_app.py
 ```
+
+La app Gradio incluye Home con checklist de setup, configuración global,
+gestión de clientes/proyectos, preview de configuración efectiva, checks de
+conexión SEMrush/SERP/GSC/GA4/Sheets/LLM, descubrimiento de Google Sheets vía
+Drive, lanzamiento validado de briefings `new_page` o `existing_page`, y revisión
+de runs con métricas, artifacts y acciones operativas. Ver
+`docs/GRADIO_OPERATOR_WORKFLOWS.md`.
 
 ## API
 

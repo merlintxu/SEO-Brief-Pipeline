@@ -7,6 +7,7 @@ This document converts the redesign into an executable backlog for maintainers a
 - Rework the pipeline by stages with typed contracts and quality gates.
 - Improve provider resilience, prompt quality, persistence, and operations.
 - Add an operator frontend for run lifecycle and diagnostics.
+- Redesign the operator UX/UI so setup, configuration, execution and review work as one product flow.
 - Keep current public flow (`POST /briefing`, `GET /briefing/{run_id}`, `/outputs/...`) backward compatible during migration.
 
 ## Delivery Rules
@@ -251,6 +252,86 @@ Acceptance:
 - Callback tests run without launching a Gradio server.
 - Gradio UI defaults to no Sheets upload.
 
+## Epic H - Operator UX/UI Redesign
+
+### Goal
+Turn the current Gradio baseline into a usable local operator console from first
+run through output review.
+
+Detailed source of truth:
+
+- `docs/UX_UI_REDESIGN_PLAN.md`
+
+### PR UX1 - Product shell and navigation
+
+- Add Home, setup checklist, active client/project context and recent run summary.
+- Replace duplicate client/project entry points with shared context state.
+
+Acceptance:
+
+- A clean local app shows the next setup action.
+- Selected context is reused by checks and launch.
+
+### PR UX2 - Guided first-run setup
+
+- Add provider credential status, default LLM setup, first client and first project flow.
+- Keep secrets write-only and show configured/not configured status only.
+
+Acceptance:
+
+- A new operator can configure the minimum viable system without editing JSON.
+
+### PR UX3 - Client and project workspaces
+
+- Replace markdown listings with structured selectable lists.
+- Add project effective configuration preview and inheritance visibility.
+
+Acceptance:
+
+- Existing clients/projects can be edited without manually typing IDs.
+
+### PR UX4 - Integrations and preflight center
+
+- Show live and config-only checks for SEMrush, SERP, GSC, GA4, Sheets and LLM.
+- Display latest preflight state on the launch screen.
+
+Acceptance:
+
+- Operators can validate readiness for the active project before launching a run.
+
+### PR UX5 - Briefing launcher redesign
+
+- Split new-page and existing-page launch modes.
+- Add run preview, mode-specific validation and explicit export intent.
+
+Acceptance:
+
+- Invalid runs fail before creating jobs.
+
+### PR UX6 - Runs workspace and output review
+
+- Add filterable run table, detail panels, metrics, costs, artifacts and safe admin actions.
+
+Acceptance:
+
+- Failed and completed runs can be diagnosed from the UI without opening files manually.
+
+### PR UX7 - UI service layer
+
+- Extract orchestration out of `apps/gradio_app.py` into reusable service modules.
+
+Acceptance:
+
+- Gradio callbacks are thin and core UI behavior is testable without importing Gradio.
+
+### PR UX8 - Documentation and release readiness
+
+- Add first-run tutorial, smoke checklist and final docs alignment.
+
+Acceptance:
+
+- README, runtime operations, troubleshooting, project map and AGENTS agree on the primary operator workflow.
+
 ## Epic G - Cost, Performance, And SLO
 
 ### Goal
@@ -286,13 +367,14 @@ Acceptance:
 5. D1, D2 (DB upgrade and observability depth)
 6. E2 (admin filters)
 7. F1, F2 (operator frontend)
-8. G1, G2 (cost/SLO optimization)
+8. UX1 through UX8 (operator UX/UI redesign)
+9. G1, G2 (cost/SLO optimization)
 
 ## Immediate Next PR (Recommended)
 
-`PR-next: job state machine hardening`
+`PR-next: UX polish and local smoke hardening`
 
-- Implement explicit transition validator in `api/job_store.py`.
-- Enforce retry/cancel rules in a single service method.
-- Add full transition matrix tests.
-- Update `AGENTS.md`, `ARCHITECTURE.md`, `docs/RUNTIME_OPERATIONS.md`.
+- Run the integrated UX baseline against a clean local setup.
+- Tighten labels, spacing and validation messages based on real usage.
+- Add smoke coverage for app construction and the first-run path.
+- Update `AGENTS.md`, `docs/GRADIO_OPERATOR_WORKFLOWS.md`, `docs/RUNTIME_OPERATIONS.md`.
