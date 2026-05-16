@@ -3,8 +3,8 @@
 This document describes the local Gradio app used by operators to configure clients,
 projects, provider connections and briefing jobs.
 
-The current implementation follows the integrated UX redesign baseline tracked
-in `docs/UX_UI_REDESIGN_PLAN.md`.
+The current implementation follows the Premium V2 integrated UX redesign baseline
+tracked in `docs/UX_UI_REDESIGN_PLAN.md` (phases UX9–UX12).
 
 Launch:
 
@@ -44,31 +44,40 @@ Configuration is still stored in:
 The UI writes through `seo_pipeline.config` models, so the JSON files remain the
 source of truth for local operation.
 
-## Console Structure
+## Console Structure (V2 Dashboard Sidebar)
 
-The app is organized around operator tasks:
+The app uses a **sidebar + main panel** layout. The left sidebar contains
+navigation buttons and always shows the active client/project context. The main
+panel shows the selected workspace.
 
-- **Home**: setup checklist, active client/project context, clients, projects and recent runs.
-- **Settings**: global provider credentials and model references.
-- **Clients**: client list plus editor.
-- **Projects**: project list, editor, effective config preview, duplication and Drive discovery.
-- **Preflight**: config-only and live provider checks for the selected project.
-- **Launch**: new-page/existing-page run preview and validated launch.
-- **Runs**: filterable run table, details, metrics, artifacts and safe admin actions.
+Sidebar navigation areas:
+
+- **🏠 Home**: setup checklist, active client/project context picker, summary
+  tables for clients, projects and recent runs.
+- **⚙️ Settings**: global provider credentials and model references.
+- **👥 Clients**: client list plus editor.
+- **📁 Projects**: project list, editor, effective config preview, duplication
+  and Drive discovery.
+- **🚀 Launch Briefing**: unified Preflight + Launch workflow — config analysis,
+  live provider checks, run preview and validated launch.
+- **📋 Runs Workspace**: filterable run list with visual status pills, details,
+  metrics, artifacts and safe admin actions.
 
 The preferred workflow is:
 
-1. Start at **Home** and confirm the next setup action.
+1. Start at **Home** and confirm the setup checklist.
 2. Configure providers in **Settings**.
 3. Create or load a client in **Clients**.
 4. Create or load a project in **Projects** and review the effective configuration.
-5. Run **Preflight** checks.
-6. Preview and launch from **Launch**.
-7. Review results in **Runs**.
+5. Go to **Launch Briefing** and click **Analyze Readiness & Preview** (runs
+   config-only preflight + generates a run preview in one click).
+6. Optionally click **Run live provider checks** before launching.
+7. Click **Launch Briefing** to submit the job.
+8. Review results in **Runs Workspace**.
 
-## Global Settings Tab
+## Settings Panel
 
-Use this tab for provider settings shared by all clients:
+Use this area for provider settings shared by all clients:
 
 - SEMrush token.
 - SerpAPI key.
@@ -81,9 +90,9 @@ Client-specific credentials can still exist for backwards compatibility, but new
 local operation should prefer global settings plus client/project non-secret
 defaults.
 
-## Clients Tab
+## Clients Panel
 
-Use this tab to create or update client-level configuration.
+Use this area to create or update client-level configuration.
 
 Editing flow:
 
@@ -107,9 +116,9 @@ Client fields:
 SEMrush database, Google `gl` and Google `hl` are dropdowns backed by
 `seo_pipeline/options.py`; operators cannot type arbitrary unsupported values.
 
-## Projects Tab
+## Projects Panel
 
-Use this tab to create or update projects under a client.
+Use this area to create or update projects under a client.
 
 Editing flow:
 
@@ -179,13 +188,16 @@ client's service account through the Google Drive API. This is service-account
 based discovery; full end-user OAuth Drive browsing is not implemented in the
 local Gradio app.
 
-## Connections Tab
+## Launch Briefing Panel (Unified Preflight + Launch)
 
-This section is now exposed as **Preflight** in the UI.
+This panel combines preflight checks and run launch in a single workflow.
 
-The Preflight tab runs sanitized provider checks for one client/project pair.
+Use **Analyze Readiness & Preview** to run config-only checks and generate a
+run preview before submitting. Use **Run live provider checks** for a full API
+connection test against real providers. Use **Launch Briefing** to submit once
+ready.
 
-Checks:
+Checks (shown in the Launch Briefing panel):
 
 - SEMrush: one small keyword query.
 - SERP: SerpAPI/DataForSEO query according to the project provider order.
@@ -196,13 +208,9 @@ Checks:
 
 Automated tests mock provider calls. CI must not call real vendor APIs.
 
-## Run Tab
+## Launch Configuration
 
-This section is now exposed as **Launch** in the UI.
-
-Use the Launch tab to preview and launch one briefing job.
-
-Required:
+Required inputs in the **Launch Briefing** panel:
 
 - client ID
 - project ID
@@ -227,11 +235,10 @@ Each Gradio-created job persists the operator context in SQLite:
 This metadata is shown in job lists and details and is available through the API
 job response schema.
 
-## Jobs And Detail Tabs
+## Runs Workspace Panel
 
-This section is now exposed as **Runs** in the UI.
-
-The Runs tab lists recent runs from SQLite. The detail panel shows:
+The **Runs Workspace** lists recent runs from SQLite with visual status pills
+(DONE, FAILED, RUNNING, QUEUED). The detail panel shows:
 
 - job status and operator context,
 - DB-first briefing record,
