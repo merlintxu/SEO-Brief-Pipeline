@@ -17,22 +17,25 @@ class LlmSettings:
 
 
 def get_llm_settings(project: ProjectConfig | None = None) -> LlmSettings:
+    from seo_pipeline.config import get_config
+
+    runtime_settings = get_config().runtime_settings
     project_llm = project.runtime.llm if project else None
-    provider = (project_llm.provider if project_llm else os.getenv("LLM_PROVIDER", "openai")).strip().lower() or "openai"
+    provider = (project_llm.provider if project_llm else os.getenv("LLM_PROVIDER", "ollama")).strip().lower() or "ollama"
     model = (project_llm.model if project_llm else None) or os.getenv("LLM_MODEL", "").strip() or None
     base_url = project_llm.base_url if project_llm else None
     prompt_version = (project_llm.prompt_version if project_llm else os.getenv("BRIEFING_PROMPT_VERSION", "v1")).strip() or "v1"
     if provider == "ollama":
-        model = model or os.getenv("OLLAMA_MODEL", "").strip() or None
-        base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
+        model = model or os.getenv("OLLAMA_MODEL", "").strip() or "gemma4:26b"
+        base_url = base_url or runtime_settings.llm_base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
         api_key = None
     elif provider == "anthropic":
         model = model or os.getenv("ANTHROPIC_MODEL", "").strip() or "claude-3-5-sonnet-latest"
         base_url = base_url or os.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com").strip()
-        api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or None
+        api_key = runtime_settings.anthropic_key or os.getenv("ANTHROPIC_API_KEY", "").strip() or None
     else:
         base_url = base_url
-        api_key = os.getenv("OPENAI_API_KEY", "").strip() or None
+        api_key = runtime_settings.openai_key or os.getenv("OPENAI_API_KEY", "").strip() or None
     return LlmSettings(
         provider=provider,
         model=model,

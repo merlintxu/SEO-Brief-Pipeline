@@ -8,7 +8,7 @@ This file is the entrypoint for coding agents working in this repository.
 - `.env` is local-only and ignored. Never print, stage, commit or summarize its values.
 - Generated artifacts are ignored: `outputs/`, `runs/`, `logs/`, caches, credentials and bytecode.
 - Tests are under `tests/` and should be run with `pytest -q`.
-- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md` and active work is in PR #37 (`codex/ops-audit-trail-f1`).
+- Current execution is aligned to `docs/REARCHITECTURE_EXECUTION_PLAN.md`; latest local work implements the integrated UX/UI redesign baseline from `docs/UX_UI_REDESIGN_PLAN.md`.
 
 ## Documented Changes (Recent)
 
@@ -204,14 +204,63 @@ This file is the entrypoint for coding agents working in this repository.
 - Added job metrics timeline API/dashboard integration:
   - protected `GET /jobs/{run_id}/metrics` returns stage metrics, provider calls, prompt run metadata and summary counts.
   - `/ops` job detail now renders persisted metrics alongside lifecycle events.
+- Added Gradio client/project operator workflows:
+  - tabs for client and project create/update backed by `data/clients.json` and `data/projects.json`.
+  - project runtime editing includes LLM provider/model/base URL, prompt version and SERP provider order.
+  - optional `ga4_property_id` is now part of `ProjectConfig`.
+  - connection checks cover SEMrush, SERP, GSC, GA4, Sheets and LLM configuration.
+  - Gradio-created jobs persist `client_id`, `project_id`, `brief_type` and `target_url`.
+- Added GA4 existing-page enrichment baseline:
+  - module: `seo_pipeline/vendors/ga4_io.py`.
+  - pipeline writes optional `ga4_url_metrics` and a `ga4` stage in `run_metrics.json`.
+  - GA4 failures are non-blocking and tests use mocked Google services only.
+- Added global/local runtime settings and inherited client/project defaults:
+  - ignored local settings file: `config/runtime_settings.json`.
+  - shared SEMrush, SerpAPI, OpenAI, Anthropic, LLM base URL and DataForSEO settings are merged into active clients at runtime.
+  - clients now define `default_base_domain`, `default_database`, `default_gl` and `default_hl`.
+  - projects inherit client defaults and can override base domain, SEMrush database and Google locale.
+  - project output paths now default to `{output_dir}/{client_id}/{project_id}/{run_id}` for direct runs.
+- Added constrained operator options:
+  - `seo_pipeline/options.py` centralizes selectable SEMrush databases, Google `gl`/`hl`, LLM providers/models and SERP providers.
+  - Gradio uses dropdowns/checkboxes instead of arbitrary text for these fields.
+  - default local LLM is now `ollama` with `gemma4:26b`.
+- Added Google Drive spreadsheet discovery:
+  - module: `seo_pipeline/vendors/drive_io.py`.
+  - Gradio can list Sheets visible to the configured service account.
+- Added Gradio client/project edit UX:
+  - existing clients and projects can be refreshed into dropdowns, loaded into forms and saved back over the same ID.
+  - tests cover load/refresh callbacks without launching a Gradio server.
+- Added global UX/UI redesign plan:
+  - source of truth: `docs/UX_UI_REDESIGN_PLAN.md`.
+  - slices the operator console redesign into UX1 through UX8, covering first-run setup, shared context, workspaces, preflight, launch, runs, service extraction and release docs.
+- Implemented integrated Gradio UX/UI baseline:
+  - Home setup checklist and active client/project context.
+  - Settings, Clients, Projects, Preflight, Launch and Runs task areas.
+  - Project effective configuration preview and duplicate-project workflow.
+  - Config preflight, guarded launch validation and richer run detail/actions.
+  - New service layer: `seo_pipeline/operator_ui.py`.
+- Added Google AI Search skill analysis:
+  - source of truth: `docs/GOOGLE_AI_SEARCH_SKILL_ANALYSIS.md`.
+  - proposes AISEO backlog for readiness contracts, target URL audit, prompt guardrails, quality review, vertical modes and agent-friendly audits.
+- Implemented AISEO1-AISEO6 baseline:
+  - `seo_pipeline/ai_search_readiness.py` adds readiness reports, target URL audit support, myth guardrails and brief quality review.
+  - `ProjectConfig.project_type` supports `content`, `ecommerce`, `local`, `saas`, `marketplace`.
+  - pipeline writes `ai_search_readiness.json` and, for existing pages, `target_audit_report.json`.
+  - prompt context now includes readiness findings and anti-hack guardrails.
+- Cleaned obsolete root-level manual scripts:
+  - removed ad-hoc `test_*.py` pipeline smoke scripts now covered by `tests/`.
+  - removed legacy `restart_pipeline.sh` launcher in favor of documented API/Gradio entrypoints.
+  - removed hardcoded-key API smoke script and tightened local repo guard coverage for `*.egg-info`.
 
 ## Next Actions (Post-PR)
 
 1. Execute `docs/REARCHITECTURE_EXECUTION_PLAN.md` in medium PRs.
-2. Immediate next PR focus after merge: add project runtime management endpoints/UI so operators can edit model/provider defaults without editing JSON directly.
-3. Continue typed stage contracts and quality gates before adding new provider complexity.
-4. Introduce prompt registry + versioning before prompt tuning experiments.
-5. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
+2. Smoke test the integrated Gradio UX baseline with a clean local setup.
+3. Harden AISEO baseline with richer ecommerce/local fixtures and one-pass target HTML reuse.
+4. Decide whether global/client/project management should remain Gradio-only or be promoted to authenticated API endpoints.
+5. Continue typed stage contracts and quality gates before adding new provider complexity.
+6. Expand typed enrichment contracts for GA4/GSC/Drive before prompt tuning experiments.
+7. Prepare DB abstraction (SQLite + PostgreSQL) before scaling admin operations/frontend.
 
 ## Documentation Discipline (Mandatory)
 
@@ -231,7 +280,7 @@ git status --short --branch
 python -m pip install -e ".[test]"
 pytest -q
 git diff --check
-git ls-files '.env' '*__pycache__*' '*.pyc'
+git ls-files '.env' '*__pycache__*' '*.pyc' '*.egg-info'
 ```
 
 The `git ls-files` command should return no output.
@@ -254,6 +303,9 @@ Key docs:
 - `docs/PIPELINE_DEEP_DIVE.md`: stage-by-stage pipeline behavior, risks and improvements.
 - `docs/EXTERNAL_APIS.md`: provider contracts, credentials and expected failures.
 - `docs/RUNTIME_OPERATIONS.md`: local setup, API lifecycle, deployment and debugging.
+- `docs/GRADIO_OPERATOR_WORKFLOWS.md`: local Gradio client/project, connection-check and briefing workflows.
+- `docs/UX_UI_REDESIGN_PLAN.md`: global UX/UI redesign plan for the operator console.
+- `docs/GOOGLE_AI_SEARCH_SKILL_ANALYSIS.md`: analysis of the attached Google AI Search optimization skill and proposed AISEO backlog.
 - `docs/IMMEDIATE_ACTION_PLAN.md`: immediate operational plan and acceptance criteria.
 - `docs/IMPROVEMENT_ROADMAP.md`: prioritized improvement backlog.
 - `docs/REARCHITECTURE_EXECUTION_PLAN.md`: executable rearchitecture backlog with PR-level steps.

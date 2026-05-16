@@ -2,6 +2,7 @@
   {
     "client_id": "ADESLAS",
     "name": "ADESLAS",
+    "default_base_domain": "https://www.segurcaixaadeslas.es/",
     "semrush_token": null,
     "serpapi_key": null,
     "openai_key": null,

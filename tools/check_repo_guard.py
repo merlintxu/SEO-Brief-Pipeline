@@ -17,7 +17,7 @@ def _run(cmd: list[str]) -> str:
 
 
 def main() -> int:
-    forbidden = _run(["git", "ls-files", ".env", "*__pycache__*", "*.pyc"])
+    forbidden = _run(["git", "ls-files", ".env", "*__pycache__*", "*.pyc", "*.egg-info"])
     if forbidden:
         print("Forbidden tracked files detected:")
         print(forbidden)

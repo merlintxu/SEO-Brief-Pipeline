@@ -13,7 +13,13 @@ from typing import Optional
 import os
 
 from seo_pipeline.config import get_config
-from seo_pipeline.artifacts import AUDIT_REPORT_JSON, RUN_METRICS_JSON, SERP_RAW_JSON
+from seo_pipeline.artifacts import (
+    AI_SEARCH_READINESS_JSON,
+    AUDIT_REPORT_JSON,
+    RUN_METRICS_JSON,
+    SERP_RAW_JSON,
+    TARGET_AUDIT_REPORT_JSON,
+)
 from seo_pipeline.cost_tracking import estimate_openai_text_cost, provider_call_estimate, summarize_costs
 from seo_pipeline.constants import (
     DEFAULT_RELATED_LIMIT,
@@ -35,7 +41,14 @@ from seo_pipeline.blueprint import build_briefing_plan_artifact, generate_briefi
 from seo_pipeline.row24 import build_row24
 from seo_pipeline.exporter import export_all_formats
 from seo_pipeline.vendors.gsc_io import fetch_cannibalization
+from seo_pipeline.vendors.ga4_io import fetch_url_metrics
 from seo_pipeline.vendors.sheets_io import upsert_to_sheet
+from seo_pipeline.ai_search_readiness import (
+    audit_target_url,
+    build_readiness_for_new_page,
+    build_readiness_from_audit_entry,
+    review_briefing_for_ai_search,
+)
 from seo_pipeline.constants import HEADERS_24, SHEET_ROW_KEYCOLS
 from seo_pipeline.utils.logging import logger, log_event
 from seo_pipeline.utils.retry import retry_call
@@ -46,6 +59,7 @@ from seo_pipeline.utils.io import save_json
 from seo_pipeline.input_validation import PipelineInput
 from seo_pipeline.models import (
     AuditReport,
+    AiSearchReadinessReport,
     BriefingPlan,
     CompetitorSet,
     EnrichmentSet,
@@ -98,6 +112,8 @@ def run_full_pipeline(
     )
 
     cfg = get_config()
+    if cfg.active_client is not None:
+        cfg.active_client = cfg.apply_effective_client_defaults(cfg.active_client)
     llm_settings = get_llm_settings(cfg.active_project)
     runtime_requirements = validate_runtime_requirements(
         cfg,
@@ -246,7 +262,7 @@ def run_full_pipeline(
         semrush_data = retry_call(
             semrush_client.fetch_related,
             keyword=keyword,
-            database=cfg.active_client.default_database,
+            database=cfg.resolve_project_database(cfg.active_project),
             limit=related_limit,
             retries=retry_attempts,
             base_delay=retry_base_delay,
@@ -288,8 +304,8 @@ def run_full_pipeline(
             search_raw,
             query=keyword,
             api_key=cfg.active_client.serpapi_key,
-            gl=cfg.active_client.default_gl,
-            hl=cfg.active_client.default_hl,
+            gl=cfg.resolve_project_gl(cfg.active_project),
+            hl=cfg.resolve_project_hl(cfg.active_project),
             num=serp_num,
             use_dataforseo_fallback=serp_provider_plan.use_dataforseo,
             force_disable_serpapi=not serp_provider_plan.use_serpapi,
@@ -308,7 +324,7 @@ def run_full_pipeline(
         top_urls = serp_snapshot.top_urls
         top_competitors = extract_competitor_domains(
             serp_raw,
-            exclude_domain=cfg.active_project.base_domain,
+            exclude_domain=cfg.resolve_project_base_domain(cfg.active_project),
             max_domains=top_competitors_count
         )
         results["top_competitors"] = top_competitors
@@ -372,6 +388,70 @@ def run_full_pipeline(
         )
 
         # ===================================================================
+        # 3b. Google AI Search readiness / target URL audit
+        # ===================================================================
+        target_audit_report = None
+        ai_search_readiness: AiSearchReadinessReport
+        project_type = getattr(cfg.active_project, "project_type", "content")
+        if target_url:
+            _log("info", "3b/8 Auditando URL objetivo para Google AI Search...", stage="target_audit")
+            _write_status(step="target_audit", message="Auditando URL objetivo", percent=50)
+            stage_started = _stage_start("target_audit", provider="scrape_failover")
+            target_audit_report = audit_target_url(
+                target_url,
+                project_type=project_type,
+                piloterr_key=getattr(cfg.active_client, "piloterr_key", None),
+                dataforseo_login=getattr(cfg.active_client, "dataforseo_login", None),
+                dataforseo_password=getattr(cfg.active_client, "dataforseo_password", None),
+            )
+            target_audit_path = output_dir / TARGET_AUDIT_REPORT_JSON
+            save_json(target_audit_path, target_audit_report.model_dump())
+            results["target_audit_path"] = str(target_audit_path)
+            target_entry = target_audit_report.entries[0] if target_audit_report.entries else None
+            if target_entry and target_entry.status_code == 200:
+                ai_search_readiness = build_readiness_from_audit_entry(
+                    target_entry,
+                    mode="existing_page",
+                    project_type=project_type,
+                )
+            else:
+                ai_search_readiness = AiSearchReadinessReport(
+                    url=target_url,
+                    mode="existing_page",
+                    project_type=project_type,
+                    score=0,
+                    verdict="Target URL could not be audited.",
+                )
+            _stage_finish(
+                "target_audit",
+                stage_started,
+                provider="scrape_failover",
+                items_processed=1,
+                status_code=target_entry.status_code if target_entry else 0,
+                readiness_score=ai_search_readiness.score,
+            )
+        else:
+            _log("info", "3b/8 Generando requisitos Google AI Search para página nueva...", stage="ai_search_readiness")
+            stage_started = _stage_start("ai_search_readiness", provider="internal")
+            ai_search_readiness = build_readiness_for_new_page(
+                keyword=keyword,
+                project_type=project_type,
+                base_domain=cfg.resolve_project_base_domain(cfg.active_project),
+            )
+            _stage_finish(
+                "ai_search_readiness",
+                stage_started,
+                provider="internal",
+                items_processed=len(ai_search_readiness.findings),
+                readiness_score=ai_search_readiness.score,
+            )
+
+        ai_search_path = output_dir / AI_SEARCH_READINESS_JSON
+        save_json(ai_search_path, ai_search_readiness.model_dump())
+        results["ai_search_readiness_path"] = str(ai_search_path)
+        results["ai_search_readiness"] = ai_search_readiness.model_dump()
+
+        # ===================================================================
         # 4. DetecciÃ³n de canibalizaciÃ³n (GSC)
         # ===================================================================
         cannibal_notes = ""
@@ -425,6 +505,62 @@ def run_full_pipeline(
                 "skipped": True,
                 "reason": "not_configured",
                 "provider": "gsc",
+                "status": "skipped",
+                "retries": 0,
+            }
+
+        # ===================================================================
+        # 4b. GA4 enrichment for existing URLs (optional)
+        # ===================================================================
+        ga4_metrics = None
+        if target_url and runtime_requirements.can_run_ga4:
+            try:
+                _log("info", "4b/8 Consultando métricas GA4 de la URL objetivo...", stage="ga4")
+                stage_started = _stage_start("ga4", provider="ga4")
+                start_date = (datetime.now() - timedelta(days=30 * gsc_months_back)).strftime("%Y-%m-%d")
+                ga4_metrics = retry_call(
+                    fetch_url_metrics,
+                    property_id=cfg.active_project.ga4_property_id,
+                    target_url=target_url,
+                    sa_json_path=cfg.active_client.gsc_sa_path,
+                    start_date=start_date,
+                    end_date=datetime.now().strftime("%Y-%m-%d"),
+                    retries=retry_attempts,
+                    base_delay=retry_base_delay,
+                    jitter=0.2,
+                    should_retry=provider_retry_policy("ga4"),
+                    on_retry=_log_retry_factory("fetch_url_metrics", retry_attempts, stage="ga4", provider="ga4"),
+                )
+                results["ga4_url_metrics"] = ga4_metrics.model_dump()
+                _stage_finish(
+                    "ga4",
+                    stage_started,
+                    provider="ga4",
+                    items_processed=1,
+                    sessions=ga4_metrics.sessions,
+                    total_users=ga4_metrics.total_users,
+                    screen_page_views=ga4_metrics.screen_page_views,
+                    conversions=ga4_metrics.conversions,
+                )
+            except Exception as e:
+                error_category = classify_error(e)
+                _log("warning", f"GA4 no disponible: {e}", stage="ga4")
+                if "ga4" in metrics["stages"]:
+                    _stage_finish(
+                        "ga4",
+                        stage_started,
+                        status="failed",
+                        provider="ga4",
+                        error=str(e),
+                        error_category=error_category,
+                    )
+        else:
+            reason = "missing_target_url" if not target_url else "not_configured"
+            _log("info", f"4b/8 GA4 omitido: {reason}", stage="ga4")
+            metrics["stages"]["ga4"] = {
+                "skipped": True,
+                "reason": reason,
+                "provider": "ga4",
                 "status": "skipped",
                 "retries": 0,
             }
@@ -577,6 +713,7 @@ def run_full_pipeline(
             temperature=prompt_bundle.temperature,
             prompt_version=prompt_bundle.version,
             planner_artifact=briefing_plan.model_dump(),
+            ai_search_readiness=ai_search_readiness.model_dump(),
             llm_provider=llm_settings.provider,
             llm_base_url=llm_settings.base_url,
         )
@@ -592,6 +729,18 @@ def run_full_pipeline(
         }
         metrics["prompt_run"] = results["prompt_run"]
         results["briefing"] = briefing
+        brief_quality_review = review_briefing_for_ai_search(
+            briefing,
+            ai_search_readiness,
+            project_type=project_type,
+        )
+        results["brief_quality_review"] = brief_quality_review.model_dump()
+        metrics["brief_quality_review"] = {
+            "passed": brief_quality_review.passed,
+            "score": brief_quality_review.score,
+            "findings": [finding.model_dump() for finding in brief_quality_review.findings],
+            "failed_count": sum(1 for finding in brief_quality_review.findings if finding.severity == "error"),
+        }
         if llm_settings.provider == "openai":
             briefing_cost = estimate_openai_text_cost(
                 model=resolved_model,

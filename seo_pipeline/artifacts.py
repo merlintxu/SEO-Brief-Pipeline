@@ -11,6 +11,8 @@ STATUS_JSON: Final = "status.json"
 AUDIT_REPORT_JSON: Final = "audit_report.json"
 SERP_RAW_JSON: Final = "serp_raw.json"
 RUN_METRICS_JSON: Final = "run_metrics.json"
+TARGET_AUDIT_REPORT_JSON: Final = "target_audit_report.json"
+AI_SEARCH_READINESS_JSON: Final = "ai_search_readiness.json"
 
 EXPORT_ARTIFACTS: Final = {
     BRIEFING_JSON,
@@ -23,6 +25,8 @@ DOWNLOADABLE_ARTIFACTS: Final = {
     *EXPORT_ARTIFACTS,
     STATUS_JSON,
     AUDIT_REPORT_JSON,
+    TARGET_AUDIT_REPORT_JSON,
+    AI_SEARCH_READINESS_JSON,
     SERP_RAW_JSON,
     RUN_METRICS_JSON,
 }

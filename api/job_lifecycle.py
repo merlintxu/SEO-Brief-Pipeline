@@ -24,6 +24,10 @@ class JobLifecycleService:
         status_path: Path,
         message: str = "Tarea en cola",
         source_run_id: str | None = None,
+        client_id: str | None = None,
+        project_id: str | None = None,
+        brief_type: str | None = None,
+        target_url: str | None = None,
     ) -> None:
         save_json(
             status_path,
@@ -38,6 +42,10 @@ class JobLifecycleService:
             keyword=keyword,
             output_dir=str(output_dir),
             source_run_id=source_run_id,
+            client_id=client_id,
+            project_id=project_id,
+            brief_type=brief_type,
+            target_url=target_url,
         )
         self._try_update(run_id, status="queued", step="queued", message=message)
 

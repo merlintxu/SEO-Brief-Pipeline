@@ -23,6 +23,10 @@ class JobRecord:
     error_category: str | None
     output_dir: str
     source_run_id: str | None
+    client_id: str | None
+    project_id: str | None
+    brief_type: str | None
+    target_url: str | None
     created_at: str
     updated_at: str
 
@@ -120,7 +124,18 @@ class BriefingRecord:
 
 
 class JobStoreBackend(Protocol):
-    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None: ...
+    def create_job(
+        self,
+        run_id: str,
+        keyword: str,
+        output_dir: str,
+        *,
+        source_run_id: str | None = None,
+        client_id: str | None = None,
+        project_id: str | None = None,
+        brief_type: str | None = None,
+        target_url: str | None = None,
+    ) -> None: ...
     def update_status(self, run_id: str, *, status: str, step: str, message: str, error_category: str | None = None) -> None: ...
     def get_job(self, run_id: str) -> JobRecord | None: ...
     def list_jobs(
@@ -191,6 +206,10 @@ class SQLiteJobStoreBackend:
                     error_category TEXT,
                     output_dir TEXT NOT NULL,
                     source_run_id TEXT,
+                    client_id TEXT,
+                    project_id TEXT,
+                    brief_type TEXT,
+                    target_url TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
@@ -308,17 +327,34 @@ class SQLiteJobStoreBackend:
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
             if "source_run_id" not in columns:
                 conn.execute("ALTER TABLE jobs ADD COLUMN source_run_id TEXT")
+            for column in ("client_id", "project_id", "brief_type", "target_url"):
+                if column not in columns:
+                    conn.execute(f"ALTER TABLE jobs ADD COLUMN {column} TEXT")
             conn.commit()
 
-    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None:
+    def create_job(
+        self,
+        run_id: str,
+        keyword: str,
+        output_dir: str,
+        *,
+        source_run_id: str | None = None,
+        client_id: str | None = None,
+        project_id: str | None = None,
+        brief_type: str | None = None,
+        target_url: str | None = None,
+    ) -> None:
         now = datetime.now().isoformat(timespec="seconds")
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO jobs (run_id, keyword, status, step, message, error_category, output_dir, source_run_id, created_at, updated_at)
-                VALUES (?, ?, 'queued', 'queued', 'Tarea en cola', NULL, ?, ?, ?, ?)
+                INSERT INTO jobs (
+                    run_id, keyword, status, step, message, error_category, output_dir,
+                    source_run_id, client_id, project_id, brief_type, target_url, created_at, updated_at
+                )
+                VALUES (?, ?, 'queued', 'queued', 'Tarea en cola', NULL, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (run_id, keyword, output_dir, source_run_id, now, now),
+                (run_id, keyword, output_dir, source_run_id, client_id, project_id, brief_type, target_url, now, now),
             )
             self._insert_event(
                 conn,
@@ -749,6 +785,10 @@ class SQLiteJobStoreBackend:
             error_category=row["error_category"],
             output_dir=row["output_dir"],
             source_run_id=row["source_run_id"],
+            client_id=row["client_id"],
+            project_id=row["project_id"],
+            brief_type=row["brief_type"],
+            target_url=row["target_url"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
@@ -883,7 +923,18 @@ class PostgresJobStoreBackend:
             "Use JOB_STORE_BACKEND=sqlite for now."
         )
 
-    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None:
+    def create_job(
+        self,
+        run_id: str,
+        keyword: str,
+        output_dir: str,
+        *,
+        source_run_id: str | None = None,
+        client_id: str | None = None,
+        project_id: str | None = None,
+        brief_type: str | None = None,
+        target_url: str | None = None,
+    ) -> None:
         raise NotImplementedError
 
     def update_status(
@@ -989,8 +1040,28 @@ class JobStore:
             return self._backend._connect()
         raise RuntimeError("_connect is only available for sqlite backend")
 
-    def create_job(self, run_id: str, keyword: str, output_dir: str, *, source_run_id: str | None = None) -> None:
-        self._backend.create_job(run_id, keyword, output_dir, source_run_id=source_run_id)
+    def create_job(
+        self,
+        run_id: str,
+        keyword: str,
+        output_dir: str,
+        *,
+        source_run_id: str | None = None,
+        client_id: str | None = None,
+        project_id: str | None = None,
+        brief_type: str | None = None,
+        target_url: str | None = None,
+    ) -> None:
+        self._backend.create_job(
+            run_id,
+            keyword,
+            output_dir,
+            source_run_id=source_run_id,
+            client_id=client_id,
+            project_id=project_id,
+            brief_type=brief_type,
+            target_url=target_url,
+        )
 
     def update_status(
         self,

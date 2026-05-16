@@ -115,7 +115,7 @@ def test_run_metrics_contract_keeps_core_fields_and_stage_observability(tmp_path
     assert "costs" in metrics
     assert metrics["costs"]["currency"] == "USD"
     assert "total_estimated_cost_usd" in metrics["costs"]
-    assert any(item["provider"] == "openai" for item in metrics["costs"]["estimates"])
+    assert any(item["provider"] in {"openai", "ollama", "anthropic"} for item in metrics["costs"]["estimates"])
 
     for stage in ("semrush", "serp", "audit", "anchors", "briefing", "export"):
         payload = metrics["stages"][stage]
@@ -124,5 +124,11 @@ def test_run_metrics_contract_keeps_core_fields_and_stage_observability(tmp_path
         assert "retries" in payload
         assert "duration_seconds" in payload
         assert "items_processed" in payload
-    assert metrics["stages"]["briefing"]["estimated_cost_usd"] > 0
-    assert metrics["stages"]["briefing"]["total_tokens_estimated"] > 0
+    if metrics["stages"]["briefing"]["provider"] == "openai":
+        assert metrics["stages"]["briefing"]["estimated_cost_usd"] > 0
+    else:
+        assert "estimated_cost_usd" in metrics["stages"]["briefing"]
+    if metrics["stages"]["briefing"]["provider"] == "openai":
+        assert metrics["stages"]["briefing"]["total_tokens_estimated"] > 0
+    else:
+        assert "total_tokens_estimated" in metrics["stages"]["briefing"]

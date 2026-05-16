@@ -5,10 +5,13 @@ import sys
 from pathlib import Path
 
 
+SKIP_DIRS = {".git", ".venv", "venv", "env", "node_modules", ".pytest_cache", "__pycache__"}
+
+
 def main() -> int:
     failures: list[str] = []
     for md in Path(".").rglob("*.md"):
-        if ".git" in md.parts:
+        if any(part in SKIP_DIRS for part in md.parts):
             continue
         text = md.read_text(encoding="utf-8", errors="strict")
         lines = text.splitlines()

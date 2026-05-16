@@ -19,6 +19,7 @@ class RuntimeRequirements:
     has_serpapi: bool
     has_dataforseo: bool
     can_run_gsc: bool
+    can_run_ga4: bool
     can_upload_sheets: bool
 
 
@@ -46,6 +47,9 @@ def validate_runtime_requirements(
         missing.append("active_project")
     if missing:
         raise RuntimeValidationError("Configuracion incompleta: falta " + ", ".join(missing))
+
+    if hasattr(cfg, "apply_effective_client_defaults"):
+        client = cfg.apply_effective_client_defaults(client)
 
     has_serpapi = bool(getattr(client, "serpapi_key", None))
     has_dataforseo = bool(
@@ -93,5 +97,6 @@ def validate_runtime_requirements(
         has_serpapi=has_serpapi,
         has_dataforseo=has_dataforseo,
         can_run_gsc=bool(getattr(client, "gsc_sa_path", None) and getattr(project, "gsc_property", None)),
+        can_run_ga4=bool(getattr(client, "gsc_sa_path", None) and getattr(project, "ga4_property_id", None)),
         can_upload_sheets=bool(getattr(client, "sheets_sa_path", None) and getattr(project, "sheets_id", None)),
     )

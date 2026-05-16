@@ -238,6 +238,10 @@ def _job_to_dict(job) -> dict:
         "error_category": job.error_category,
         "output_dir": job.output_dir,
         "source_run_id": job.source_run_id,
+        "client_id": job.client_id,
+        "project_id": job.project_id,
+        "brief_type": job.brief_type,
+        "target_url": job.target_url,
         "created_at": job.created_at,
         "updated_at": job.updated_at,
     }
@@ -335,7 +339,17 @@ def _persist_job_output_from_result(run_id: str, keyword: str, result: dict) -> 
     artifacts = {
         key: str(value)
         for key, value in result.items()
-        if key in {"json", "markdown", "csv", "xlsx", "metrics_path", "serp_raw_path", "audit_path"}
+        if key in {
+            "json",
+            "markdown",
+            "csv",
+            "xlsx",
+            "metrics_path",
+            "serp_raw_path",
+            "audit_path",
+            "target_audit_path",
+            "ai_search_readiness_path",
+        }
     }
     prompt_run = result.get("prompt_run") if isinstance(result.get("prompt_run"), dict) else {}
     job_store.persist_job_output(

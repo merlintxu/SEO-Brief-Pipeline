@@ -183,6 +183,91 @@ class AuditReport(BaseModel):
     generated_at: str
 
 
+# ==================== Google AI Search Readiness ====================
+class AiSearchFinding(BaseModel):
+    model_config = BaseConfig
+    category: str
+    severity: str = Field(default="info")
+    issue: str
+    evidence: str = ""
+    recommendation: str
+    validation: str = ""
+
+
+class TechnicalEligibilitySignals(BaseModel):
+    model_config = BaseConfig
+    status_code: int = 0
+    indexable: bool = False
+    robots_meta: str = ""
+    canonical_url: str = ""
+    has_title: bool = False
+    has_meta_description: bool = False
+    has_crawlable_links: bool = False
+    has_stable_url: bool = True
+
+
+class ContentValueSignals(BaseModel):
+    model_config = BaseConfig
+    word_count: int = 0
+    has_h1: bool = False
+    heading_count: int = 0
+    has_author_signal: bool = False
+    has_date_signal: bool = False
+    has_trust_signal: bool = False
+    commodity_risk: str = "unknown"
+
+
+class MediaSeoSignals(BaseModel):
+    model_config = BaseConfig
+    image_count: int = 0
+    images_missing_alt: int = 0
+    video_count: int = 0
+    has_descriptive_media: bool = False
+
+
+class StructuredDataReadiness(BaseModel):
+    model_config = BaseConfig
+    schema_types: List[str] = Field(default_factory=list)
+    has_article: bool = False
+    has_product: bool = False
+    has_breadcrumb: bool = False
+    has_faq: bool = False
+    has_local_business: bool = False
+    has_organization: bool = False
+
+
+class AgentFriendlySignals(BaseModel):
+    model_config = BaseConfig
+    buttons_count: int = 0
+    links_count: int = 0
+    inputs_with_labels: int = 0
+    inputs_without_labels: int = 0
+    suspicious_empty_controls: int = 0
+    important_content_in_text: bool = False
+
+
+class AiSearchReadinessReport(BaseModel):
+    model_config = BaseConfig
+    url: str = ""
+    mode: str = Field(default="new_page")
+    project_type: str = Field(default="content")
+    score: int = Field(default=0, ge=0, le=100)
+    verdict: str = ""
+    technical: TechnicalEligibilitySignals = Field(default_factory=TechnicalEligibilitySignals)
+    content: ContentValueSignals = Field(default_factory=ContentValueSignals)
+    media: MediaSeoSignals = Field(default_factory=MediaSeoSignals)
+    structured_data: StructuredDataReadiness = Field(default_factory=StructuredDataReadiness)
+    agent_friendly: AgentFriendlySignals = Field(default_factory=AgentFriendlySignals)
+    findings: List[AiSearchFinding] = Field(default_factory=list)
+
+
+class BriefQualityReview(BaseModel):
+    model_config = BaseConfig
+    passed: bool
+    score: int = Field(default=0, ge=0, le=100)
+    findings: List[AiSearchFinding] = Field(default_factory=list)
+
+
 # ==================== GSC ====================
 class GscPage(BaseModel):
     model_config = BaseConfig

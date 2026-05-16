@@ -33,6 +33,26 @@ def test_job_store_create_with_source_run_id(tmp_path: Path):
     assert job.source_run_id == "run-parent"
 
 
+def test_job_store_create_with_operator_context(tmp_path: Path):
+    store = JobStore(tmp_path / "jobs.db")
+    store.create_job(
+        "run-context",
+        "keyword",
+        "outputs/run-context",
+        client_id="client-a",
+        project_id="project-a",
+        brief_type="existing_page",
+        target_url="https://example.com/page",
+    )
+
+    job = store.get_job("run-context")
+    assert job is not None
+    assert job.client_id == "client-a"
+    assert job.project_id == "project-a"
+    assert job.brief_type == "existing_page"
+    assert job.target_url == "https://example.com/page"
+
+
 def test_job_store_update_status(tmp_path: Path):
     store = JobStore(tmp_path / "jobs.db")
     store.create_job("run2", "keyword two", "outputs/run2")

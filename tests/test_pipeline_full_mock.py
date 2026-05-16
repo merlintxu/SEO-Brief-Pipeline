@@ -114,8 +114,11 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
     assert "competitor_set" in result
     assert "enrichment_set" in result
     assert "briefing_plan" in result
+    assert "ai_search_readiness" in result
+    assert "brief_quality_review" in result
     assert (output_dir / "serp_raw.json").exists()
     assert (output_dir / "audit_report.json").exists()
+    assert (output_dir / "ai_search_readiness.json").exists()
     assert result["json"].exists()
     assert result["markdown"].exists()
     assert result["csv"].exists()
@@ -126,9 +129,132 @@ def test_run_full_pipeline_writes_real_artifacts_with_mocked_vendors(tmp_path, m
     metrics = json.loads((output_dir / "run_metrics.json").read_text(encoding="utf-8"))
     assert metrics["status"] == "done"
     assert metrics["costs"]["currency"] == "USD"
-    assert set(metrics["stages"]) >= {"semrush", "serp", "audit", "anchors", "briefing", "export"}
+    assert set(metrics["stages"]) >= {"semrush", "serp", "audit", "ai_search_readiness", "anchors", "briefing", "export"}
     for stage in ("semrush", "serp", "audit", "anchors", "briefing", "export"):
         assert "provider" in metrics["stages"][stage]
         assert "retries" in metrics["stages"][stage]
         assert "status" in metrics["stages"][stage]
     assert json.loads(status_path.read_text(encoding="utf-8"))["status"] == "done"
+
+
+def test_run_full_pipeline_enriches_existing_url_with_ga4(tmp_path, monkeypatch):
+    cfg = get_config()
+    cfg.root_dir = tmp_path
+    cfg.cache_dir = tmp_path / "cache"
+    cfg.active_client = ClientConfig(
+        client_id="c1",
+        name="c1",
+        semrush_token="semrush",
+        serpapi_key="serp",
+        openai_key="openai",
+        gsc_sa_path="credentials/google.json",
+        sheets_sa_path=None,
+    )
+    cfg.active_project = ProjectConfig(
+        project_id="p1",
+        client_id="c1",
+        name="p1",
+        base_domain="example.com",
+        gsc_property="",
+        ga4_property_id="123456",
+        sheets_id="",
+        output_dir="outputs",
+        runtime={
+            "llm": {"provider": "openai", "model": "gpt-project-test", "prompt_version": "v1"},
+            "providers": {"serp": {"provider_order": ["serpapi"]}},
+        },
+    )
+    monkeypatch.setattr(
+        "seo_pipeline.pipeline.SemrushClient.fetch_related",
+        lambda *args, **kwargs: SemrushResults(
+            keyword_principal=SemrushKeyword(keyword="kw", search_volume=100),
+            keywords_secundarias=[SemrushKeyword(keyword="kw secundaria", search_volume=50)],
+        ),
+    )
+    monkeypatch.setattr(
+        "seo_pipeline.pipeline.search_raw",
+        lambda *args, **kwargs: {
+            "search_parameters": {"q": "kw", "gl": "es", "hl": "es-es"},
+            "organic_results": [{"link": "https://competitor.com/page"}],
+        },
+    )
+    monkeypatch.setattr(
+        "seo_pipeline.pipeline.audit_urls",
+        lambda urls: AuditReport(
+            label="top10_audit",
+            generated_at="2026-01-01T00:00:00",
+            entries=[
+                AuditEntry(
+                    url=urls[0],
+                    status_code=200,
+                    title="Competitor title",
+                    h1="Competitor h1",
+                    headings={"H2": ["Competitor section"]},
+                    word_count=1000,
+                )
+            ],
+        ),
+    )
+    monkeypatch.setattr(
+        "seo_pipeline.pipeline.generate_anchors",
+        lambda **kwargs: AnchorSet(primary=["kw guide"], secondary=["kw secundaria"], internal=["learn kw"]),
+    )
+    monkeypatch.setattr(
+        "seo_pipeline.pipeline.generate_briefing",
+        lambda *args, **kwargs: SEOBriefing(
+            meta_title="KW Guide",
+            meta_description="KW description",
+            h1="KW H1",
+            tone_style="expert",
+            unique_angle="Useful angle",
+            headings=[BriefingSection(title=f"S{i}", content="Content") for i in range(1, 9)],
+        ),
+    )
+    monkeypatch.setattr(
+        "seo_pipeline.pipeline.fetch_url_metrics",
+        lambda **kwargs: type(
+            "Ga4Metrics",
+            (),
+            {
+                "sessions": 10,
+                "total_users": 8,
+                "screen_page_views": 12,
+                "conversions": 1.0,
+                "model_dump": lambda self: {"sessions": 10, "total_users": 8},
+            },
+        )(),
+    )
+    monkeypatch.setattr(
+        "seo_pipeline.pipeline.audit_target_url",
+        lambda *args, **kwargs: AuditReport(
+            label="target_url_audit",
+            generated_at="2026-01-01T00:00:00",
+            entries=[
+                AuditEntry(
+                    url="https://example.com/page",
+                    status_code=200,
+                    title="Target title",
+                    h1="Target h1",
+                    headings={"H2": ["Target section"]},
+                    word_count=1500,
+                )
+            ],
+        ),
+    )
+
+    output_dir = tmp_path / "run"
+    result = run_full_pipeline(
+        "kw",
+        target_url="https://example.com/page",
+        run_id="run-ga4",
+        upload_to_sheets=False,
+        output_dir=output_dir,
+    )
+
+    assert result["ga4_url_metrics"]["sessions"] == 10
+    assert "target_audit_path" in result
+    assert "ai_search_readiness" in result
+    metrics = json.loads((output_dir / "run_metrics.json").read_text(encoding="utf-8"))
+    assert metrics["stages"]["ga4"]["status"] == "ok"
+    assert metrics["stages"]["ga4"]["provider"] == "ga4"
+    assert metrics["stages"]["target_audit"]["status"] == "ok"
