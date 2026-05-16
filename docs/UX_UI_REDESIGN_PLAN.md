@@ -358,3 +358,29 @@ shape stabilizes, but early enough that the final app is maintainable.
 - Run results, metrics, costs and artifacts can be reviewed from the UI.
 - Documentation describes the operator workflow first and internal details second.
 - Automated tests cover UI state services and Gradio callback wiring.
+
+## V2 Premium Redesign (Dashboard Sidebar)
+
+Status: UX9 and UX10 implemented.
+
+A new visual identity and sidebar-based layout have been integrated to improve the aesthetics and navigation of the Gradio application, shifting from a technical tool to a Premium Operator Console.
+
+### PR UX9 - Theme, Typography, and Dark Mode
+Status: implemented.
+Goal: Apply a premium dark mode theme, Google Fonts (Inter), and CSS styling (Glassmorphism, Gradients).
+
+### PR UX10 - Sidebar and Dashboard Layout
+Status: implemented.
+Goal: Replace `gr.Tab` with a `gr.Row`/`gr.Column` sidebar approach.
+Scope:
+- Sidebar contains navigation buttons and active context.
+- Main panel contains conditionally visible Groups for each workspace.
+
+### PR UX11 - Progressive Forms and Unified Preflight (Pending)
+Status: pending.
+Goal: Wrap secondary inputs in Accordions and merge Preflight checks into the Launch view.
+
+### PR UX12 - Advanced Runs Rendering (Pending)
+Status: pending.
+Goal: Replace the raw Dataframe for Runs with a custom HTML rendering including status pills and icons.
+

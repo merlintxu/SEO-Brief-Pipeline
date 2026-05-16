@@ -56,9 +56,14 @@ BRIEF_TYPES = {
     "existing_page": "Existing page",
 }
 APP_CSS = """
-.gradio-container { max-width: 1440px !important; }
-.status-panel { border-left: 4px solid #2563eb; padding-left: 12px; }
-.danger-action button { border-color: #b91c1c !important; color: #b91c1c !important; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.gradio-container { max-width: 1440px !important; font-family: 'Inter', sans-serif !important; }
+.status-panel { border-left: 4px solid #6366F1; padding-left: 12px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid #374151; }
+.danger-action button { border-color: #EF4444 !important; color: #EF4444 !important; }
+.btn-primary { background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%) !important; border: none !important; color: white !important; font-weight: 600 !important; }
+.sidebar-panel { background: #111827; border-radius: 12px; padding: 20px; border: 1px solid #374151; height: 100%; min-height: 800px; }
+.main-panel { background: #1F2937; border-radius: 12px; padding: 24px; border: 1px solid #374151; min-height: 800px; }
 """
 
 
@@ -674,329 +679,299 @@ def launch_briefing_callback(
 def build_app():
     import gradio as gr
 
-    with gr.Blocks(title="SEO Brief Pipeline Ops") as app:
-        gr.Markdown("# SEO Brief Pipeline Ops")
-        gr.Markdown("Local operator console for setup, client/project work, preflight, briefing launch and run review.")
+    theme = gr.themes.Default(
+        primary_hue="indigo",
+        neutral_hue="slate",
+        font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
+    )
 
-        with gr.Tab("Home"):
-            with gr.Row():
-                home_status = gr.Markdown(setup_health_markdown(), elem_classes=["status-panel"])
-                active_context = gr.Markdown(active_context_markdown(), elem_classes=["status-panel"])
-            with gr.Row():
-                home_client = gr.Dropdown(client_dropdown_choices(), label="Active client")
-                home_project = gr.Dropdown(project_dropdown_choices(), label="Active project")
-                set_context = gr.Button("Set active context", variant="primary")
-                refresh_home = gr.Button("Refresh")
-            with gr.Row():
-                home_clients = gr.Dataframe(
-                    headers=["Client ID", "Name", "Domain", "DB", "gl", "hl", "Projects", "GSC", "Sheets"],
-                    value=clients_table_data(),
-                    interactive=False,
-                    label="Clients",
-                )
-            home_projects = gr.Dataframe(
-                headers=["Project ID", "Name", "Client", "Domain", "GSC", "GA4", "Type", "LLM", "SERP"],
-                value=projects_table_data(),
-                interactive=False,
-                label="Projects",
-            )
-            home_runs = gr.Dataframe(
-                headers=["Run ID", "Status", "Client", "Project", "Type", "Keyword", "Error", "Updated"],
-                value=runs_table_data(DEFAULT_STORE, limit=20),
-                interactive=False,
-                label="Recent runs",
-            )
-            home_client.change(
-                context_client_changed_callback,
-                inputs=home_client,
-                outputs=[home_project, home_projects, active_context],
-            )
-            set_context.click(
-                set_context_home_callback,
-                inputs=[home_client, home_project],
-                outputs=[active_context, home_status],
-            )
-            refresh_home.click(
-                home_refresh_callback,
-                outputs=[home_status, home_client, home_project, active_context, home_clients, home_projects, home_runs],
-            )
+    with gr.Blocks(title="SEO Brief Pipeline Ops", theme=theme) as app:
+        with gr.Row():
+            # SIDEBAR
+            with gr.Column(scale=1, elem_classes=["sidebar-panel"]):
+                gr.Markdown("# SEO Ops")
+                gr.Markdown("Premium Pipeline Console")
 
-        with gr.Tab("Settings"):
-            gr.Markdown("## Global Providers")
-            with gr.Row():
-                global_semrush = gr.Textbox(label="SEMrush token", type="password")
-                global_serpapi = gr.Textbox(label="SerpAPI key", type="password")
-            with gr.Row():
-                global_openai = gr.Textbox(label="OpenAI key", type="password")
-                global_anthropic = gr.Textbox(label="Anthropic key", type="password")
-                global_llm_base_url = gr.Textbox(value=DEFAULT_OLLAMA_BASE_URL, label="LLM base URL")
-            with gr.Row():
-                global_dataforseo_login = gr.Textbox(label="DataForSEO login")
-                global_dataforseo_password = gr.Textbox(label="DataForSEO password", type="password")
-            save_global = gr.Button("Save settings", variant="primary")
-            global_message = gr.Markdown()
-            with gr.Row():
-                refresh_global = gr.Button("Refresh provider status")
-                global_status = gr.Markdown(runtime_settings_markdown())
-            gr.Markdown(model_choices_markdown())
-            save_global.click(
-                save_runtime_settings_callback,
-                inputs=[
-                    global_semrush,
-                    global_serpapi,
-                    global_openai,
-                    global_anthropic,
-                    global_llm_base_url,
-                    global_dataforseo_login,
-                    global_dataforseo_password,
-                ],
-                outputs=global_message,
-            )
-            refresh_global.click(runtime_settings_markdown, outputs=global_status)
+                nav_home = gr.Button("🏠 Home", variant="secondary")
+                nav_settings = gr.Button("⚙️ Settings", variant="secondary")
+                nav_clients = gr.Button("👥 Clients", variant="secondary")
+                nav_projects = gr.Button("📁 Projects", variant="secondary")
+                nav_launch = gr.Button("🚀 Launch Briefing", variant="primary", elem_classes=["btn-primary"])
+                nav_runs = gr.Button("📋 Runs Workspace", variant="secondary")
 
-        with gr.Tab("Clients"):
-            gr.Markdown("## Client Workspace")
-            selected_client = gr.Dropdown(client_choices(), label="Existing client")
-            with gr.Row():
-                refresh_clients = gr.Button("Refresh clients")
-                load_client = gr.Button("Load selected client")
-            clients_grid = gr.Dataframe(
-                headers=["Client ID", "Name", "Domain", "DB", "gl", "hl", "Projects", "GSC", "Sheets"],
-                value=clients_table_data(),
-                interactive=False,
-                label="Client list",
-            )
-            with gr.Row():
-                client_id = gr.Textbox(label="Client ID")
-                client_name = gr.Textbox(label="Name")
-                default_base_domain = gr.Textbox(label="Default base domain")
-            with gr.Row():
-                gsc_sa_path = gr.Textbox(label="GSC/GA4 service account path")
-                sheets_sa_path = gr.Textbox(label="Sheets/Drive service account path")
-            with gr.Row():
-                default_database = gr.Dropdown(SEMRUSH_DATABASES, value="es", label="SEMrush database")
-                default_gl = gr.Dropdown(GOOGLE_GL_OPTIONS, value="es", label="Google gl")
-                default_hl = gr.Dropdown(GOOGLE_HL_OPTIONS, value="es-es", label="Google hl")
-            save_client = gr.Button("Save client", variant="primary")
-            client_message = gr.Markdown()
-            refresh_clients.click(refresh_clients_callback, outputs=[selected_client, client_message])
-            refresh_clients.click(clients_table_data, outputs=clients_grid)
-            load_client.click(
-                load_client_callback,
-                inputs=selected_client,
-                outputs=[
-                    client_id,
-                    client_name,
-                    default_base_domain,
-                    gsc_sa_path,
-                    sheets_sa_path,
-                    default_database,
-                    default_gl,
-                    default_hl,
-                    client_message,
-                ],
-            )
-            save_client.click(
-                save_client_callback,
-                inputs=[
-                    client_id,
-                    client_name,
-                    default_base_domain,
-                    gsc_sa_path,
-                    sheets_sa_path,
-                    default_database,
-                    default_gl,
-                    default_hl,
-                ],
-                outputs=client_message,
-            )
+                gr.Markdown("---")
+                gr.Markdown("### Context")
+                sidebar_context = gr.Markdown(active_context_markdown())
 
-        with gr.Tab("Projects"):
-            gr.Markdown("## Project Workspace")
-            selected_project = gr.Dropdown(project_choices(), label="Existing project")
-            with gr.Row():
-                refresh_projects = gr.Button("Refresh projects")
-                load_project = gr.Button("Load selected project")
-            projects_grid = gr.Dataframe(
-                headers=["Project ID", "Name", "Client", "Domain", "GSC", "GA4", "Type", "LLM", "SERP"],
-                value=projects_table_data(),
-                interactive=False,
-                label="Project list",
-            )
-            effective_preview = gr.Markdown("Select a project to preview its effective configuration.")
-            with gr.Row():
-                project_id = gr.Textbox(label="Project ID")
-                project_client_id = gr.Textbox(label="Client ID")
-                project_name = gr.Textbox(label="Name")
-            with gr.Row():
-                base_domain = gr.Textbox(label="Base domain override")
-                project_database = gr.Dropdown([None, *SEMRUSH_DATABASES], value=None, label="SEMrush database override")
-                project_gl = gr.Dropdown([None, *GOOGLE_GL_OPTIONS], value=None, label="Google gl override")
-                project_hl = gr.Dropdown([None, *GOOGLE_HL_OPTIONS], value=None, label="Google hl override")
-            with gr.Row():
-                gsc_property = gr.Textbox(label="GSC property")
-                ga4_property_id = gr.Textbox(label="GA4 property ID")
-                sheets_id = gr.Textbox(label="Google Sheets ID or URL")
-                project_type = gr.Dropdown(PROJECT_TYPE_OPTIONS, value="content", label="Project type")
-                output_dir = gr.Textbox(value="runs", label="Output directory")
-            with gr.Row():
-                llm_provider = gr.Dropdown(LLM_PROVIDER_OPTIONS, value=DEFAULT_LLM_PROVIDER, label="Default LLM provider")
-                llm_model = gr.Dropdown(OLLAMA_MODEL_OPTIONS, value=DEFAULT_LLM_MODEL, label="Default model")
-                llm_base_url = gr.Textbox(value=DEFAULT_OLLAMA_BASE_URL, label="LLM base URL")
-            with gr.Row():
-                serpapi_enabled = gr.Checkbox(value=True, label="Use SerpAPI")
-                dataforseo_enabled = gr.Checkbox(value=True, label="Use DataForSEO fallback")
-            save_project = gr.Button("Save project", variant="primary")
-            project_message = gr.Markdown()
-            with gr.Row():
-                activate_project = gr.Button("Activate project")
-                active_message = gr.Markdown()
-            with gr.Accordion("Duplicate Project", open=False):
-                duplicate_source = gr.Textbox(label="Source project ID")
-                duplicate_target = gr.Textbox(label="New project ID")
-                duplicate_name = gr.Textbox(label="New project name")
-                duplicate_button = gr.Button("Duplicate project")
-                duplicate_message = gr.Markdown()
-            with gr.Accordion("Discover Sheets from Drive", open=False):
-                sheets_query = gr.Textbox(label="Search Google Sheets")
-                discover_sheets = gr.Button("Discover Sheets")
-                sheets_listing = gr.Markdown()
-            llm_provider.change(model_options_callback, inputs=llm_provider, outputs=llm_model)
-            selected_project.change(effective_config_markdown, inputs=selected_project, outputs=effective_preview)
-            refresh_projects.click(refresh_projects_callback, inputs=project_client_id, outputs=[selected_project, project_message])
-            refresh_projects.click(projects_table_data, inputs=project_client_id, outputs=projects_grid)
-            load_project.click(
-                load_project_callback,
-                inputs=selected_project,
-                outputs=[
-                    project_id,
-                    project_client_id,
-                    project_name,
-                    base_domain,
-                    project_database,
-                    project_gl,
-                    project_hl,
-                    gsc_property,
-                    ga4_property_id,
-                    sheets_id,
-                    project_type,
-                    output_dir,
-                    llm_provider,
-                    llm_model,
-                    llm_base_url,
-                    serpapi_enabled,
-                    dataforseo_enabled,
-                    project_message,
-                ],
-            )
-            load_project.click(effective_config_markdown, inputs=selected_project, outputs=effective_preview)
-            save_project.click(
-                save_project_callback,
-                inputs=[
-                    project_id,
-                    project_client_id,
-                    project_name,
-                    base_domain,
-                    project_database,
-                    project_gl,
-                    project_hl,
-                    gsc_property,
-                    ga4_property_id,
-                    sheets_id,
-                    project_type,
-                    output_dir,
-                    llm_provider,
-                    llm_model,
-                    llm_base_url,
-                    serpapi_enabled,
-                    dataforseo_enabled,
-                ],
-                outputs=project_message,
-            )
-            activate_project.click(activate_project_callback, inputs=[project_client_id, project_id], outputs=active_message)
-            discover_sheets.click(discover_sheets_callback, inputs=[project_client_id, sheets_query], outputs=sheets_listing)
-            duplicate_button.click(duplicate_project_callback, inputs=[duplicate_source, duplicate_target, duplicate_name], outputs=duplicate_message)
+            # MAIN CONTENT
+            with gr.Column(scale=4, elem_classes=["main-panel"]):
 
-        with gr.Tab("Preflight"):
-            gr.Markdown("## Integrations And Preflight")
-            with gr.Row():
-                checks_client_id = gr.Dropdown(client_dropdown_choices(), label="Client")
-                checks_project_id = gr.Dropdown(project_dropdown_choices(), label="Project")
-                checks_keyword = gr.Textbox(value="test", label="Test keyword")
-            with gr.Row():
-                run_config_checks = gr.Button("Run config preflight", variant="primary")
-                run_live_checks = gr.Button("Run live provider checks")
-            checks_output = gr.Markdown()
-            checks_projects_hidden = gr.Dataframe(visible=False)
-            checks_client_id.change(context_client_changed_callback, inputs=checks_client_id, outputs=[checks_project_id, checks_projects_hidden, checks_output])
-            run_config_checks.click(preflight_config_callback, inputs=[checks_client_id, checks_project_id], outputs=checks_output)
-            run_live_checks.click(preflight_live_callback, inputs=[checks_client_id, checks_project_id, checks_keyword], outputs=checks_output)
+                # --- HOME ---
+                with gr.Group(visible=True) as view_home:
+                    gr.Markdown("## Dashboard Home")
+                    with gr.Row():
+                        home_status = gr.Markdown(setup_health_markdown(), elem_classes=["status-panel"])
+                        active_context = gr.Markdown(active_context_markdown(), elem_classes=["status-panel"])
+                    with gr.Row():
+                        home_client = gr.Dropdown(client_dropdown_choices(), label="Active client")
+                        home_project = gr.Dropdown(project_dropdown_choices(), label="Active project")
+                        set_context = gr.Button("Set active context", variant="primary", elem_classes=["btn-primary"])
+                        refresh_home = gr.Button("Refresh")
+                    home_clients = gr.Dataframe(
+                        headers=["Client ID", "Name", "Domain", "DB", "gl", "hl", "Projects", "GSC", "Sheets"],
+                        value=clients_table_data(), interactive=False, label="Clients"
+                    )
+                    home_projects = gr.Dataframe(
+                        headers=["Project ID", "Name", "Client", "Domain", "GSC", "GA4", "Type", "LLM", "SERP"],
+                        value=projects_table_data(), interactive=False, label="Projects"
+                    )
+                    home_runs = gr.Dataframe(
+                        headers=["Run ID", "Status", "Client", "Project", "Type", "Keyword", "Error", "Updated"],
+                        value=runs_table_data(DEFAULT_STORE, limit=20), interactive=False, label="Recent runs"
+                    )
+                    home_client.change(
+                        context_client_changed_callback,
+                        inputs=home_client,
+                        outputs=[home_project, home_projects, active_context]
+                    )
+                    set_context.click(
+                        set_context_home_callback,
+                        inputs=[home_client, home_project],
+                        outputs=[active_context, home_status]
+                    )
+                    refresh_home.click(
+                        home_refresh_callback,
+                        outputs=[home_status, home_client, home_project, active_context, home_clients, home_projects, home_runs]
+                    )
 
-        with gr.Tab("Launch"):
-            gr.Markdown("## Briefing Launcher")
-            with gr.Row():
-                run_client_id = gr.Dropdown(client_dropdown_choices(), label="Client")
-                run_project_id = gr.Dropdown(project_dropdown_choices(), label="Project")
-                brief_type = gr.Radio(
-                    [("New page", "new_page"), ("Existing page", "existing_page")],
-                    value="new_page",
-                    label="Briefing type",
-                )
-            with gr.Row():
-                keyword = gr.Textbox(label="Keyword")
-                target_url = gr.Textbox(label="Target URL")
-            with gr.Row():
-                provider = gr.Dropdown(LLM_PROVIDER_OPTIONS, value=DEFAULT_LLM_PROVIDER, label="LLM Provider override")
-                model = gr.Dropdown(OLLAMA_MODEL_OPTIONS, value=DEFAULT_LLM_MODEL, label="Model override")
-                ollama_base_url = gr.Textbox(value=DEFAULT_OLLAMA_BASE_URL, label="Ollama Base URL")
-                upload = gr.Checkbox(value=False, label="Export to Google Sheets")
-            with gr.Row():
-                preview_button = gr.Button("Preview run")
-                run_button = gr.Button("Launch briefing", variant="primary")
-            run_preview = gr.Markdown()
-            run_output = gr.Markdown()
-            run_projects_hidden = gr.Dataframe(visible=False)
-            run_client_id.change(context_client_changed_callback, inputs=run_client_id, outputs=[run_project_id, run_projects_hidden, run_preview])
-            provider.change(model_options_callback, inputs=provider, outputs=model)
-            preview_button.click(
-                launch_preview_callback,
-                inputs=[run_client_id, run_project_id, brief_type, keyword, target_url, upload],
-                outputs=run_preview,
-            )
-            run_button.click(
-                guarded_launch_briefing_callback,
-                inputs=[run_client_id, run_project_id, brief_type, keyword, target_url, provider, model, ollama_base_url, upload],
-                outputs=run_output,
-            )
+                # --- SETTINGS ---
+                with gr.Group(visible=False) as view_settings:
+                    gr.Markdown("## Global Providers")
+                    with gr.Row():
+                        global_semrush = gr.Textbox(label="SEMrush token", type="password")
+                        global_serpapi = gr.Textbox(label="SerpAPI key", type="password")
+                    with gr.Row():
+                        global_openai = gr.Textbox(label="OpenAI key", type="password")
+                        global_anthropic = gr.Textbox(label="Anthropic key", type="password")
+                        global_llm_base_url = gr.Textbox(value=DEFAULT_OLLAMA_BASE_URL, label="LLM base URL")
+                    with gr.Row():
+                        global_dataforseo_login = gr.Textbox(label="DataForSEO login")
+                        global_dataforseo_password = gr.Textbox(label="DataForSEO password", type="password")
+                    save_global = gr.Button("Save settings", variant="primary", elem_classes=["btn-primary"])
+                    global_message = gr.Markdown()
+                    with gr.Row():
+                        refresh_global = gr.Button("Refresh provider status")
+                        global_status = gr.Markdown(runtime_settings_markdown())
+                    gr.Markdown(model_choices_markdown())
+                    save_global.click(
+                        save_runtime_settings_callback,
+                        inputs=[global_semrush, global_serpapi, global_openai, global_anthropic, global_llm_base_url, global_dataforseo_login, global_dataforseo_password],
+                        outputs=global_message
+                    )
+                    refresh_global.click(runtime_settings_markdown, outputs=global_status)
 
-        with gr.Tab("Runs"):
-            gr.Markdown("## Runs Workspace")
-            with gr.Row():
-                limit = gr.Number(value=50, label="Limit", precision=0)
-                status_filter = gr.Dropdown(["", "queued", "running", "done", "failed"], value="", label="Status")
-                search_filter = gr.Textbox(label="Search")
-                refresh = gr.Button("Refresh runs", variant="primary")
-            runs_grid = gr.Dataframe(
-                headers=["Run ID", "Status", "Client", "Project", "Type", "Keyword", "Error", "Updated"],
-                value=runs_table_data(DEFAULT_STORE, limit=50),
-                interactive=False,
-                label="Runs",
-            )
-            run_id = gr.Textbox(label="Run ID")
-            with gr.Row():
-                detail_button = gr.Button("Load detail")
-                cancel_button = gr.Button("Cancel run")
-                delete_button = gr.Button("Delete metadata", elem_classes=["danger-action"])
-            detail = gr.Markdown()
-            with gr.Accordion("Cleanup terminal jobs", open=False):
-                cleanup_age = gr.Number(value=30, label="Max age days", precision=0)
-                cleanup_button = gr.Button("Cleanup done/failed metadata")
-                cleanup_message = gr.Markdown()
-            refresh.click(refresh_runs_callback, inputs=[limit, status_filter, search_filter], outputs=runs_grid)
-            detail_button.click(run_detail_callback, inputs=run_id, outputs=detail)
-            cancel_button.click(cancel_run_callback, inputs=run_id, outputs=detail)
-            delete_button.click(delete_run_callback, inputs=run_id, outputs=detail)
-            cleanup_button.click(cleanup_runs_callback, inputs=cleanup_age, outputs=cleanup_message)
+                # --- CLIENTS ---
+                with gr.Group(visible=False) as view_clients:
+                    gr.Markdown("## Client Workspace")
+                    selected_client = gr.Dropdown(client_choices(), label="Existing client")
+                    with gr.Row():
+                        refresh_clients = gr.Button("Refresh clients")
+                        load_client = gr.Button("Load selected client", variant="primary", elem_classes=["btn-primary"])
+                    clients_grid = gr.Dataframe(
+                        headers=["Client ID", "Name", "Domain", "DB", "gl", "hl", "Projects", "GSC", "Sheets"],
+                        value=clients_table_data(), interactive=False, label="Client list"
+                    )
+                    with gr.Accordion("Client Configuration", open=True):
+                        with gr.Row():
+                            client_id = gr.Textbox(label="Client ID")
+                            client_name = gr.Textbox(label="Name")
+                            default_base_domain = gr.Textbox(label="Default base domain")
+                        with gr.Row():
+                            gsc_sa_path = gr.Textbox(label="GSC/GA4 service account path")
+                            sheets_sa_path = gr.Textbox(label="Sheets/Drive service account path")
+                        with gr.Row():
+                            default_database = gr.Dropdown(SEMRUSH_DATABASES, value="es", label="SEMrush database")
+                            default_gl = gr.Dropdown(GOOGLE_GL_OPTIONS, value="es", label="Google gl")
+                            default_hl = gr.Dropdown(GOOGLE_HL_OPTIONS, value="es-es", label="Google hl")
+                        save_client = gr.Button("Save client", variant="primary", elem_classes=["btn-primary"])
+                        client_message = gr.Markdown()
+                    refresh_clients.click(refresh_clients_callback, outputs=[selected_client, client_message])
+                    refresh_clients.click(clients_table_data, outputs=clients_grid)
+                    load_client.click(
+                        load_client_callback, inputs=selected_client,
+                        outputs=[client_id, client_name, default_base_domain, gsc_sa_path, sheets_sa_path, default_database, default_gl, default_hl, client_message]
+                    )
+                    save_client.click(
+                        save_client_callback,
+                        inputs=[client_id, client_name, default_base_domain, gsc_sa_path, sheets_sa_path, default_database, default_gl, default_hl],
+                        outputs=client_message
+                    )
+
+                # --- PROJECTS ---
+                with gr.Group(visible=False) as view_projects:
+                    gr.Markdown("## Project Workspace")
+                    selected_project = gr.Dropdown(project_choices(), label="Existing project")
+                    with gr.Row():
+                        refresh_projects = gr.Button("Refresh projects")
+                        load_project = gr.Button("Load selected project", variant="primary", elem_classes=["btn-primary"])
+                    projects_grid = gr.Dataframe(
+                        headers=["Project ID", "Name", "Client", "Domain", "GSC", "GA4", "Type", "LLM", "SERP"],
+                        value=projects_table_data(), interactive=False, label="Project list"
+                    )
+                    effective_preview = gr.Markdown("Select a project to preview its effective configuration.", elem_classes=["status-panel"])
+                    with gr.Accordion("Project Configuration", open=True):
+                        with gr.Row():
+                            project_id = gr.Textbox(label="Project ID")
+                            project_client_id = gr.Textbox(label="Client ID")
+                            project_name = gr.Textbox(label="Name")
+                        with gr.Row():
+                            base_domain = gr.Textbox(label="Base domain override")
+                            project_database = gr.Dropdown([None, *SEMRUSH_DATABASES], value=None, label="SEMrush database override")
+                            project_gl = gr.Dropdown([None, *GOOGLE_GL_OPTIONS], value=None, label="Google gl override")
+                            project_hl = gr.Dropdown([None, *GOOGLE_HL_OPTIONS], value=None, label="Google hl override")
+                        with gr.Row():
+                            gsc_property = gr.Textbox(label="GSC property")
+                            ga4_property_id = gr.Textbox(label="GA4 property ID")
+                            sheets_id = gr.Textbox(label="Google Sheets ID or URL")
+                            project_type = gr.Dropdown(PROJECT_TYPE_OPTIONS, value="content", label="Project type")
+                            output_dir = gr.Textbox(value="runs", label="Output directory")
+                        with gr.Row():
+                            llm_provider = gr.Dropdown(LLM_PROVIDER_OPTIONS, value=DEFAULT_LLM_PROVIDER, label="Default LLM provider")
+                            llm_model = gr.Dropdown(OLLAMA_MODEL_OPTIONS, value=DEFAULT_LLM_MODEL, label="Default model")
+                            llm_base_url = gr.Textbox(value=DEFAULT_OLLAMA_BASE_URL, label="LLM base URL")
+                        with gr.Row():
+                            serpapi_enabled = gr.Checkbox(value=True, label="Use SerpAPI")
+                            dataforseo_enabled = gr.Checkbox(value=True, label="Use DataForSEO fallback")
+                        save_project = gr.Button("Save project", variant="primary", elem_classes=["btn-primary"])
+                        project_message = gr.Markdown()
+                    with gr.Row():
+                        activate_project = gr.Button("Activate project")
+                        active_message = gr.Markdown()
+                    with gr.Accordion("Duplicate Project", open=False):
+                        duplicate_source = gr.Textbox(label="Source project ID")
+                        duplicate_target = gr.Textbox(label="New project ID")
+                        duplicate_name = gr.Textbox(label="New project name")
+                        duplicate_button = gr.Button("Duplicate project")
+                        duplicate_message = gr.Markdown()
+                    with gr.Accordion("Discover Sheets from Drive", open=False):
+                        sheets_query = gr.Textbox(label="Search Google Sheets")
+                        discover_sheets = gr.Button("Discover Sheets")
+                        sheets_listing = gr.Markdown()
+
+                    llm_provider.change(model_options_callback, inputs=llm_provider, outputs=llm_model)
+                    selected_project.change(effective_config_markdown, inputs=selected_project, outputs=effective_preview)
+                    refresh_projects.click(refresh_projects_callback, inputs=project_client_id, outputs=[selected_project, project_message])
+                    refresh_projects.click(projects_table_data, inputs=project_client_id, outputs=projects_grid)
+                    load_project.click(
+                        load_project_callback, inputs=selected_project,
+                        outputs=[project_id, project_client_id, project_name, base_domain, project_database, project_gl, project_hl, gsc_property, ga4_property_id, sheets_id, project_type, output_dir, llm_provider, llm_model, llm_base_url, serpapi_enabled, dataforseo_enabled, project_message]
+                    )
+                    load_project.click(effective_config_markdown, inputs=selected_project, outputs=effective_preview)
+                    save_project.click(
+                        save_project_callback,
+                        inputs=[project_id, project_client_id, project_name, base_domain, project_database, project_gl, project_hl, gsc_property, ga4_property_id, sheets_id, project_type, output_dir, llm_provider, llm_model, llm_base_url, serpapi_enabled, dataforseo_enabled],
+                        outputs=project_message
+                    )
+                    activate_project.click(activate_project_callback, inputs=[project_client_id, project_id], outputs=active_message)
+                    discover_sheets.click(discover_sheets_callback, inputs=[project_client_id, sheets_query], outputs=sheets_listing)
+                    duplicate_button.click(duplicate_project_callback, inputs=[duplicate_source, duplicate_target, duplicate_name], outputs=duplicate_message)
+
+                # --- LAUNCH (Unified with Preflight) ---
+                with gr.Group(visible=False) as view_launch:
+                    gr.Markdown("## Briefing Launcher & Preflight")
+                    with gr.Row():
+                        run_client_id = gr.Dropdown(client_dropdown_choices(), label="Client")
+                        run_project_id = gr.Dropdown(project_dropdown_choices(), label="Project")
+                        brief_type = gr.Radio([("New page", "new_page"), ("Existing page", "existing_page")], value="new_page", label="Briefing type")
+                    with gr.Row():
+                        keyword = gr.Textbox(label="Keyword")
+                        target_url = gr.Textbox(label="Target URL")
+                    with gr.Accordion("Advanced Configuration", open=False):
+                        with gr.Row():
+                            provider = gr.Dropdown(LLM_PROVIDER_OPTIONS, value=DEFAULT_LLM_PROVIDER, label="LLM Provider override")
+                            model = gr.Dropdown(OLLAMA_MODEL_OPTIONS, value=DEFAULT_LLM_MODEL, label="Model override")
+                            ollama_base_url = gr.Textbox(value=DEFAULT_OLLAMA_BASE_URL, label="Ollama Base URL")
+                            upload = gr.Checkbox(value=False, label="Export to Google Sheets")
+
+                    with gr.Row():
+                        preview_button = gr.Button("1. Analyze Readiness & Preview", variant="secondary")
+                        run_live_checks = gr.Button("Run live provider checks", variant="secondary")
+                        run_button = gr.Button("2. Launch Briefing", variant="primary", elem_classes=["btn-primary"])
+
+                    checks_output = gr.Markdown()
+                    run_preview = gr.Markdown(elem_classes=["status-panel"])
+                    run_output = gr.Markdown()
+
+                    run_projects_hidden = gr.Dataframe(visible=False)
+                    run_client_id.change(context_client_changed_callback, inputs=run_client_id, outputs=[run_project_id, run_projects_hidden, run_preview])
+                    provider.change(model_options_callback, inputs=provider, outputs=model)
+
+                    preview_button.click(
+                        preflight_config_callback, inputs=[run_client_id, run_project_id], outputs=checks_output
+                    ).then(
+                        launch_preview_callback,
+                        inputs=[run_client_id, run_project_id, brief_type, keyword, target_url, upload],
+                        outputs=run_preview
+                    )
+                    run_live_checks.click(preflight_live_callback, inputs=[run_client_id, run_project_id, keyword], outputs=checks_output)
+                    run_button.click(
+                        guarded_launch_briefing_callback,
+                        inputs=[run_client_id, run_project_id, brief_type, keyword, target_url, provider, model, ollama_base_url, upload],
+                        outputs=run_output
+                    )
+
+                # --- RUNS WORKSPACE ---
+                with gr.Group(visible=False) as view_runs:
+                    gr.Markdown("## Runs Workspace")
+                    with gr.Row():
+                        limit = gr.Number(value=50, label="Limit", precision=0)
+                        status_filter = gr.Dropdown(["", "queued", "running", "done", "failed"], value="", label="Status")
+                        search_filter = gr.Textbox(label="Search")
+                        refresh = gr.Button("Refresh runs", variant="primary", elem_classes=["btn-primary"])
+                    runs_grid = gr.Dataframe(
+                        headers=["Run ID", "Status", "Client", "Project", "Type", "Keyword", "Error", "Updated"],
+                        value=runs_table_data(DEFAULT_STORE, limit=50), interactive=False, label="Runs"
+                    )
+                    run_id = gr.Textbox(label="Run ID")
+                    with gr.Row():
+                        detail_button = gr.Button("Load detail")
+                        cancel_button = gr.Button("Cancel run")
+                        delete_button = gr.Button("Delete metadata", elem_classes=["danger-action"])
+                    detail = gr.Markdown(elem_classes=["status-panel"])
+                    with gr.Accordion("Cleanup terminal jobs", open=False):
+                        cleanup_age = gr.Number(value=30, label="Max age days", precision=0)
+                        cleanup_button = gr.Button("Cleanup done/failed metadata")
+                        cleanup_message = gr.Markdown()
+                    refresh.click(refresh_runs_callback, inputs=[limit, status_filter, search_filter], outputs=runs_grid)
+                    detail_button.click(run_detail_callback, inputs=run_id, outputs=detail)
+                    cancel_button.click(cancel_run_callback, inputs=run_id, outputs=detail)
+                    delete_button.click(delete_run_callback, inputs=run_id, outputs=detail)
+                    cleanup_button.click(cleanup_runs_callback, inputs=cleanup_age, outputs=cleanup_message)
+
+        # Handle Navigation state
+        def show_view(view_name):
+            return [
+                gr.update(visible=(view_name == "home")),
+                gr.update(visible=(view_name == "settings")),
+                gr.update(visible=(view_name == "clients")),
+                gr.update(visible=(view_name == "projects")),
+                gr.update(visible=(view_name == "launch")),
+                gr.update(visible=(view_name == "runs")),
+            ]
+
+        # Use partials/lambdas to map clicks
+        views = [view_home, view_settings, view_clients, view_projects, view_launch, view_runs]
+        nav_home.click(lambda: show_view("home"), outputs=views)
+        nav_settings.click(lambda: show_view("settings"), outputs=views)
+        nav_clients.click(lambda: show_view("clients"), outputs=views)
+        nav_projects.click(lambda: show_view("projects"), outputs=views)
+        nav_launch.click(lambda: show_view("launch"), outputs=views)
+        nav_runs.click(lambda: show_view("runs"), outputs=views)
+
+        # Keep context panel updated when context changes
+        set_context.click(lambda: active_context_markdown(), outputs=sidebar_context)
+        activate_project.click(lambda: active_context_markdown(), outputs=sidebar_context)
+
     return app
 
 
