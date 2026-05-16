@@ -361,7 +361,7 @@ shape stabilizes, but early enough that the final app is maintainable.
 
 ## V2 Premium Redesign (Dashboard Sidebar)
 
-Status: UX9 and UX10 implemented.
+Status: UX9 through UX12 implemented.
 
 A new visual identity and sidebar-based layout have been integrated to improve the aesthetics and navigation of the Gradio application, shifting from a technical tool to a Premium Operator Console.
 

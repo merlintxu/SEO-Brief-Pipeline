@@ -251,6 +251,10 @@ This file is the entrypoint for coding agents working in this repository.
   - removed ad-hoc `test_*.py` pipeline smoke scripts now covered by `tests/`.
   - removed legacy `restart_pipeline.sh` launcher in favor of documented API/Gradio entrypoints.
   - removed hardcoded-key API smoke script and tightened local repo guard coverage for `*.egg-info`.
+- Reviewed UX V2 PRs #58 and #59:
+  - Gradio now passes the premium theme and `APP_CSS` through `launch()` for Gradio 6 compatibility.
+  - sidebar labels and operator docs use plain readable text instead of corrupted emoji/mojibake.
+  - local scratch files are ignored through `.gitignore`.
 - Implemented Premium UX/UI V2 Redesign Baseline (UX9 and UX10):
   - injected modern Dark Mode theme, Google Fonts (Inter) and CSS styling (Glassmorphism, gradients) in `apps/gradio_app.py`.
   - replaced `gr.Tab` navigation with a structural Dashboard Sidebar (`gr.Row`/`gr.Column`) for active context visibility.

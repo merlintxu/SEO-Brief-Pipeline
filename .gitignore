@@ -76,6 +76,7 @@ logs/
 *.log
 
 # Temporary files
+scratch/
 *.tmp
 *.bak
 *~

@@ -683,28 +683,32 @@ def home_refresh_runs_html_callback() -> str:
     return runs_table_html(DEFAULT_STORE, limit=20)
 
 
-def build_app():
+def build_theme():
     import gradio as gr
 
-    theme = gr.themes.Default(
+    return gr.themes.Default(
         primary_hue="indigo",
         neutral_hue="slate",
         font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
     )
 
-    with gr.Blocks(title="SEO Brief Pipeline Ops", theme=theme) as app:
+
+def build_app():
+    import gradio as gr
+
+    with gr.Blocks(title="SEO Brief Pipeline Ops") as app:
         with gr.Row():
             # SIDEBAR
             with gr.Column(scale=1, elem_classes=["sidebar-panel"]):
                 gr.Markdown("# SEO Ops")
                 gr.Markdown("Premium Pipeline Console")
 
-                nav_home = gr.Button("🏠 Home", variant="secondary")
-                nav_settings = gr.Button("⚙️ Settings", variant="secondary")
-                nav_clients = gr.Button("👥 Clients", variant="secondary")
-                nav_projects = gr.Button("📁 Projects", variant="secondary")
-                nav_launch = gr.Button("🚀 Launch Briefing", variant="primary", elem_classes=["btn-primary"])
-                nav_runs = gr.Button("📋 Runs Workspace", variant="secondary")
+                nav_home = gr.Button("Home", variant="secondary")
+                nav_settings = gr.Button("Settings", variant="secondary")
+                nav_clients = gr.Button("Clients", variant="secondary")
+                nav_projects = gr.Button("Projects", variant="secondary")
+                nav_launch = gr.Button("Launch Briefing", variant="primary", elem_classes=["btn-primary"])
+                nav_runs = gr.Button("Runs Workspace", variant="secondary")
 
                 gr.Markdown("---")
                 gr.Markdown("### Context")
@@ -1070,9 +1074,9 @@ def _activate_context(client_id: str, project_id: str) -> str | None:
 
 def _normalize_brief_type(value: str) -> str:
     normalized = (value or "new_page").strip().lower()
-    if normalized in {"new", "new page", "pagina nueva", "página nueva"}:
+    if normalized in {"new", "new page", "pagina nueva", "p\u00e1gina nueva"}:
         return "new_page"
-    if normalized in {"existing", "existing page", "pagina existente", "página existente"}:
+    if normalized in {"existing", "existing page", "pagina existente", "p\u00e1gina existente"}:
         return "existing_page"
     return normalized if normalized in BRIEF_TYPES else "new_page"
 
@@ -1100,4 +1104,4 @@ def _yes_no(value: object) -> str:
 
 
 if __name__ == "__main__":
-    build_app().launch(css=APP_CSS)
+    build_app().launch(theme=build_theme(), css=APP_CSS)

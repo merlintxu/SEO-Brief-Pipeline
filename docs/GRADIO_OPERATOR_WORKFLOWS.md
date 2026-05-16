@@ -4,7 +4,7 @@ This document describes the local Gradio app used by operators to configure clie
 projects, provider connections and briefing jobs.
 
 The current implementation follows the Premium V2 integrated UX redesign baseline
-tracked in `docs/UX_UI_REDESIGN_PLAN.md` (phases UX9–UX12).
+tracked in `docs/UX_UI_REDESIGN_PLAN.md` (phases UX9-UX12).
 
 Launch:
 
@@ -52,15 +52,15 @@ panel shows the selected workspace.
 
 Sidebar navigation areas:
 
-- **🏠 Home**: setup checklist, active client/project context picker, summary
+- **Home**: setup checklist, active client/project context picker, summary
   tables for clients, projects and recent runs.
-- **⚙️ Settings**: global provider credentials and model references.
-- **👥 Clients**: client list plus editor.
-- **📁 Projects**: project list, editor, effective config preview, duplication
+- **Settings**: global provider credentials and model references.
+- **Clients**: client list plus editor.
+- **Projects**: project list, editor, effective config preview, duplication
   and Drive discovery.
-- **🚀 Launch Briefing**: unified Preflight + Launch workflow — config analysis,
+- **Launch Briefing**: unified Preflight + Launch workflow: config analysis,
   live provider checks, run preview and validated launch.
-- **📋 Runs Workspace**: filterable run list with visual status pills, details,
+- **Runs Workspace**: filterable run list with visual status pills, details,
   metrics, artifacts and safe admin actions.
 
 The preferred workflow is:
