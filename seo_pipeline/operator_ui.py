@@ -349,25 +349,43 @@ def launch_preview_markdown(*, client_id: str, project_id: str, brief_type: str,
     return "\n".join(rows)
 
 
-def runs_table_data(store: JobStore, *, limit: int = 50, status: str = "", search: str = "") -> list[list[str]]:
+def runs_table_html(store: JobStore, *, limit: int = 50, status: str = "", search: str = "") -> str:
     jobs = store.list_jobs(
         limit=max(1, min(int(limit), 200)),
         status=status or None,
         search=search or None,
     )
-    return [
-        [
-            job.run_id,
-            job.status,
-            job.client_id or "",
-            job.project_id or "",
-            job.brief_type or "",
-            job.keyword,
-            job.error_category or "",
-            job.updated_at,
-        ]
-        for job in jobs
-    ]
+
+    html = ['<div class="table-wrap" style="border-radius: 8px; overflow: hidden; border: 1px solid #374151;"><table style="width: 100%; border-collapse: collapse; text-align: left; color: #E2E8F0; font-size: 0.9em; font-family: \'Inter\', sans-serif;">']
+    html.append('<thead style="background: #111827; border-bottom: 2px solid #374151;"><tr>')
+    for header in ["Run ID", "Status", "Client", "Project", "Type", "Keyword", "Error", "Updated"]:
+        html.append(f'<th style="padding: 12px 16px; font-weight: 600;">{header}</th>')
+    html.append('</tr></thead><tbody>')
+
+    for job in jobs:
+        st = job.status or 'queued'
+        if st == 'done':
+            pill = f'<span style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 4px 10px; border-radius: 99px; font-weight: 600; font-size: 0.75em; letter-spacing: 0.05em; display: inline-block;">{st.upper()}</span>'
+        elif st == 'failed':
+            pill = f'<span style="background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 4px 10px; border-radius: 99px; font-weight: 600; font-size: 0.75em; letter-spacing: 0.05em; display: inline-block;">{st.upper()}</span>'
+        elif st == 'running':
+            pill = f'<span style="background: rgba(59, 130, 246, 0.2); color: #3B82F6; padding: 4px 10px; border-radius: 99px; font-weight: 600; font-size: 0.75em; letter-spacing: 0.05em; display: inline-block;">{st.upper()}</span>'
+        else:
+            pill = f'<span style="background: rgba(107, 114, 128, 0.2); color: #9CA3AF; padding: 4px 10px; border-radius: 99px; font-weight: 600; font-size: 0.75em; letter-spacing: 0.05em; display: inline-block;">{st.upper()}</span>'
+
+        html.append('<tr style="border-bottom: 1px solid #374151; background: #1F2937;">')
+        html.append(f'<td style="padding: 12px 16px; font-family: monospace; color: #9CA3AF;">{job.run_id[:8]}...</td>')
+        html.append(f'<td style="padding: 12px 16px;">{pill}</td>')
+        html.append(f'<td style="padding: 12px 16px; font-weight: 500;">{job.client_id or ""}</td>')
+        html.append(f'<td style="padding: 12px 16px; font-weight: 500;">{job.project_id or ""}</td>')
+        html.append(f'<td style="padding: 12px 16px; color: #9CA3AF;">{job.brief_type or ""}</td>')
+        html.append(f'<td style="padding: 12px 16px;">{job.keyword}</td>')
+        html.append(f'<td style="padding: 12px 16px; color: #EF4444;">{job.error_category or ""}</td>')
+        html.append(f'<td style="padding: 12px 16px; color: #9CA3AF; font-size: 0.85em;">{job.updated_at[:19] if job.updated_at else ""}</td>')
+        html.append('</tr>')
+
+    html.append('</tbody></table></div>')
+    return "".join(html)
 
 
 def run_detail_markdown(run_id: str, store: JobStore) -> str:

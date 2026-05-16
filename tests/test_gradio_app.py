@@ -202,7 +202,7 @@ def test_gradio_home_and_launch_preview_callbacks(tmp_path: Path, monkeypatch):
         )
     }
 
-    home_status, client_update, project_update, context, clients, projects, runs = home_refresh_callback()
+    home_status, client_update, project_update, context, clients, projects = home_refresh_callback()
     preview = launch_preview_callback("c1", "p1", "new_page", "keyword", "", False)
 
     assert "Home" in home_status
@@ -211,7 +211,6 @@ def test_gradio_home_and_launch_preview_callbacks(tmp_path: Path, monkeypatch):
     assert "Client" in context
     assert clients[0][0] == "c1"
     assert projects[0][0] == "p1"
-    assert isinstance(runs, list)
     assert "Run Preview" in preview
 
 

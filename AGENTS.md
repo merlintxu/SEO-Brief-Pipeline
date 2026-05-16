@@ -256,6 +256,10 @@ This file is the entrypoint for coding agents working in this repository.
   - replaced `gr.Tab` navigation with a structural Dashboard Sidebar (`gr.Row`/`gr.Column`) for active context visibility.
   - grouped views dynamically using `gr.Group` controlled by sidebar actions.
   - updated `docs/UX_UI_REDESIGN_PLAN.md` with the new V2 Premium roadmap.
+- Implemented Premium UX/UI V2 Redesign Additions (UX11 and UX12):
+  - wrapped advanced/secondary inputs in `gr.Accordion` components to streamline forms.
+  - unified `Preflight` and `Launch` tabs into a single workflow.
+  - replaced raw `gr.Dataframe` for Runs with custom `gr.HTML` rendering using `runs_table_html`, displaying visual status pills.
 
 ## Next Actions (Post-PR)
 
