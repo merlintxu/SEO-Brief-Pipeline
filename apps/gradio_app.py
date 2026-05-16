@@ -40,7 +40,7 @@ from seo_pipeline.operator_ui import (
     project_dropdown_choices,
     projects_table_data,
     run_detail_markdown,
-    runs_table_data,
+    runs_table_html,
     set_active_context,
     setup_health_markdown,
     validate_launch_request,
@@ -429,7 +429,6 @@ def home_refresh_callback():
         active_context_markdown(),
         clients_table_data(),
         projects_table_data(selected_client or ""),
-        runs_table_data(DEFAULT_STORE, limit=20),
     )
 
 
@@ -676,6 +675,14 @@ def launch_briefing_callback(
         _restore_env(old_env)
 
 
+def refresh_runs_html_callback(limit: float | int, status_filter: str, search_filter: str) -> str:
+    return runs_table_html(DEFAULT_STORE, limit=int(limit), status=status_filter, search=search_filter)
+
+
+def home_refresh_runs_html_callback() -> str:
+    return runs_table_html(DEFAULT_STORE, limit=20)
+
+
 def build_app():
     import gradio as gr
 
@@ -725,9 +732,8 @@ def build_app():
                         headers=["Project ID", "Name", "Client", "Domain", "GSC", "GA4", "Type", "LLM", "SERP"],
                         value=projects_table_data(), interactive=False, label="Projects"
                     )
-                    home_runs = gr.Dataframe(
-                        headers=["Run ID", "Status", "Client", "Project", "Type", "Keyword", "Error", "Updated"],
-                        value=runs_table_data(DEFAULT_STORE, limit=20), interactive=False, label="Recent runs"
+                    home_runs = gr.HTML(
+                        value=runs_table_html(DEFAULT_STORE, limit=20), label="Recent runs"
                     )
                     home_client.change(
                         context_client_changed_callback,
@@ -741,7 +747,10 @@ def build_app():
                     )
                     refresh_home.click(
                         home_refresh_callback,
-                        outputs=[home_status, home_client, home_project, active_context, home_clients, home_projects, home_runs]
+                        outputs=[home_status, home_client, home_project, active_context, home_clients, home_projects]
+                    ).then(
+                        home_refresh_runs_html_callback,
+                        outputs=[home_runs]
                     )
 
                 # --- SETTINGS ---
@@ -928,9 +937,8 @@ def build_app():
                         status_filter = gr.Dropdown(["", "queued", "running", "done", "failed"], value="", label="Status")
                         search_filter = gr.Textbox(label="Search")
                         refresh = gr.Button("Refresh runs", variant="primary", elem_classes=["btn-primary"])
-                    runs_grid = gr.Dataframe(
-                        headers=["Run ID", "Status", "Client", "Project", "Type", "Keyword", "Error", "Updated"],
-                        value=runs_table_data(DEFAULT_STORE, limit=50), interactive=False, label="Runs"
+                    runs_grid = gr.HTML(
+                        value=runs_table_html(DEFAULT_STORE, limit=50), label="Runs"
                     )
                     run_id = gr.Textbox(label="Run ID")
                     with gr.Row():
@@ -942,7 +950,7 @@ def build_app():
                         cleanup_age = gr.Number(value=30, label="Max age days", precision=0)
                         cleanup_button = gr.Button("Cleanup done/failed metadata")
                         cleanup_message = gr.Markdown()
-                    refresh.click(refresh_runs_callback, inputs=[limit, status_filter, search_filter], outputs=runs_grid)
+                    refresh.click(refresh_runs_html_callback, inputs=[limit, status_filter, search_filter], outputs=runs_grid)
                     detail_button.click(run_detail_callback, inputs=run_id, outputs=detail)
                     cancel_button.click(cancel_run_callback, inputs=run_id, outputs=detail)
                     delete_button.click(delete_run_callback, inputs=run_id, outputs=detail)

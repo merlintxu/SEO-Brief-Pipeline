@@ -11,7 +11,7 @@ from seo_pipeline.operator_ui import (
     get_setup_health,
     launch_preview_markdown,
     run_detail_markdown,
-    runs_table_data,
+    runs_table_html,
     set_active_context,
     validate_launch_request,
 )
@@ -136,11 +136,11 @@ def test_runs_workspace_services(tmp_path: Path):
         model="gpt-4o",
     )
 
-    rows = runs_table_data(store, limit=10)
+    html = runs_table_html(store, limit=10)
     detail = run_detail_markdown("run1", store)
     cleanup_message = cleanup_runs(store, max_age_days=1)
 
-    assert rows[0][0] == "run1"
+    assert "run1" in html
     assert "Stage Metrics" in detail
     assert "H1" in detail
     assert "Cleanup deleted" in cleanup_message

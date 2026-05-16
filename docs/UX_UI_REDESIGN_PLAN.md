@@ -376,11 +376,11 @@ Scope:
 - Sidebar contains navigation buttons and active context.
 - Main panel contains conditionally visible Groups for each workspace.
 
-### PR UX11 - Progressive Forms and Unified Preflight (Pending)
-Status: pending.
+### PR UX11 - Progressive Forms and Unified Preflight
+Status: implemented.
 Goal: Wrap secondary inputs in Accordions and merge Preflight checks into the Launch view.
 
-### PR UX12 - Advanced Runs Rendering (Pending)
-Status: pending.
+### PR UX12 - Advanced Runs Rendering
+Status: implemented.
 Goal: Replace the raw Dataframe for Runs with a custom HTML rendering including status pills and icons.
 
